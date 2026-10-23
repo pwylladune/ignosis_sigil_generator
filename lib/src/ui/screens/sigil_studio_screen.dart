@@ -3,9 +3,12 @@ import 'package:flutter/rendering.dart';
 import '../../models/intent_kernel.dart';
 import '../../models/sigil_state.dart';
 import '../../services/universal_export_service.dart';
+import '../theme/ignosis_theme.dart';
 import '../widgets/ember_particle_painter.dart';
-import '../widgets/ritual_burn_dialog.dart';
-import '../widgets/sigil_painter.dart';
+import '../widgets/pen_ink_ritual_burn_dialog.dart';
+import '../widgets/pen_ink_sigil_painter.dart';
+import '../widgets/ritual_exegesis_modal.dart';
+import '../widgets/wallet_consecration_modal.dart';
 
 class SigilStudioScreen extends StatefulWidget {
   const SigilStudioScreen({super.key});
@@ -22,7 +25,10 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
 
   final GlobalKey _canvasKey = GlobalKey();
 
-  SigilState _state = const SigilState();
+  SigilState _state = const SigilState(
+    primaryColor: IgnosisTheme.sumiInk,
+    strokeWidth: 2.0,
+  );
   IntentKernel _kernel = IntentKernel.fromText('I COMMAND RADIANT CLARITY');
 
   @override
@@ -90,22 +96,38 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
     _burnController.forward(from: 0.0);
   }
 
+  void _showExegesisModal() {
+    showDialog(
+      context: context,
+      builder: (context) => const RitualExegesisModal(),
+    );
+  }
+
+  void _showWalletBankModal() {
+    showDialog(
+      context: context,
+      builder: (context) => WalletConsecrationModal(
+        rawIntent: _state.rawIntent,
+        onBurnSuccess: (txSig, amount) {
+          _triggerLocalBurn();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: IgnosisTheme.sumiInk,
+              content: Text('Sacrifice Recorded on Solana: ${txSig.substring(0, 16)}... (Burned $amount \$IGNOSIS)'),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   void _showBurnModal() {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => RitualBurnDialog(
+      builder: (context) => PenInkWitualBurnDialog(
         onBurnComplete: _triggerLocalBurn,
-        onBurnOnChainRequested: () {
-          // Trigger on-chain burn
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Connecting to Solana RPC for \$IGNOSIS consecration...'),
-              backgroundColor: Color(0xFF1A1A24),
-            ),
-          );
-          _triggerLocalBurn();
-        },
+        onBurnOnChainRequested: _showWalletBankModal,
       ),
     );
   }
@@ -113,90 +135,122 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF070709),
+      backgroundColor: IgnosisTheme.bone,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: IgnosisTheme.bone,
         elevation: 0,
         centerTitle: true,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(4),
+              padding: const EdgeInsets.all(5),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.amberAccent, width: 1.5),
+                border: Border.all(color: IgnosisTheme.sumiInk, width: 1.2),
               ),
-              child: const Icon(Icons.auto_awesome, color: Colors.amberAccent, size: 16),
+              child: const Text('🜂', style: TextStyle(fontSize: 12, color: IgnosisTheme.vermilion)),
             ),
             const SizedBox(width: 8),
             const Text(
               'IGNOSIS',
               style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+                color: IgnosisTheme.sumiInk,
+                fontWeight: FontWeight.w700,
                 letterSpacing: 4.0,
-                fontSize: 18,
+                fontSize: 15,
               ),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share, color: Colors.white70),
-            tooltip: 'Export Consecrated Sigil',
+            icon: const Icon(Icons.help_outline, color: IgnosisTheme.charcoal, size: 20),
+            tooltip: 'The Ritual & Chaos Philosophy',
+            onPressed: _showExegesisModal,
+          ),
+          IconButton(
+            icon: const Icon(Icons.account_balance_wallet_outlined, color: IgnosisTheme.charcoal, size: 20),
+            tooltip: '\$IGNOSIS Solana Bank & Burn',
+            onPressed: _showWalletBankModal,
+          ),
+          IconButton(
+            icon: const Icon(Icons.ios_share, color: IgnosisTheme.charcoal, size: 20),
+            tooltip: 'Export Vector / Seal',
             onPressed: _state.isIncinerated ? null : _exportSigil,
           ),
+          const SizedBox(width: 6),
         ],
       ),
       body: SafeArea(
         child: Column(
           children: [
-            // Top: Statement of Intent input + Kernel status
+            // Statement of Intent Input
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   TextField(
                     controller: _textController,
                     onChanged: _onIntentChanged,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    style: const TextStyle(
+                      color: IgnosisTheme.sumiInk,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.5,
+                    ),
                     decoration: InputDecoration(
                       hintText: 'Enter Statement of Intent (e.g. MY WILL IS UNBREAKABLE)',
-                      hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                      hintStyle: const TextStyle(color: IgnosisTheme.pencilGraphite, fontSize: 13),
                       filled: true,
-                      fillColor: const Color(0xFF121218),
-                      prefixIcon: const Icon(Icons.fingerprint, color: Colors.amberAccent, size: 20),
+                      fillColor: IgnosisTheme.surfaceElevated,
+                      prefixIcon: const Icon(Icons.edit_note, color: IgnosisTheme.charcoal, size: 20),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: IgnosisTheme.parchmentSubtle),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: IgnosisTheme.parchmentSubtle),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Colors.amberAccent),
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: IgnosisTheme.sumiInk, width: 1.2),
                       ),
                     ),
                   ),
                   const SizedBox(height: 6),
                   if (_kernel.reducedConsonants.isNotEmpty)
-                    Row(
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 4,
                       children: [
                         const Text(
-                          'SPARE REDUCED KERNEL: ',
-                          style: TextStyle(color: Colors.white38, fontSize: 10, letterSpacing: 1.2),
+                          'AUSTIN OSMAN SPARE KERNEL: ',
+                          style: TextStyle(
+                            color: IgnosisTheme.pencilGraphite,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
                         ),
                         Text(
                           _kernel.reducedConsonants.split('').join(' · '),
                           style: const TextStyle(
-                            color: Colors.amberAccent,
+                            color: IgnosisTheme.vermilion,
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            letterSpacing: 2.0,
+                            letterSpacing: 1.8,
+                          ),
+                        ),
+                        InkWell(
+                          onTap: _showExegesisModal,
+                          child: const Text(
+                            'Why reduce? 🛈',
+                            style: TextStyle(fontSize: 11, color: IgnosisTheme.pencilGraphite, decoration: TextDecoration.underline),
                           ),
                         ),
                       ],
@@ -205,7 +259,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
               ),
             ),
 
-            // Middle: Interactive Sigil Canvas with Particle Combustion Layer
+            // Archival Parchment Canvas Viewport
             Expanded(
               child: Center(
                 child: AspectRatio(
@@ -213,18 +267,18 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
                   child: Container(
                     margin: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0A0A0F),
+                      color: IgnosisTheme.paperWhite,
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: _state.isIncinerated
-                            ? Colors.red.shade900.withValues(alpha: 0.3)
-                            : Colors.white.withValues(alpha: 0.08),
+                            ? IgnosisTheme.vermilion.withValues(alpha: 0.3)
+                            : IgnosisTheme.parchmentSubtle,
                         width: 1.5,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: _state.primaryColor.withValues(alpha: 0.15),
-                          blurRadius: 40,
+                          color: IgnosisTheme.sumiInk.withValues(alpha: 0.04),
+                          blurRadius: 30,
                           spreadRadius: 2,
                         ),
                       ],
@@ -236,15 +290,30 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
                         builder: (context, child) {
                           if (_state.isIncinerated) {
                             return const Center(
-                              child: Text(
-                                'SEAL DISSOLVED INTO CHAOS\n"Does not matter, need not be."',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white24,
-                                  fontSize: 12,
-                                  fontStyle: FontStyle.italic,
-                                  letterSpacing: 1.5,
-                                ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'SEAL DISSOLVED INTO THE VOID',
+                                    style: TextStyle(
+                                      color: IgnosisTheme.charcoal,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 2.0,
+                                    ),
+                                  ),
+                                  SizedBox(height: 6),
+                                  Text(
+                                    '"Does not matter, need not be."\nReleased to subconscious execution.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: IgnosisTheme.pencilGraphite,
+                                      fontSize: 12,
+                                      fontStyle: FontStyle.italic,
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                ],
                               ),
                             );
                           }
@@ -252,19 +321,20 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
                           return Stack(
                             fit: StackFit.expand,
                             children: [
-                              // The Sacred Geometry Path
+                              // The Clean Pen & Ink Sigil Geometry
                               CustomPaint(
-                                painter: SigilPainter(
+                                painter: PenInkSigilPainter(
                                   state: _state,
                                   kernel: _kernel,
                                   animationPhase: _phaseController.value,
                                 ),
                               ),
-                              // Rising Embers during Burn
+                              // Delicate Rising Cinders / Spark Layer
                               CustomPaint(
                                 painter: EmberParticlePainter(
                                   progress: _state.burnProgress,
                                   time: _phaseController.value * 10,
+                                  emberColor: IgnosisTheme.cinderAmber,
                                 ),
                               ),
                             ],
@@ -277,7 +347,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
               ),
             ),
 
-            // System Selector Tabs
+            // System Selector Tabs (Parchment Pill Style)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -289,15 +359,17 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
                     child: ChoiceChip(
                       label: Text(sys.title),
                       selected: isSelected,
-                      selectedColor: Colors.amberAccent.withValues(alpha: 0.2),
-                      backgroundColor: const Color(0xFF14141E),
+                      selectedColor: IgnosisTheme.surfaceElevated,
+                      backgroundColor: IgnosisTheme.paperWhite,
                       labelStyle: TextStyle(
-                        color: isSelected ? Colors.amberAccent : Colors.white60,
-                        fontSize: 12,
+                        color: isSelected ? IgnosisTheme.sumiInk : IgnosisTheme.pencilGraphite,
+                        fontSize: 11,
                         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        letterSpacing: 0.5,
                       ),
                       side: BorderSide(
-                        color: isSelected ? Colors.amberAccent : Colors.white10,
+                        color: isSelected ? IgnosisTheme.sumiInk : IgnosisTheme.parchmentSubtle,
+                        width: isSelected ? 1.2 : 1.0,
                       ),
                       onSelected: (val) {
                         if (val) setState(() => _state = _state.copyWith(system: sys));
@@ -308,39 +380,38 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
               ),
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
 
-            // Secondary Controls (Planetary Kamea selector / Color Palettes / Burn CTA)
+            // Bottom Bar: Ink Tones, Stroke Slider, and Burn Trigger
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               decoration: const BoxDecoration(
-                color: Color(0xFF0F0F16),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                color: IgnosisTheme.surfaceElevated,
+                border: Border(top: BorderSide(color: IgnosisTheme.parchmentSubtle)),
               ),
               child: Row(
                 children: [
-                  // Palette Selector
+                  // Classic Drafting Inks
                   Wrap(
                     spacing: 8,
                     children: [
-                      const Color(0xFF00E5FF), // Cyan radiance
-                      const Color(0xFFFFD700), // Solar Gold
-                      const Color(0xFFFF1744), // Mars Crimson
-                      const Color(0xFF76FF03), // Venus Emerald
-                      const Color(0xFFE040FB), // Astral Violet
+                      IgnosisTheme.sumiInk,        // Deep drafting black
+                      IgnosisTheme.vermilion,      // Alchemical red
+                      IgnosisTheme.lapisBlue,       // Astrological lapis
+                      IgnosisTheme.pencilGraphite,  // Drafting pencil
                     ].map((col) {
                       final isSelected = _state.primaryColor == col;
                       return GestureDetector(
                         onTap: () => setState(() => _state = _state.copyWith(primaryColor: col)),
                         child: Container(
-                          width: 26,
-                          height: 26,
+                          width: 24,
+                          height: 24,
                           decoration: BoxDecoration(
                             color: col,
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: isSelected ? Colors.white : Colors.transparent,
-                              width: 2,
+                              color: isSelected ? IgnosisTheme.sumiInk : IgnosisTheme.parchmentSubtle,
+                              width: isSelected ? 2.5 : 1.0,
                             ),
                           ),
                         ),
@@ -348,21 +419,20 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
                     }).toList(),
                   ),
                   const Spacer(),
-                  // The Burn Button
+                  // The Burn Button (Refined minimal vermilion seal)
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFD84315),
+                      backgroundColor: IgnosisTheme.sumiInk,
                       foregroundColor: Colors.white,
-                      elevation: 6,
-                      shadowColor: Colors.deepOrangeAccent,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                     onPressed: _state.isIncinerated ? null : _showBurnModal,
-                    icon: const Icon(Icons.whatshot, size: 18),
+                    icon: const Icon(Icons.whatshot, size: 16, color: IgnosisTheme.vermilion),
                     label: const Text(
-                      'BURN / CONSECRATE',
-                      style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.0, fontSize: 12),
+                      'RITUAL COMBUSTION',
+                      style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.0, fontSize: 11),
                     ),
                   ),
                 ],

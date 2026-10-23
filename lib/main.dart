@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'src/ui/screens/sigil_studio_screen.dart';
+import 'src/ui/theme/ignosis_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,16 +13,9 @@ class IgnosisApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'IGNOSIS - Chaos Magic Sigil Studio',
+      title: 'IGNOSIS - Chaos Sigil Studio',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF070709),
-        colorScheme: const ColorScheme.dark(
-          primary: Colors.amberAccent,
-          secondary: Colors.deepOrangeAccent,
-          surface: Color(0xFF0F0F16),
-        ),
-      ),
+      theme: IgnosisTheme.lightTheme,
       home: const SigilStudioScreen(),
     );
   }
