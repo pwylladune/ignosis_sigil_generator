@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/revenue_schema.dart';
 import '../theme/sigil_skins.dart';
 
-/// Modal dialog for subscribing or purchasing $IGNOSIS burn allowances
+/// Modal dialog detailing the IGNOSIS transparent pay schema & micro-transactions
 class PaySchemaModal extends StatelessWidget {
   final SigilSkinTheme theme;
 
@@ -35,7 +35,7 @@ class PaySchemaModal extends StatelessWidget {
                       border: Border.all(color: theme.hairline),
                     ),
                     child: Center(
-                      child: Text('🜂', style: TextStyle(color: theme.accent, fontSize: 16)),
+                      child: Text('⚖', style: TextStyle(color: theme.accent, fontSize: 16)),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -43,7 +43,7 @@ class PaySchemaModal extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'IGNOSIS MEMBERSHIP & REVENUE',
+                        'IGNOSIS REVENUE SCHEMA',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
@@ -52,7 +52,7 @@ class PaySchemaModal extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'Universal Revenue & Tier Access Across iOS, Android & Web',
+                        'Transparent, Free Core Studio & Modular Esoteric Add-ons',
                         style: TextStyle(fontSize: 11, color: theme.inkMuted),
                       ),
                     ],
@@ -73,43 +73,140 @@ class PaySchemaModal extends StatelessWidget {
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   children: [
+                    // 1. FREE TIER - FULL FUNCTIONALITY
                     _buildTierCard(
-                      tier: SubscriptionTier.adept,
-                      price: '\$4.99 / month or \$39.99 / year',
-                      badge: 'MOST POPULAR',
+                      title: 'CORE STUDIO (FREE)',
+                      price: 'Free Forever (\$0.00)',
+                      badge: 'FULLY FUNCTIONAL',
                       benefits: [
-                        'Instant access to all 8 aesthetic skins (Tech-Occult, Cosmic, Alchemical, etc.)',
-                        'Unlimited high-resolution PDF print sheets with cut lines',
-                        'Vector SVG export for laser engraving & physical talismans',
-                        'Full access to the Chaos Magic Wiki & Philosophy Archives',
-                      ],
-                      isFeatured: true,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTierCard(
-                      tier: SubscriptionTier.magus,
-                      price: '\$12.99 / month',
-                      badge: 'FULL ON-CHAIN',
-                      benefits: [
-                        'All Adept features included',
-                        'Monthly bank of 372 \$IGNOSIS tokens deposited to your Solana address',
-                        'Direct in-app on-chain consecrations without manual gas hassle',
-                        'Permanent listing in the Cosmic Pyre Global Archival Registry',
+                        'All 5 Mathematical Engines: Spare Monogram, Planetary Kameas (Saturn to Moon), Rose Cross, Chladni Cymatics, and SHA-256 Cyber Chaos.',
+                        'Default Vellum & Ink light archival pen-and-ink aesthetic.',
+                        'Local gnosis breath charging and simulated digital combustion.',
+                        'High-resolution A4 / US-Letter PDF Print Sheets with cut-lines for physical parchment burns.',
+                        'Connect any external Solana wallet (Phantom, Solflare, etc.) to burn \$IGNOSIS acquired separately on decentralized exchanges at zero in-app surcharge.',
                       ],
                       isFeatured: false,
+                      actionLabel: 'CURRENTLY ACTIVE',
+                      onAction: null,
                     ),
+
                     const SizedBox(height: 16),
-                    _buildPackTile(
-                      title: '3-RITUAL CONSECRATION BUNDLE',
-                      subtitle: 'Micro-pack: 279 \$IGNOSIS + PDF sheets',
-                      price: '\$1.99',
+
+                    // 2. IGNITION STARTER PACK ($1.99)
+                    _buildTierCard(
+                      title: 'IGNITION STARTER PACK',
+                      price: '\$${RevenueSchemaConfig.ignitionStarterPackPriceUsd.toStringAsFixed(2)} One-Time',
+                      badge: 'RECOMMENDED FOR BEGINNERS',
+                      benefits: [
+                        'Instantly establishes & provisions an in-app Solana \$IGNOSIS wallet.',
+                        'Deposits ${RevenueSchemaConfig.starterPackTokensDeposited} \$IGNOSIS directly into your vault.',
+                        'Pre-funds exactly 3 full classical rites (based on standard default of ${RevenueSchemaConfig.defaultBurnAmount} \$IGNOSIS per burn).',
+                        'Skip manual DEX swapping or crypto bridging.',
+                      ],
+                      isFeatured: true,
+                      actionLabel: 'ESTABLISH WALLET & CLAIM 279 \$IGNOSIS',
+                      onAction: () {
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: theme.inkPrimary,
+                            content: const Text('Open Consecration modal to activate Ignition Starter Pack.'),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // 3. AESTHETIC GENRE SKINS ($0.99 each or $3.99 bundle)
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: theme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: theme.hairline),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'AESTHETIC GENRE SKINS',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.0,
+                                  color: theme.inkPrimary,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: theme.background,
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: theme.hairline),
+                                ),
+                                child: Text(
+                                  '\$${RevenueSchemaConfig.individualSkinPriceUsd.toStringAsFixed(2)} EACH',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.0,
+                                    color: theme.accent,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Selectable esoteric visual paradigms altering the entire studio environment, typography, drafting canvas motifs, and ember particles:',
+                            style: TextStyle(fontSize: 11, color: theme.inkSecondary, height: 1.4),
+                          ),
+                          const SizedBox(height: 10),
+                          const Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              _GenrePill(label: 'Tech-Occult'),
+                              _GenrePill(label: 'Dark Academia'),
+                              _GenrePill(label: 'Cosmic'),
+                              _GenrePill(label: 'Surrealist'),
+                              _GenrePill(label: 'Alchemical'),
+                              _GenrePill(label: 'Wiccan'),
+                              _GenrePill(label: 'Chaos'),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 38,
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: theme.inkPrimary,
+                                side: BorderSide(color: theme.hairline),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: Text(
+                                'UNLOCK ALL 7 SKINS BUNDLE — \$${RevenueSchemaConfig.allSkinsBundlePriceUsd.toStringAsFixed(2)}',
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
 
-            // Footer note on cross-platform sync
+            // Footer note
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               decoration: BoxDecoration(
@@ -118,11 +215,11 @@ class PaySchemaModal extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.sync, size: 14, color: theme.inkMuted),
+                  Icon(Icons.shield_outlined, size: 14, color: theme.inkMuted),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Purchases restore across iOS, Android, and Web automatically via your account or connected Solana wallet.',
+                      'No paywalls on sigil creation or personal crypto burns. Default ritual burn is 93 \$IGNOSIS and fully modifiable.',
                       style: TextStyle(fontSize: 10, color: theme.inkMuted, height: 1.3),
                     ),
                   ),
@@ -136,11 +233,13 @@ class PaySchemaModal extends StatelessWidget {
   }
 
   Widget _buildTierCard({
-    required SubscriptionTier tier,
+    required String title,
     required String price,
     required String badge,
     required List<String> benefits,
     required bool isFeatured,
+    required String actionLabel,
+    required VoidCallback? onAction,
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -159,7 +258,7 @@ class PaySchemaModal extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                tier.title.toUpperCase(),
+                title,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
@@ -219,9 +318,9 @@ class PaySchemaModal extends StatelessWidget {
                 elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              onPressed: () {},
+              onPressed: onAction,
               child: Text(
-                'ACTIVATE ${tier.title.toUpperCase()}',
+                actionLabel,
                 style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0),
               ),
             ),
@@ -230,43 +329,24 @@ class PaySchemaModal extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildPackTile({
-    required String title,
-    required String subtitle,
-    required String price,
-  }) {
+class _GenrePill extends StatelessWidget {
+  final String label;
+  const _GenrePill({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: theme.background,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.hairline),
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: theme.inkPrimary)),
-                Text(subtitle, style: TextStyle(fontSize: 10, color: theme.inkMuted)),
-              ],
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.surface,
-              foregroundColor: theme.inkPrimary,
-              elevation: 0,
-              side: BorderSide(color: theme.hairline),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-            ),
-            onPressed: () {},
-            child: Text(price, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-          ),
-        ],
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
       ),
     );
   }

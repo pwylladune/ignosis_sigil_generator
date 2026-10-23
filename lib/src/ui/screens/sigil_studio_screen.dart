@@ -164,6 +164,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
       context: context,
       builder: (context) => WalletConsecrationModal(
         rawIntent: _state.rawIntent,
+        theme: _skinTheme,
         onBurnSuccess: (txSig, amount) {
           _triggerLocalBurn();
           ScaffoldMessenger.of(context).showSnackBar(

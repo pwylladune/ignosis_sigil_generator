@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import '../../models/revenue_schema.dart';
 import '../../services/solana_wallet_service.dart';
-import '../theme/ignosis_theme.dart';
+import '../theme/sigil_skins.dart';
 
-/// Modal for connecting, funding, and inspecting the Solana $IGNOSIS bank
+/// Modal for connecting, inspecting, adjusting burn amount, and burning $IGNOSIS
 class WalletConsecrationModal extends StatefulWidget {
   final String rawIntent;
+  final SigilSkinTheme theme;
   final Function(String txSignature, double tokensBurned) onBurnSuccess;
 
   const WalletConsecrationModal({
     super.key,
     required this.rawIntent,
+    required this.theme,
     required this.onBurnSuccess,
   });
 
@@ -20,34 +23,60 @@ class WalletConsecrationModal extends StatefulWidget {
 class _WalletConsecrationModalState extends State<WalletConsecrationModal> {
   final _walletService = SolanaWalletService();
   final _addressController = TextEditingController(text: '7xKy...IgnosisPractitioner42');
+  late final TextEditingController _burnAmountController;
 
   bool _isTransacting = false;
   final double _solBalance = 3.42;
-  double _ignosisBalance = 777.0; // Practitioner token bank
+  double _ignosisBalance = 777.0; // Externally acquired or starter pack balance
+  double _burnAmount = RevenueSchemaConfig.defaultBurnAmount.toDouble();
+
+  @override
+  void initState() {
+    super.initState();
+    _burnAmountController = TextEditingController(text: RevenueSchemaConfig.defaultBurnAmount.toString());
+  }
 
   @override
   void dispose() {
     _addressController.dispose();
+    _burnAmountController.dispose();
     super.dispose();
   }
 
+  void _onAmountChanged(String val) {
+    final parsed = double.tryParse(val.trim());
+    if (parsed != null && parsed > 0) {
+      setState(() => _burnAmount = parsed);
+    }
+  }
+
   Future<void> _executeOnChainBurn() async {
+    if (_burnAmount > _ignosisBalance) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: widget.theme.burn,
+          content: Text('Insufficient \$IGNOSIS balance (${_ignosisBalance.toStringAsFixed(0)} available). Acquire more or purchase the \$1.99 starter pack.'),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isTransacting = true);
 
     try {
       final txSig = await _walletService.submitBurnConsecration(
         walletAddress: _addressController.text,
         rawIntent: widget.rawIntent,
-        amount: 93.0,
+        amount: _burnAmount,
       );
 
       setState(() {
-        _ignosisBalance = (_ignosisBalance - 93.0).clamp(0.0, double.infinity);
+        _ignosisBalance = (_ignosisBalance - _burnAmount).clamp(0.0, double.infinity);
         _isTransacting = false;
       });
 
       if (mounted) {
-        widget.onBurnSuccess(txSig, 93.0);
+        widget.onBurnSuccess(txSig, _burnAmount);
         Navigator.of(context).pop();
       }
     } catch (_) {
@@ -57,19 +86,34 @@ class _WalletConsecrationModalState extends State<WalletConsecrationModal> {
     }
   }
 
+  void _buyStarterPack() {
+    // Simulates purchasing the $1.99 Ignition Pack (deposits 279 $IGNOSIS)
+    setState(() {
+      _ignosisBalance += RevenueSchemaConfig.starterPackTokensDeposited;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: widget.theme.inkPrimary,
+        content: const Text('Ignition Pack Activated! Deposited 279 \$IGNOSIS into your wallet.'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = widget.theme;
+
     return Dialog(
-      backgroundColor: IgnosisTheme.surfaceElevated,
+      backgroundColor: theme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: IgnosisTheme.parchmentSubtle),
+        side: BorderSide(color: theme.hairline),
       ),
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480),
+        constraints: const BoxConstraints(maxWidth: 500),
         child: Padding(
-          padding: const EdgeInsets.all(28.0),
+          padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,14 +125,14 @@ class _WalletConsecrationModalState extends State<WalletConsecrationModal> {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: IgnosisTheme.bone,
-                      border: Border.all(color: IgnosisTheme.parchmentSubtle),
+                      color: theme.background,
+                      border: Border.all(color: theme.hairline),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.account_balance_wallet_outlined, size: 18, color: IgnosisTheme.sumiInk),
+                    child: Icon(Icons.account_balance_wallet_outlined, size: 18, color: theme.inkPrimary),
                   ),
                   const SizedBox(width: 12),
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -97,116 +141,195 @@ class _WalletConsecrationModalState extends State<WalletConsecrationModal> {
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.5,
-                          color: IgnosisTheme.sumiInk,
+                          color: theme.inkPrimary,
                         ),
                       ),
                       Text(
-                        'Decentralized Energetic Burn Bank',
-                        style: TextStyle(fontSize: 11, color: IgnosisTheme.pencilGraphite),
+                        'Connect Any Solana Wallet · Free to Burn Externally Acquired Tokens',
+                        style: TextStyle(fontSize: 10, color: theme.inkMuted),
                       ),
                     ],
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close, size: 18, color: IgnosisTheme.pencilGraphite),
+                    icon: Icon(Icons.close, size: 18, color: theme.inkMuted),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
               // Wallet State & Balances Board
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: IgnosisTheme.bone,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: IgnosisTheme.parchmentSubtle),
+                  color: theme.background,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: theme.hairline),
                 ),
                 child: Column(
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('CONNECTED WALLET', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: IgnosisTheme.pencilGraphite)),
+                        Text('ACTIVE SOLANA ADDRESS', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: theme.inkMuted)),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: const Color(0xFFDCFCE7),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: const Text('SOLANA DEVNET', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF15803D))),
+                          child: const Text('EXTERNAL WALLET LINKED', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Color(0xFF15803D))),
                         ),
                       ],
                     ),
                     const SizedBox(height: 6),
                     Text(
                       _addressController.text,
-                      style: const TextStyle(fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.w600, color: IgnosisTheme.sumiInk),
+                      style: TextStyle(fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.w600, color: theme.inkPrimary),
                     ),
-                    const Divider(height: 20, color: IgnosisTheme.parchmentSubtle),
+                    Divider(height: 18, color: theme.hairline),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _buildBalanceTile('SOL BALANCE', '${_solBalance.toStringAsFixed(2)} SOL', Icons.toll),
-                        Container(width: 1, height: 36, color: IgnosisTheme.parchmentSubtle),
-                        _buildBalanceTile(r'$IGNOSIS BANK', '${_ignosisBalance.toStringAsFixed(0)} \$IGNOSIS', Icons.local_fire_department, isAccent: true),
+                        Container(width: 1, height: 32, color: theme.hairline),
+                        _buildBalanceTile(r'$IGNOSIS BALANCE', '${_ignosisBalance.toStringAsFixed(0)} \$IGNOSIS', Icons.local_fire_department, isAccent: true),
                       ],
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Burn Transaction Requirement
-              const Text(
-                'CONSECRATION SACRIFICE REQUIREMENT',
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: IgnosisTheme.pencilGraphite),
-              ),
-              const SizedBox(height: 8),
+              // Starter Pack Promotion Tile
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: IgnosisTheme.paperWhite,
+                  color: theme.surfaceElevated,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: IgnosisTheme.parchmentSubtle),
+                  border: Border.all(color: theme.hairline),
                 ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Row(
                   children: [
-                    Text('Standard Rite Combustion:', style: TextStyle(fontSize: 12, color: IgnosisTheme.charcoal)),
-                    Text('93 \$IGNOSIS', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: IgnosisTheme.vermilion)),
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: theme.accent.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text('🜂', style: TextStyle(fontSize: 12, color: theme.accent)),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Need \$IGNOSIS? Get 279 Tokens', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: theme.inkPrimary)),
+                          Text('Set up wallet & deposit 279 \$IGNOSIS (3 full rites)', style: TextStyle(fontSize: 10, color: theme.inkMuted)),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.inkPrimary,
+                        foregroundColor: theme.surface,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                      onPressed: _buyStarterPack,
+                      child: const Text('\$1.99', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    ),
                   ],
                 ),
               ),
+
+              const SizedBox(height: 18),
+
+              // Modifiable Burn Quantity Control
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'CONSECRATION HEAT SACRIFICE',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: theme.inkMuted),
+                  ),
+                  Text(
+                    'Default: 93 \$IGNOSIS',
+                    style: TextStyle(fontSize: 10, color: theme.inkMuted),
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
-              const Text(
-                'Tokens are permanently transmitted to the Solana Incinerator address (1111...1111). '
-                'Proof of heat will be anchored on-chain while your intent is wiped from local memory.',
-                style: TextStyle(fontSize: 11, color: IgnosisTheme.pencilGraphite, height: 1.4),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _burnAmountController,
+                      keyboardType: TextInputType.number,
+                      onChanged: _onAmountChanged,
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: theme.inkPrimary),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: theme.background,
+                        suffixText: r'$IGNOSIS',
+                        suffixStyle: TextStyle(fontWeight: FontWeight.bold, color: theme.accent, fontSize: 12),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: theme.hairline)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: theme.hairline)),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: theme.inkPrimary)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Preset Quick Chips
+                  Wrap(
+                    spacing: 6,
+                    children: [33, 93, 279].map((amt) {
+                      final isSelected = _burnAmount == amt;
+                      return ChoiceChip(
+                        label: Text('$amt'),
+                        selected: isSelected,
+                        selectedColor: theme.surfaceElevated,
+                        backgroundColor: theme.background,
+                        labelStyle: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected ? theme.accent : theme.inkSecondary,
+                        ),
+                        side: BorderSide(color: isSelected ? theme.accent : theme.hairline),
+                        onSelected: (_) {
+                          _burnAmountController.text = amt.toString();
+                          _onAmountChanged(amt.toString());
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-              // Action Button
+              // Burn Action
               SizedBox(
                 width: double.infinity,
-                height: 46,
+                height: 44,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: IgnosisTheme.sumiInk,
-                    foregroundColor: Colors.white,
+                    backgroundColor: theme.inkPrimary,
+                    foregroundColor: theme.surface,
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   onPressed: _isTransacting ? null : _executeOnChainBurn,
                   icon: _isTransacting
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.whatshot, size: 18, color: IgnosisTheme.vermilion),
+                      ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: theme.surface))
+                      : Icon(Icons.whatshot, size: 18, color: theme.accent),
                   label: Text(
-                    _isTransacting ? 'TRANSMITTING SACRIFICE TO SOLANA...' : 'INCINERATE 93 \$IGNOSIS ON-CHAIN',
-                    style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.0, fontSize: 12),
+                    _isTransacting ? 'TRANSMITTING SACRIFICE TO SOLANA...' : 'INCINERATE ${_burnAmount.toInt()} \$IGNOSIS ON-CHAIN',
+                    style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.0, fontSize: 11),
                   ),
                 ),
               ),
@@ -218,24 +341,25 @@ class _WalletConsecrationModalState extends State<WalletConsecrationModal> {
   }
 
   Widget _buildBalanceTile(String title, String value, IconData icon, {bool isAccent = false}) {
+    final theme = widget.theme;
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 12, color: isAccent ? IgnosisTheme.vermilion : IgnosisTheme.pencilGraphite),
+              Icon(icon, size: 12, color: isAccent ? theme.accent : theme.inkMuted),
               const SizedBox(width: 4),
-              Text(title, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: IgnosisTheme.pencilGraphite)),
+              Text(title, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: theme.inkMuted)),
             ],
           ),
           const SizedBox(height: 2),
           Text(
             value,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: FontWeight.bold,
-              color: isAccent ? IgnosisTheme.vermilion : IgnosisTheme.sumiInk,
+              color: isAccent ? theme.accent : theme.inkPrimary,
             ),
           ),
         ],

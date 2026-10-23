@@ -1,26 +1,29 @@
-enum SubscriptionTier {
-  neophyte('neophyte', 'Neophyte (Free)', 'Core sigil generators, local combustion, pen & ink export'),
-  adept('adept', 'Adept Tier', 'All 8 esoteric skins, high-res PDF print sheets, unlimited ritual burns'),
-  magus('magus', 'Magus Tier', 'Full access + monthly \$IGNOSIS energetic allowance & live on-chain consecrations');
+/// Revenue Schema & In-App Purchase Catalog for IGNOSIS
+///
+/// Principles:
+/// 1. Free version is 100% fully functional: All math engines, local burns, PDF printing,
+///    AND full external wallet connection (Phantom, Solflare, etc.) to burn externally acquired $IGNOSIS.
+/// 2. Aesthetic Skins: $0.99 one-time unlocks individual premium skins (or $3.99 for all-skins master pack).
+/// 3. Ignition Starter Pack: $1.99 provisions/links a fresh Solana wallet and deposits 279 $IGNOSIS tokens.
+/// 4. Burn Quantities: Fully modifiable by the practitioner (defaults to 93 $IGNOSIS).
+class RevenueSchemaConfig {
+  // One-time microtransactions
+  static const double individualSkinPriceUsd = 0.99;
+  static const double allSkinsBundlePriceUsd = 3.99;
+  static const double ignitionStarterPackPriceUsd = 1.99; // Sets up wallet + deposits 279 $IGNOSIS
 
-  final String id;
-  final String title;
-  final String subtitle;
-  const SubscriptionTier(this.id, this.title, this.subtitle);
-}
+  // Product IDs (iOS App Store & Google Play In-App Purchases)
+  static const String skinTechOccultId = 'com.ignosis.skin.tech_occult';
+  static const String skinDarkAcademiaId = 'com.ignosis.skin.dark_academia';
+  static const String skinCosmicId = 'com.ignosis.skin.cosmic';
+  static const String skinSurrealistId = 'com.ignosis.skin.surrealist';
+  static const String skinAlchemicalId = 'com.ignosis.skin.alchemical';
+  static const String skinWiccanId = 'com.ignosis.skin.wiccan';
+  static const String skinChaosId = 'com.ignosis.skin.chaos';
+  static const String allSkinsBundleId = 'com.ignosis.skin.all_bundle';
+  static const String ignitionStarterPackId = 'com.ignosis.pack.ignition_279';
 
-class RevenueModelConfig {
-  // Mobile (In-App Purchases) & Web (Stripe / Solana Pay)
-  static const String adeptMonthlyIapId = 'com.ignosis.adept.monthly';
-  static const String adeptYearlyIapId = 'com.ignosis.adept.yearly';
-  static const String magusMonthlyIapId = 'com.ignosis.magus.monthly';
-
-  // Digital Micro-transaction Packs
-  static const String pack3BurnsIapId = 'com.ignosis.burns.pack3';
-  static const String pack9BurnsIapId = 'com.ignosis.burns.pack9';
-
-  static const double adeptMonthlyPriceUsd = 4.99;
-  static const double adeptYearlyPriceUsd = 39.99;
-  static const double magusMonthlyPriceUsd = 12.99;
-  static const double pack3BurnsPriceUsd = 1.99;
+  // Token amounts
+  static const int defaultBurnAmount = 93;
+  static const int starterPackTokensDeposited = 279;
 }
