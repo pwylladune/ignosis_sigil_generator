@@ -21,15 +21,13 @@ class ChladniEngine {
 
     final n = 2 + (sum % 5); // 2..6
     final m = 3 + ((sum ~/ 5) % 4); // 3..6
-    final a = 1.0;
+    const a = 1.0;
     final b = 0.8 + 0.4 * math.sin(animationPhase * 2 * math.pi);
 
     final centerX = size.width / 2;
     final centerY = size.height / 2;
     final radius = math.min(size.width, size.height) * 0.42;
 
-    // Contour trace using marching radial points
-    const int radialSteps = 120;
     const int angleSteps = 360;
 
     // Precompute resonant rings
