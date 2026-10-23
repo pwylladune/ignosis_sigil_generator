@@ -47,10 +47,10 @@ class _RitualBurnDialogState extends State<RitualBurnDialog>
         decoration: BoxDecoration(
           color: const Color(0xFF0F0F14),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.amber.shade700.withOpacity(0.5), width: 1.5),
+          border: Border.all(color: Colors.amber.shade700.withValues(alpha: 0.5), width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.deepOrange.withOpacity(0.2),
+              color: Colors.deepOrange.withValues(alpha: 0.2),
               blurRadius: 30,
               spreadRadius: 5,
             ),
@@ -95,8 +95,8 @@ class _RitualBurnDialogState extends State<RitualBurnDialog>
                           shape: BoxShape.circle,
                           gradient: RadialGradient(
                             colors: [
-                              Colors.deepOrangeAccent.withOpacity(0.8),
-                              Colors.amberAccent.withOpacity(0.2),
+                              Colors.deepOrangeAccent.withValues(alpha: 0.8),
+                              Colors.amberAccent.withValues(alpha: 0.2),
                               Colors.transparent,
                             ],
                           ),

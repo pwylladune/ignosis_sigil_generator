@@ -81,7 +81,7 @@ class SigilPainter extends CustomPainter {
 
     // 1. Ambient outer glow layer
     final glowPaint = Paint()
-      ..color = state.primaryColor.withOpacity(0.35)
+      ..color = state.primaryColor.withValues(alpha: 0.35)
       ..style = PaintingStyle.stroke
       ..strokeWidth = state.strokeWidth * 3.5
       ..strokeCap = StrokeCap.round
@@ -100,7 +100,7 @@ class SigilPainter extends CustomPainter {
 
     // 3. Incandescent white-hot center trace
     final centerTracePaint = Paint()
-      ..color = Colors.white.withOpacity(0.85)
+      ..color = Colors.white.withValues(alpha: 0.85)
       ..style = PaintingStyle.stroke
       ..strokeWidth = math.max(1.0, state.strokeWidth * 0.4)
       ..strokeCap = StrokeCap.round;

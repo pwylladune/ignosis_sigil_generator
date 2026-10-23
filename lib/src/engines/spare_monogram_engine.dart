@@ -122,7 +122,7 @@ class SpareMonogramEngine {
     for (int s = 0; s < symmetry; s++) {
       final rot = s * angleStep + (animationPhase * 0.2);
       final matrix = Matrix4.identity()
-        ..translate(centerX, centerY)
+        ..translateByDouble(centerX, centerY, 0.0, 1.0)
         ..rotateZ(rot);
 
       path.addPath(baseGlyph.transform(matrix.storage), Offset.zero);

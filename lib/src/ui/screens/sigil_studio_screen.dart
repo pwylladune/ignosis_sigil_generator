@@ -170,11 +170,11 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
                       prefixIcon: const Icon(Icons.fingerprint, color: Colors.amberAccent, size: 20),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+                        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+                        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -217,13 +217,13 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: _state.isIncinerated
-                            ? Colors.red.shade900.withOpacity(0.3)
-                            : Colors.white.withOpacity(0.08),
+                            ? Colors.red.shade900.withValues(alpha: 0.3)
+                            : Colors.white.withValues(alpha: 0.08),
                         width: 1.5,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: _state.primaryColor.withOpacity(0.15),
+                          color: _state.primaryColor.withValues(alpha: 0.15),
                           blurRadius: 40,
                           spreadRadius: 2,
                         ),
@@ -289,7 +289,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
                     child: ChoiceChip(
                       label: Text(sys.title),
                       selected: isSelected,
-                      selectedColor: Colors.amberAccent.withOpacity(0.2),
+                      selectedColor: Colors.amberAccent.withValues(alpha: 0.2),
                       backgroundColor: const Color(0xFF14141E),
                       labelStyle: TextStyle(
                         color: isSelected ? Colors.amberAccent : Colors.white60,

@@ -13,7 +13,7 @@ class SolanaIgnosisBridge {
   static const String ignosisMintAddress = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
 
   /// Fixed burn cost per ritual consecration (e.g. 93 $IGNOSIS = 93 * 10^9 atomic units)
-  static const BigInt consecrationBurnUnits = BigInt.from(93000000000);
+  static final BigInt consecrationBurnUnits = BigInt.from(93000000000);
 
   /// Hashes the raw intent into a one-way 32-byte cryptographic commitment
   /// Ensuring private statements of intent are NEVER published on the public ledger

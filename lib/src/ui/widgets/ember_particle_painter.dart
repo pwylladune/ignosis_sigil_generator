@@ -38,7 +38,7 @@ class EmberParticlePainter extends CustomPainter {
       final sparkAlpha = (1.0 - (1.0 - (currentY / size.height))).clamp(0.0, 1.0);
       final radius = 1.0 + (i % 3) * 1.2;
 
-      paint.color = emberColor.withOpacity(sparkAlpha * (1.0 - progress * 0.3));
+      paint.color = emberColor.withValues(alpha: sparkAlpha * (1.0 - progress * 0.3));
       canvas.drawCircle(Offset(driftX % size.width, currentY), radius, paint);
     }
   }

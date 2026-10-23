@@ -43,7 +43,7 @@ class UniversalExportService {
   /// Converts a Path into SVG string for vector export
   static String exportSvg(Path path, Size size, Color color, double strokeWidth) {
     // Generate basic clean SVG wrapper
-    final hexColor = '#${color.value.toRadixString(16).substring(2)}';
+    final hexColor = '#${color.toARGB32().toRadixString(16).substring(2)}';
     final buffer = StringBuffer();
     buffer.writeln('<?xml version="1.0" encoding="UTF-8"?>');
     buffer.writeln('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size.width} ${size.height}" width="${size.width}" height="${size.height}">');
