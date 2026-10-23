@@ -28,10 +28,12 @@ class UniversalExportService {
         name: filename,
       );
 
-      final result = await Share.shareXFiles(
-        [xFile],
-        text: 'Consecrated via IGNOSIS: Chaos Magic Sigil Studio',
-        subject: 'My Consecrated Sigil',
+      final result = await SharePlus.instance.share(
+        ShareParams(
+          files: [xFile],
+          text: 'Consecrated via IGNOSIS: Chaos Magic Sigil Studio',
+          subject: 'My Consecrated Sigil',
+        ),
       );
 
       return result.status == ShareResultStatus.success || result.status == ShareResultStatus.dismissed;
