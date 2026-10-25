@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
 import '../../motion/clock.dart';
+import '../../motion/reduce_motion.dart';
 import '../theme/sigil_skins.dart';
 import 'combustion.dart';
 import 'scene.dart';
@@ -79,7 +81,7 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    _reduceMotion = reduceMotionOf(context);
     _clock.reduceMotion = _reduceMotion;
   }
 
@@ -105,6 +107,16 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
         _show(widget.spec);
       }
     }
+  }
+
+  @override
+  void didChangeAccessibilityFeatures() {
+    // iOS Reduce Motion is not part of MediaQuery, so re-read it here.
+    if (!mounted) return;
+    setState(() {
+      _reduceMotion = reduceMotionOf(context);
+      _clock.reduceMotion = _reduceMotion;
+    });
   }
 
   @override
@@ -137,6 +149,13 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
   void _onBurnRequested() {
     if (widget.burn.generation == _burnGeneration) return;
     _burnGeneration = widget.burn.generation;
+    // A keystroke still waiting on the typing debounce must not fire mid-burn
+    // (it would replace the scene and the burn would never report). Show the
+    // latest spec now, so what burns is what the user sees.
+    if (_debounce?.isActive ?? false) {
+      _debounce!.cancel();
+      _show(widget.spec);
+    }
     final scene = _scene;
     if (scene == null || scene.geometry.isEmpty || !_hasLayout) {
       widget.onIncinerated();
@@ -244,47 +263,72 @@ class _SigilPlatePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (size.isEmpty) return;
-    final now = clock.now;
-    // Paint in the reference space, scaled and centred on the canvas.
-    const ref = SigilCanvas.referenceSize;
-    final scale = math.min(size.width, size.height) / ref.width;
-    canvas.save();
-    canvas.translate((size.width - ref.width * scale) / 2, (size.height - ref.height * scale) / 2);
-    canvas.scale(scale);
-    final style = SceneStyle.fromSkin(skin, breath: breath?.value, scale: scale);
-    final center = ref.center(Offset.zero);
-    final radius = ref.width * 0.44;
-
-    final c = combustion();
-    final s = scene();
-
-    // Drafting guides: three rings and quadrant ticks (outer ring only when
-    // the scene draws its own construction).
-    final guide = style.guidePaint();
-    canvas.drawCircle(center, radius, guide);
-    if (!(s?.ownsGuides ?? false)) {
-      canvas.drawCircle(center, radius * 0.70, guide);
-      canvas.drawCircle(center, radius * 0.35, guide);
-    }
-    final tick = style.guidePaint(width: 0.8);
-    for (var i = 0; i < 4; i++) {
-      final a = i * math.pi / 2;
-      final d = Offset(math.cos(a), math.sin(a));
-      canvas.drawLine(center + d * (radius - style.px(8)), center + d * (radius + style.px(8)), tick);
-    }
-
-    if (c != null) {
-      c.paint(canvas, ref, now, style);
-    } else if (s != null) {
-      s.paint(canvas, ref, now, style);
-    }
-
-    // Vermilion bind point.
-    canvas.drawCircle(center, style.px(2.5), Paint()..color = style.accent);
-    canvas.restore();
+    paintPlate(canvas, size, skin: skin, scene: scene(), combustion: combustion(), now: clock.now, breath: breath?.value);
   }
 
   @override
   bool shouldRepaint(covariant _SigilPlatePainter old) => old.version != version || old.skin != skin || old.breath != breath;
+}
+
+/// Paints the plate (paper, guides, the scene or its burn, the bind point) at
+/// clock time [now], scaled from the reference space to [size]. Used both on
+/// screen and for offscreen export, so the two always match.
+void paintPlate(
+  Canvas canvas,
+  Size size, {
+  required SigilSkinTheme skin,
+  required SigilScene? scene,
+  Combustion? combustion,
+  required double now,
+  double? breath,
+}) {
+  if (size.isEmpty) return;
+  const ref = SigilCanvas.referenceSize;
+  final scale = math.min(size.width, size.height) / ref.width;
+  canvas.save();
+  canvas.translate((size.width - ref.width * scale) / 2, (size.height - ref.height * scale) / 2);
+  canvas.scale(scale);
+  final style = SceneStyle.fromSkin(skin, breath: breath, scale: scale);
+  final center = ref.center(Offset.zero);
+  final radius = ref.width * 0.44;
+
+  // The paper itself, so captures and exports carry the skin's ground
+  // (light ink on a dark skin is otherwise invisible on white).
+  canvas.drawCircle(center, ref.width / 2, Paint()..color = style.paper);
+
+  // Drafting guides: three rings and quadrant ticks (outer ring only when the
+  // scene draws its own construction).
+  final guide = style.guidePaint();
+  canvas.drawCircle(center, radius, guide);
+  if (!(scene?.ownsGuides ?? false)) {
+    canvas.drawCircle(center, radius * 0.70, guide);
+    canvas.drawCircle(center, radius * 0.35, guide);
+  }
+  final tick = style.guidePaint(width: 0.8);
+  for (var i = 0; i < 4; i++) {
+    final a = i * math.pi / 2;
+    final d = Offset(math.cos(a), math.sin(a));
+    canvas.drawLine(center + d * (radius - style.px(8)), center + d * (radius + style.px(8)), tick);
+  }
+
+  if (combustion != null) {
+    combustion.paint(canvas, ref, now, style);
+  } else if (scene != null) {
+    scene.paint(canvas, ref, now, style);
+  }
+
+  // Vermilion bind point.
+  canvas.drawCircle(center, style.px(2.5), Paint()..color = style.accent);
+  canvas.restore();
+}
+
+/// Renders the settled seal for [spec] offscreen, independent of what the
+/// canvas is showing (no half-written strokes, no burn in progress).
+Future<ui.Image> renderSettledSeal(SigilSpec spec, SigilSkinTheme skin, {int pixels = 1536}) {
+  final scene = buildScene(spec, SigilCanvas.referenceSize, -1e6);
+  final recorder = ui.PictureRecorder();
+  final size = Size.square(pixels.toDouble());
+  final canvas = Canvas(recorder, Offset.zero & size);
+  paintPlate(canvas, size, skin: skin, scene: scene, now: 0);
+  return recorder.endRecording().toImage(pixels, pixels);
 }

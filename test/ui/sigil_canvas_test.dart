@@ -85,4 +85,36 @@ void main() {
       expect(tester.hasRunningAnimations, isFalse, reason: 'side $side');
     }
   });
+
+  testWidgets('a burn started while a keystroke is still debouncing completes', (tester) async {
+    final burn = SigilBurnController();
+    var done = 0;
+    await tester.pumpWidget(host(spec('FOCUS', SigilSystem.spare), burn, () => done++));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(host(spec('FOCUSED', SigilSystem.spare), burn, () => done++));
+    await tester.pump(const Duration(milliseconds: 100)); // debounce still pending
+    burn.ignite();
+    await tester.pumpAndSettle(const Duration(milliseconds: 100), EnginePhase.sendSemanticsUpdate, const Duration(seconds: 30));
+    expect(done, 1);
+  });
+
+  testWidgets('iOS Reduce Motion (accessibility feature, not MediaQuery) is honoured', (tester) async {
+    tester.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(reduceMotion: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    final burn = SigilBurnController();
+    await tester.pumpWidget(host(spec('FOCUS', SigilSystem.kamea), burn, () {}));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(tester.hasRunningAnimations, isFalse);
+  });
+
+  testWidgets('settled offscreen render paints the paper (dark skins export visibly)', (tester) async {
+    final skin = SigilSkinTheme.getSkin(SigilSkinId.chaos);
+    final image = await tester.runAsync(() => renderSettledSeal(spec('FOCUS', SigilSystem.spare), skin, pixels: 64));
+    final bytes = await tester.runAsync(() => image!.toByteData());
+    // Centre pixel is the bind point; a pixel near the rim is paper, not transparent.
+    const i = (32 * 64 + 4) * 4;
+    expect(bytes!.getUint8(i + 3), 255);
+    image!.dispose();
+  });
 }

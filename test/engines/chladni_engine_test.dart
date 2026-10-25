@@ -68,6 +68,12 @@ void main() {
     final first = ChladniScene(a, startTime: 0)..residualAt(5);
     final second = ChladniScene(b, startTime: 5, previous: first);
     expect(second.residualAt(0), greaterThan(0.1));
+    expect(second.residualAt(1), greaterThan(0.05)); // still flowing mid-morph
     expect(second.residualAt(6), lessThan(0.06));
+  });
+
+  test('a scene first seen already settled snaps its sand onto the nodal lines', () {
+    final sigil = ChladniEngine().build(IntentKernel.fromText('SILENCE'), const Size(500, 500));
+    expect(ChladniScene(sigil, startTime: 0).residualAt(1e6), lessThan(0.06));
   });
 }

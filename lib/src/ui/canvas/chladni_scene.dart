@@ -71,7 +71,7 @@ class ChladniScene extends SigilScene {
     // Already settled on the first look (reduced motion, or a scene shown
     // without replay): place the sand on the nodal lines directly instead of
     // simulating seconds of physics in one frame.
-    if (_simTime == 0 && _from == null && target >= _settleSim) {
+    if (_simTime == 0 && target >= _settleSim) {
       _snapToNodalLines();
       return;
     }
@@ -121,8 +121,8 @@ class ChladniScene extends SigilScene {
       final (a, b) = segs[(i * segs.length) ~/ particleCount];
       final u = rnd.nextDouble();
       // A grain's width of residual scatter, as the settled simulation leaves.
-      _xs[i] = (a.dx + (b.dx - a.dx) * u + 0.004 * rnd.nextGaussian()).clamp(-1.0, 1.0);
-      _ys[i] = (a.dy + (b.dy - a.dy) * u + 0.004 * rnd.nextGaussian()).clamp(-1.0, 1.0);
+      _xs[i] = (a.dx + (b.dx - a.dx) * u + 0.0015 * rnd.nextGaussian()).clamp(-1.0, 1.0);
+      _ys[i] = (a.dy + (b.dy - a.dy) * u + 0.0015 * rnd.nextGaussian()).clamp(-1.0, 1.0);
     }
   }
 

@@ -64,4 +64,15 @@ void main() {
     expect(f.samples, isEmpty);
     expect(f.at(Offset.zero), 0);
   });
+
+  test('a binding circle written last does not take the ignition', () {
+    final g = SigilGeometry(strokes: [
+      SigilStroke(Path()..moveTo(150, 200)..lineTo(250, 200)),
+      SigilStroke(Path()..addOval(Rect.fromCircle(center: const Offset(200, 200), radius: 150)), role: StrokeRole.binding),
+    ]);
+    final f = BurnField.compute(g, size);
+    // Ignites at the end of the glyph stroke, not on the circle.
+    expect(f.at(const Offset(249, 200)), lessThan(0.02));
+    expect(f.at(const Offset(350, 200)), greaterThan(0.02));
+  });
 }

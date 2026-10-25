@@ -63,9 +63,16 @@ class BurnField {
       }
     }
 
-    // Ignition: the end of the last stroke that has ink.
+    // Ignition: the end of the last written stroke of the glyph itself. A
+    // binding circle drawn after the glyph is skipped, so the flame starts at
+    // the terminal (reverse ductus), not on the frame.
     Offset ignition = size.center(Offset.zero);
-    for (final stroke in geometry.strokes.reversed) {
+    // Searched from the end: glyph strokes first, bindings only as fallback.
+    final ordered = [
+      ...geometry.strokes.where((s) => s.role == StrokeRole.binding),
+      ...geometry.strokes.where((s) => s.role != StrokeRole.binding),
+    ];
+    for (final stroke in ordered.reversed) {
       final end = stroke.length > 0 ? stroke.pointAt(1) : null;
       if (end != null) {
         ignition = end;
