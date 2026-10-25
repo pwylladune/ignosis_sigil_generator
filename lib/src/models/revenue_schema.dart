@@ -10,14 +10,14 @@ class RevenueSchemaConfig {
   // skin, 3.99 for the bundle) and always displayed from the store, localised.
 
   // Product IDs (App Store and Google Play non-consumables).
-  static const String skinTechOccultId = 'com.ignosis.skin.tech_occult';
-  static const String skinDarkAcademiaId = 'com.ignosis.skin.dark_academia';
-  static const String skinCosmicId = 'com.ignosis.skin.cosmic';
-  static const String skinSurrealistId = 'com.ignosis.skin.surrealist';
-  static const String skinAlchemicalId = 'com.ignosis.skin.alchemical';
-  static const String skinWiccanId = 'com.ignosis.skin.wiccan';
-  static const String skinChaosId = 'com.ignosis.skin.chaos';
-  static const String allSkinsBundleId = 'com.ignosis.skin.all_bundle';
+  static const String skinTechOccultId = 'net.ignosis.studio.skin.tech_occult';
+  static const String skinDarkAcademiaId = 'net.ignosis.studio.skin.dark_academia';
+  static const String skinCosmicId = 'net.ignosis.studio.skin.cosmic';
+  static const String skinSurrealistId = 'net.ignosis.studio.skin.surrealist';
+  static const String skinAlchemicalId = 'net.ignosis.studio.skin.alchemical';
+  static const String skinWiccanId = 'net.ignosis.studio.skin.wiccan';
+  static const String skinChaosId = 'net.ignosis.studio.skin.chaos';
+  static const String allSkinsBundleId = 'net.ignosis.studio.skin.all_bundle';
 
   /// Product that unlocks each premium skin, keyed by `SigilSkinId.key`.
   /// Skins not listed here are free.

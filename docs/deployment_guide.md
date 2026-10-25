@@ -110,19 +110,22 @@ The smart contract program lives in `contracts/programs/ignosis/src/lib.rs`.
 
 > **Partly current.** Skin products are real. The Ignition Starter Pack (IAP that dispenses a crypto token) is removed from v1.0: it is high-risk under App Store / Play policy (TASK.md §2.3).
 
-Configure these identical Product IDs in **App Store Connect** and **Google Play Console**:
+App ID on both stores: **`net.ignosis.studio`** (iOS bundle ID and Android `applicationId`; permanent once published).
+
+Configure these identical non-consumable Product IDs in **App Store Connect** and **Google Play Console** (prices are set there; the app only ever displays the store's localised price):
 
 | Product ID | Type | Price | Description |
 |---|---|---|---|
-| `com.ignosis.pack.ignition_279` | Consumable | $1.99 | Sets up Solana vault + deposits 279 `$IGNOSIS` |
-| `com.ignosis.skin.all_bundle` | Non-Consumable | $3.99 | Unlocks all 7 premium esoteric genre skins |
-| `com.ignosis.skin.tech_occult` | Non-Consumable | $0.99 | Tech-Occult visual skin |
-| `com.ignosis.skin.dark_academia` | Non-Consumable | $0.99 | Dark Academia visual skin |
-| `com.ignosis.skin.cosmic` | Non-Consumable | $0.99 | Cosmic visual skin |
-| `com.ignosis.skin.surrealist` | Non-Consumable | $0.99 | Surrealist visual skin |
-| `com.ignosis.skin.alchemical` | Non-Consumable | $0.99 | Alchemical visual skin |
-| `com.ignosis.skin.wiccan` | Non-Consumable | $0.99 | Wiccan visual skin |
-| `com.ignosis.skin.chaos` | Non-Consumable | $0.99 | Chaos visual skin |
+| `net.ignosis.studio.skin.all_bundle` | Non-Consumable | $3.99 | Unlocks all 7 premium skins |
+| `net.ignosis.studio.skin.tech_occult` | Non-Consumable | $0.99 | Tech-Occult skin |
+| `net.ignosis.studio.skin.dark_academia` | Non-Consumable | $0.99 | Dark Academia skin |
+| `net.ignosis.studio.skin.cosmic` | Non-Consumable | $0.99 | Cosmic skin |
+| `net.ignosis.studio.skin.surrealist` | Non-Consumable | $0.99 | Surrealist skin |
+| `net.ignosis.studio.skin.alchemical` | Non-Consumable | $0.99 | Alchemical skin |
+| `net.ignosis.studio.skin.wiccan` | Non-Consumable | $0.99 | Greenwood skin (product key kept as `wiccan`) |
+| `net.ignosis.studio.skin.chaos` | Non-Consumable | $0.99 | Chaos skin |
+
+The crypto starter pack (`com.ignosis.pack.ignition_279`) is discontinued and must not be created.
 
 ---
 
