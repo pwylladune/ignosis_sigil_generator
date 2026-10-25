@@ -57,7 +57,7 @@ It ends with a phased, prioritized task list.
 - Chaos-magic interview wiki and the "Why reduce?" exegesis.
 
 ### 1.3 Platform / release hygiene gaps
-- **Bundle IDs disagree:** iOS `com.ignosis.ignosisSigilGenerator`, Android `com.ignosis.ignosis_sigil_generator`, backend `com.ignosis.sigilgenerator`. Pick one; IAP products are bound to it.
+- **Bundle IDs disagree:** iOS `com.ignosis.ignosisSigilGenerator`, Android `com.ignosis.ignosis_sigil_generator`, backend `com.ignosis.sigilgenerator`. Pick one; IAP products are bound to it. _(Resolved 2026-10-25: `net.ignosis.studio`.)_
 - **Android:** `main/AndroidManifest.xml` has no `INTERNET` permission, so release builds can't reach RPC or the backend. Release builds are signed with debug keys, and `applicationId` still has a `TODO`.
 - `theme.fontFamily: '-apple-system'` is not a real family on Android or web. `google_fonts` is declared but unused.
 - Unused deps: `flutter_riverpod`, `google_fonts`, `vector_math`, `path_provider`.
@@ -199,7 +199,7 @@ Replace the generic ember spray and diagonal shader sweep with a burn that *know
 - [x] Delete or quarantine the fake paths: `SecureKeyStorageService.createInAppWallet`, `submitBurnConsecration`, the IAP simulated fallbacks, and the hard-coded balances. _(8a954ac1 client, d0d1ecf2 backend, 2371d50a portal; reviewed by you before commit.)_
 - [x] **Gate skins by entitlement.** Read `IapService.unlockedSkins` in `SkinSelectorModal`, wire the purchase buttons in `PaySchemaModal`, and add **Restore Purchases**. Persist the selected skin. _(d259bda9)_
 - [x] Move IAP init off the critical path in `main()`. _(d259bda9)_
-- [ ] Unify the bundle ID / applicationId. Configure Android release signing. Add the `INTERNET` permission if any network call remains. _**Needs your decision on the ID.** Release signing needs your keystore. INTERNET is not needed once the review batch lands: the app makes no network calls of its own (`http` removed), and Play Billing declares its own permissions._
+- [ ] Unify the bundle ID / applicationId. Configure Android release signing. Add the `INTERNET` permission if any network call remains. _ID done: `net.ignosis.studio` on both platforms, display name IGNOSIS (8321ef6a). Product IDs are `net.ignosis.studio.skin.*` (e23ebebb). Still open: release signing needs your keystore. INTERNET is not needed once the review batch lands: the app makes no network calls of its own (`http` removed), and Play Billing declares its own permissions._
 - [x] Register `assets/shaders/` under `flutter: shaders:`, or remove the shader until §3.3 lands. _(registered; rewritten as the level-set burn, a865c25c)_
 - [x] Fix the Spare rotation discontinuity, or remove idle rotation (moot once §3 lands). _(no idle rotation; single clock, b55dd3a0)_
 - [ ] Privacy policy, ToS, age rating, App Store / Play listing copy. Mark energetic and "Joules" language as symbolic.
@@ -349,7 +349,7 @@ Six reviewers took part: esoteric-researcher, research, ellie, code-reviewer, se
   - Breath holds cost no frames.
   - Typed burn heap, lazy path metrics, reused buffers, font-change cache refresh.
 - **Android (f68f3881):** `allowBackup=false`.
-- **Payments, backend and portal batch (uncommitted, awaiting review):**
+- **Payments, backend and portal batch (reviewed, committed as c7cfc322, 534d5906, 46622209, ea6c18bc):**
   - Skin preview before purchase with an explicit Unlock button; inline store notices; price spinner; "remaining skins".
   - The pay dialog becomes "Skins & support", with no hard-coded prices.
   - `IapService.resetForTest`, plus positive restore and preview tests.
@@ -363,6 +363,6 @@ Six reviewers took part: esoteric-researcher, research, ellie, code-reviewer, se
 - Tracing every letter of a full sentence (Golden Dawn practice was for names) makes busy Kamea and Rose sigils. Consider a "trace reduced kernel" option.
 
 ### 6.4 Still open (beyond the checkboxes)
-- Bundle ID decision (iOS `com.ignosis.ignosisSigilGenerator`, Android `com.ignosis.ignosis_sigil_generator`, backend `com.ignosis.sigilgenerator`).
+- ~~Bundle ID decision~~ Done: `net.ignosis.studio` (8321ef6a).
 - Skin entitlements are cached client-side in `SharedPreferences`. That is acceptable for cosmetic non-consumables, but it can be edited on a rooted device.
 - Not started: variant nonce (re-roll), hiding the kernel after charging, φ-ratio fixation rings, cross-system path morph, SVG / animated SVG / vector PDF export (`exportSvg` is still a stub), store listing, privacy policy, ToS.
