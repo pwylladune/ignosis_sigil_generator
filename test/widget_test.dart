@@ -2,6 +2,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ignosis_sigil_generator/main.dart';
+import 'package:ignosis_sigil_generator/src/models/revenue_schema.dart';
+import 'package:ignosis_sigil_generator/src/services/iap_service.dart';
 import 'package:ignosis_sigil_generator/src/ui/theme/sigil_skins.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -21,6 +23,33 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     expect(find.text('VELLUM & INK'), findsOneWidget);
     expect(find.text('CHAOS'), findsNothing);
+  });
+
+  testWidgets('an entitled saved skin is restored on launch', (tester) async {
+    IapService.instance.resetForTest();
+    SharedPreferences.setMockInitialValues({
+      'ignosis_selected_skin': 'chaos',
+      'ignosis_unlocked_skins': [RevenueSchemaConfig.skinChaosId],
+    });
+    // Real async: the store probe and preferences are platform calls.
+    await tester.runAsync(() => IapService.instance.initialize().timeout(const Duration(seconds: 5)));
+    await tester.pumpWidget(const IgnosisApp());
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.text('CHAOS'), findsOneWidget);
+  });
+
+  testWidgets('tapping a locked skin previews it and buys nothing', (tester) async {
+    IapService.instance.resetForTest();
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(const IgnosisApp());
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.byIcon(Icons.palette_outlined));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cosmic'));
+    await tester.pump();
+    // An explicit unlock button appears; the skin is not applied or bought.
+    expect(find.textContaining('UNLOCK COSMIC'), findsOneWidget);
+    expect(IapService.instance.isSkinUnlocked('cosmic'), isFalse);
   });
 
   testWidgets('the intent never enters the keyboard dictionary', (tester) async {

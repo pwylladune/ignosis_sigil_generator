@@ -49,15 +49,31 @@ class IapService extends ChangeNotifier {
   bool _isAvailable = false;
   Map<String, ProductDetails> _products = {};
   final Set<String> _unlocked = {};
-  String? _lastError;
+  String? _notice;
+  bool _noticeIsError = false;
   bool _restoring = false;
+  bool _loadingProducts = false;
 
   bool get isAvailable => _isAvailable;
   bool get isRestoring => _restoring;
   Set<String> get unlockedProducts => Set.unmodifiable(_unlocked);
 
   /// Last purchase error message, cleared when a purchase starts or succeeds.
-  String? get lastError => _lastError;
+  String? get lastError => _noticeIsError ? _notice : null;
+
+  /// Message for the purchase dialogs (error or progress), shown inline so it
+  /// is never hidden behind a dialog barrier.
+  String? get notice => _notice;
+  bool get noticeIsError => _noticeIsError;
+
+  void setNotice(String? message, {bool error = false}) {
+    _notice = message;
+    _noticeIsError = error && message != null;
+    notifyListeners();
+  }
+
+  /// True while product details are being fetched from the store.
+  bool get isLoadingProducts => _loadingProducts;
 
   /// Localised store product, if the store returned it.
   ProductDetails? product(String id) => _products[id];
@@ -106,6 +122,8 @@ class IapService extends ChangeNotifier {
   Future<void> _loadProducts() async {
     final iap = _iap;
     if (iap == null) return;
+    _loadingProducts = true;
+    notifyListeners();
     try {
       final response = await iap.queryProductDetails(RevenueSchemaConfig.allProductIds);
       if (response.error != null) {
@@ -120,6 +138,7 @@ class IapService extends ChangeNotifier {
     } catch (e) {
       debugPrint('[IAP] Product query threw: $e');
     }
+    _loadingProducts = false;
     notifyListeners();
   }
 
@@ -142,7 +161,8 @@ class IapService extends ChangeNotifier {
     if (!_products.containsKey(productId)) await _loadProducts();
     final product = _products[productId];
     if (product == null) return PurchaseStart.productUnavailable;
-    _lastError = null;
+    _notice = null;
+    _noticeIsError = false;
     notifyListeners();
     try {
       final ok = await iap.buyNonConsumable(purchaseParam: PurchaseParam(productDetails: product));
@@ -159,7 +179,8 @@ class IapService extends ChangeNotifier {
     final iap = _iap;
     if (!_isAvailable || iap == null) return PurchaseStart.storeUnavailable;
     _restoring = true;
-    _lastError = null;
+    _notice = null;
+    _noticeIsError = false;
     notifyListeners();
     try {
       await iap.restorePurchases();
@@ -194,7 +215,8 @@ class IapService extends ChangeNotifier {
       final paid = _isPaid(p);
       if (paid && RevenueSchemaConfig.allProductIds.contains(p.productID)) {
         changed |= _unlocked.add(p.productID);
-        _lastError = null;
+        _notice = null;
+    _noticeIsError = false;
       }
       // Never acknowledge a pending Android purchase: Play rejects it, and it
       // is redelivered once payment clears.
@@ -214,9 +236,25 @@ class IapService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _fail(String message) {
-    _lastError = message;
-    notifyListeners();
+  void _fail(String message) => setNotice(message, error: true);
+
+  /// Restores a fresh, uninitialised state between tests (the service is a
+  /// singleton).
+  @visibleForTesting
+  void resetForTest() {
+    _subscription?.cancel();
+    _subscription = null;
+    _lifecycle?.dispose();
+    _lifecycle = null;
+    _iap = null;
+    _init = null;
+    _isAvailable = false;
+    _products = {};
+    _unlocked.clear();
+    _notice = null;
+    _noticeIsError = false;
+    _restoring = false;
+    _loadingProducts = false;
   }
 
   static String _describe(Object e) {

@@ -32,7 +32,10 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
   bool _isBurning = false;
 
   SigilSkinId _currentSkinId = SigilSkinId.vellumDraft;
-  SigilSkinTheme get _skinTheme => SigilSkinTheme.getSkin(_currentSkinId);
+  /// A locked skin shown behind the skin dialog while the user considers it.
+  SigilSkinId? _previewSkinId;
+
+  SigilSkinTheme get _skinTheme => SigilSkinTheme.getSkin(_previewSkinId ?? _currentSkinId);
 
   SigilState _state = const SigilState();
   IntentKernel _kernel = IntentKernel.fromText('I COMMAND RADIANT CLARITY');
@@ -194,8 +197,12 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
         currentSkinId: _currentSkinId,
         theme: _skinTheme,
         onSkinSelected: _selectSkin,
+        onPreview: (skin) => setState(() => _previewSkinId = skin),
       )),
-    );
+    ).whenComplete(() {
+      // The preview ends with the dialog unless the skin was bought.
+      if (mounted) setState(() => _previewSkinId = null);
+    });
   }
 
   void _showPayModal() {

@@ -28,6 +28,11 @@ GooglePlayPurchaseDetails playPurchase(String productId, PurchaseStateWrapper st
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  // The service is a singleton: start every test from a clean state.
+  setUp(() {
+    IapService.instance.resetForTest();
+    SharedPreferences.setMockInitialValues({});
+  });
 
   test('entitlements come only from recorded purchases; no simulated unlocks', () async {
     SharedPreferences.setMockInitialValues({
@@ -50,6 +55,7 @@ void main() {
 
   test('Android restore of a purchase still pending payment does not unlock', () async {
     final iap = IapService.instance;
+    expect(iap.isSkinUnlocked('wiccan'), isFalse, reason: 'clean state per test');
     await iap.initialize();
     final pending = playPurchase(RevenueSchemaConfig.skinWiccanId, PurchaseStateWrapper.pending, PurchaseStatus.restored);
     await iap.handlePurchaseUpdates([pending]);
