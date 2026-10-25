@@ -31,7 +31,6 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
   final BreathSignal _breath = BreathSignal();
   bool _isBurning = false;
 
-
   SigilSkinId _currentSkinId = SigilSkinId.vellumDraft;
   SigilSkinTheme get _skinTheme => SigilSkinTheme.getSkin(_currentSkinId);
 
@@ -436,7 +435,8 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                           onTap: _showExegesisModal,
                           child: Text(
                             'Why reduce? 🛈',
-                            style: TextStyle(fontSize: 11, color: theme.inkTertiary, decoration: TextDecoration.underline),
+                            style:
+                                TextStyle(fontSize: 11, color: theme.inkTertiary, decoration: TextDecoration.underline),
                           ),
                         ),
                       ],
@@ -456,9 +456,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                       color: theme.canvasBackground,
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: _state.isIncinerated
-                            ? theme.accent.withValues(alpha: 0.3)
-                            : theme.hairline,
+                        color: _state.isIncinerated ? theme.accent.withValues(alpha: 0.3) : theme.hairline,
                         width: 1.5,
                       ),
                       boxShadow: [
@@ -537,36 +535,36 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                   // Current Skin Label Tag (shrinks with an ellipsis on narrow phones)
                   Flexible(
                     child: InkWell(
-                    onTap: _showSkinModal,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: theme.background,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: theme.hairline),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.palette_outlined, size: 14, color: theme.accent),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                            _currentSkinId.label.toUpperCase(),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.8,
-                              color: theme.inkPrimary,
+                      onTap: _showSkinModal,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: theme.background,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: theme.hairline),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.palette_outlined, size: 14, color: theme.accent),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                _currentSkinId.label.toUpperCase(),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.8,
+                                  color: theme.inkPrimary,
+                                ),
+                              ),
                             ),
-                          ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
                   ),
                   const SizedBox(width: 12),
                   // The Burn Button (Refined minimal vermilion seal)
@@ -631,7 +629,8 @@ class _IncineratedPlateState extends State<_IncineratedPlate> {
           children: [
             Text(
               'SEAL DISSOLVED INTO THE VOID',
-              style: TextStyle(color: theme.inkSecondary, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2.0),
+              style:
+                  TextStyle(color: theme.inkSecondary, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2.0),
             ),
             const SizedBox(height: 6),
             Text(
