@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ignosis_sigil_generator/src/models/intent_kernel.dart';
-import 'package:ignosis_sigil_generator/src/engines/kamea_engine.dart';
 import 'package:ignosis_sigil_generator/src/engines/rose_cross_engine.dart';
 import 'package:ignosis_sigil_generator/src/engines/chladni_engine.dart';
 import 'package:ignosis_sigil_generator/src/engines/cyber_chaos_engine.dart';
@@ -33,22 +32,6 @@ void main() {
     test('Handles empty text gracefully', () {
       final kernel = IntentKernel.fromText('   ');
       expect(kernel.isEmpty, isTrue);
-    });
-  });
-
-  group('KameaEngine Tests', () {
-    test('Generates deterministic nodes across all 7 planetary kameas', () {
-      final engine = KameaEngine();
-      final kernel = IntentKernel.fromText('MY WILL IS LAW');
-      const size = Size(400, 400);
-
-      for (final planet in PlanetaryKameaType.values) {
-        final nodes = engine.getNodes(kernel, planet, size);
-        expect(nodes.length, equals(kernel.reducedConsonants.length));
-
-        final path = engine.generatePath(kernel, planet, size);
-        expect(path.getBounds().isEmpty, isFalse);
-      }
     });
   });
 

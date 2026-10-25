@@ -7,10 +7,12 @@ import '../../engines/spare_monogram_engine.dart';
 import '../../geometry/geometry_cache.dart';
 import '../../geometry/sigil_geometry.dart';
 import '../../models/sigil_state.dart';
+import 'kamea_scene.dart';
 import 'scene.dart';
 import 'sigil_spec.dart';
 
 final _cache = GeometryCache<SigilGeometry>();
+final _kameaCache = GeometryCache<KameaSigil>();
 
 /// Builds the scene for [spec] at canvas [size], starting at [startTime].
 ///
@@ -18,6 +20,13 @@ final _cache = GeometryCache<SigilGeometry>();
 /// Chladni sand flowing from the old mode into the new one).
 SigilScene buildScene(SigilSpec spec, Size size, double startTime, {SigilScene? previous}) {
   final key = (spec, size);
+  switch (spec.system) {
+    case SigilSystem.kamea:
+      final sigil = _kameaCache.putIfAbsent(key, () => KameaEngine().build(spec.kernel, spec.kameaType, size));
+      return KameaScene(sigil, startTime: startTime);
+    default:
+      break;
+  }
   final geometry = _cache.putIfAbsent(key, () => _legacyGeometry(spec, size));
   return DuctusScene(geometry, startTime: startTime);
 }
@@ -29,7 +38,7 @@ SigilGeometry _legacyGeometry(SigilSpec spec, Size size) {
     case SigilSystem.spare:
       path = SpareMonogramEngine().generatePath(k, size, symmetry: spec.symmetryFolds);
     case SigilSystem.kamea:
-      path = KameaEngine().generatePath(k, spec.kameaType, size);
+      throw StateError('Kamea has its own scene');
     case SigilSystem.roseCross:
       path = RoseCrossEngine().generatePath(k, size);
     case SigilSystem.chladni:

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import '../../config/feature_flags.dart';
+import '../../engines/kamea_engine.dart';
 import '../../models/intent_kernel.dart';
 import '../../models/sigil_state.dart';
 import '../../services/sigil_print_service.dart';
@@ -173,6 +174,61 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
         onBurnComplete: _triggerLocalBurn,
         breath: _breath,
         onBurnOnChainRequested: kEnableChain ? _showWalletBankModal : null,
+      ),
+    );
+  }
+
+  /// Options for the selected system (planet for Kamea; folds and group for
+  /// the symmetric systems). Empty for systems without options.
+  Widget _buildSystemOptions(SigilSkinTheme theme) {
+    final chips = <Widget>[];
+    Widget chip(String label, bool selected, VoidCallback onTap, {String? tooltip}) => Padding(
+          padding: const EdgeInsets.only(right: 6),
+          child: Tooltip(
+            message: tooltip ?? '',
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(5),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(5),
+                  border: Border.all(color: selected ? theme.accent : theme.hairline),
+                ),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    letterSpacing: 0.6,
+                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                    color: selected ? theme.inkPrimary : theme.inkMuted,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+    switch (_state.system) {
+      case SigilSystem.kamea:
+        for (final t in PlanetaryKameaType.values) {
+          chips.add(chip(
+            t.label.split(' ').first,
+            _state.kameaType == t,
+            () => setState(() => _state = _state.copyWith(kameaType: t)),
+            tooltip: '${t.label}: ${t.aspect}',
+          ));
+        }
+      default:
+        return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(children: chips),
       ),
     );
   }
@@ -395,6 +451,8 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                 }).toList(),
               ),
             ),
+
+            _buildSystemOptions(theme),
 
             const SizedBox(height: 10),
 

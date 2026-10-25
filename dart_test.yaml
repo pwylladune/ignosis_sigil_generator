@@ -1,0 +1,6 @@
+tags:
+  golden:
+    # Golden PNGs are platform-sensitive; they are generated and checked on macOS.
+  visual:
+    # Writes preview frames to $VISUAL_OUT. Run explicitly: flutter test --tags visual
+    skip: "Run with: VISUAL_OUT=<dir> flutter test --tags visual --run-skipped"

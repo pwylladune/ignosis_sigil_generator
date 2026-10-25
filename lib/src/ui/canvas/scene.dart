@@ -7,6 +7,7 @@ import '../theme/sigil_skins.dart';
 class SceneStyle {
   final Color ink;
   final Color guide;
+  final Color muted;
   final Color accent;
   final Color burn;
   final Color paper;
@@ -19,6 +20,7 @@ class SceneStyle {
   const SceneStyle({
     required this.ink,
     required this.guide,
+    required this.muted,
     required this.accent,
     required this.burn,
     required this.paper,
@@ -30,6 +32,7 @@ class SceneStyle {
   factory SceneStyle.fromSkin(SigilSkinTheme skin, {double? breath}) => SceneStyle(
         ink: skin.inkPrimary,
         guide: skin.guideColor,
+        muted: skin.inkMuted,
         accent: skin.accent,
         burn: skin.burn,
         paper: skin.canvasBackground,

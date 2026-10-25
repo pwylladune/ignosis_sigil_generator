@@ -1,5 +1,7 @@
 import 'dart:math' as math;
-import 'package:flutter/material.dart';
+import 'dart:ui';
+import '../geometry/sigil_geometry.dart';
+import '../models/hebrew_letters.dart';
 import '../models/intent_kernel.dart';
 
 /// The 7 Classical Planetary Magic Squares.
@@ -18,13 +20,65 @@ enum PlanetaryKameaType {
   const PlanetaryKameaType(this.size, this.label, this.aspect);
 }
 
-/// Generates authentic Planetary Kamea Sigil paths with classical sigil grammar:
-/// - Circle starting node (O)
-/// - Continuous vector or smooth Bézier spline interconnects
-/// - Teardrop or loop reflex on repeats
-/// - Orthogonal crossbar termination (T / ⟂)
+/// Geometry of a centred, square kamea grid on the canvas.
+class KameaLayout {
+  KameaLayout(this.n, Size size)
+      : square = Rect.fromCenter(
+          center: size.center(Offset.zero),
+          // Fits inside the plate's guide circle (radius 0.44·w): side ≤ 0.62·w.
+          width: math.min(size.width, size.height) * 0.6,
+          height: math.min(size.width, size.height) * 0.6,
+        );
+
+  final int n;
+  final Rect square;
+
+  double get cell => square.width / n;
+
+  Offset cellCenter(int index) =>
+      Offset(square.left + (index % n + 0.5) * cell, square.top + (index ~/ n + 0.5) * cell);
+
+  Rect cellRect(int index) => Rect.fromLTWH(square.left + (index % n) * cell, square.top + (index ~/ n) * cell, cell, cell);
+}
+
+/// A traced kamea sigil: which numbers and cells the letters visit, and the
+/// written geometry (start circle, traversal, terminal crossbar).
+class KameaSigil {
+  KameaSigil({
+    required this.type,
+    required this.layout,
+    required this.letters,
+    required this.numbers,
+    required this.cells,
+    required this.geometry,
+    required this.visitFractions,
+  });
+
+  final PlanetaryKameaType type;
+  final KameaLayout layout;
+  final String letters;
+
+  /// Aiq Bekar–reduced gematria value of each letter, in `[1, n²]`.
+  final List<int> numbers;
+
+  /// Row-major cell index of each number in the square.
+  final List<int> cells;
+  final SigilGeometry geometry;
+
+  /// Fraction of the traversal stroke's length at which each node is reached.
+  final List<double> visitFractions;
+
+  /// Index of the traversal stroke in [geometry], or null for a single node.
+  int? get traversalStroke => geometry.strokes.length >= 2 ? 1 : null;
+}
+
+/// Planetary Kamea sigils with classical grammar:
+/// - each letter → Hebrew gematria (see [latinToHebrew]) → Aiq Bekar reduction
+///   into the square's range `[1, n²]`, so no two letters collide by accident
+///   of the alphabet index;
+/// - a hollow circle where the pen starts, straight traversal from cell to
+///   cell, a loop on an immediate repeat, and a perpendicular crossbar at the end.
 class KameaEngine {
-  /// Precomputed standard magic squares (1-indexed numbers in row-major order)
   static final Map<PlanetaryKameaType, List<int>> _squares = {
     // Saturn 3x3 (Sum = 15)
     PlanetaryKameaType.saturn: [
@@ -91,96 +145,80 @@ class KameaEngine {
     ],
   };
 
-  /// Computes the sequence of 2D node coordinates on the canvas for a given intent.
-  List<Offset> getNodes(IntentKernel kernel, PlanetaryKameaType type, Size size) {
-    if (kernel.isEmpty) return [];
+  /// The square for [type] as row-major numbers.
+  static List<int> square(PlanetaryKameaType type) => _squares[type]!;
 
-    final n = type.size;
-    final square = _squares[type]!;
-    final totalCells = n * n;
+  /// Magic constant `M = n(n² + 1) / 2`: every row, column and diagonal sums to it.
+  static int magicConstant(int n) => n * (n * n + 1) ~/ 2;
 
-    final cellWidth = size.width / n;
-    final cellHeight = size.height / n;
-
-    final offsets = <Offset>[];
-
-    for (final code in kernel.consonantCodes) {
-      // Map character (A-Z) to grid number 1..totalCells
-      // Agrippa reduction or mod-mapping
-      final rawVal = code - 65; // 0..25
-      final gridTarget = (rawVal % totalCells) + 1; // 1..totalCells
-
-      final index = square.indexOf(gridTarget);
-      if (index != -1) {
-        final row = index ~/ n;
-        final col = index % n;
-        final x = col * cellWidth + (cellWidth / 2);
-        final y = row * cellHeight + (cellHeight / 2);
-        offsets.add(Offset(x, y));
-      }
-    }
-
-    return offsets;
+  /// Gematria value of a Latin letter reduced into `[1, n²]`.
+  static int letterNumber(String letter, int n) {
+    final hebrew = latinToHebrew[letter] ?? HebrewLetter.aleph;
+    return aiqBekarReduce(hebrew.value, n * n);
   }
 
-  /// Generates the complete Sigil Path including classical start circle,
-  /// connection lines, and termination crossbar.
-  Path generatePath(IntentKernel kernel, PlanetaryKameaType type, Size size) {
-    final path = Path();
-    final nodes = getNodes(kernel, type, size);
+  KameaSigil build(IntentKernel kernel, PlanetaryKameaType type, Size size) {
+    final n = type.size;
+    final layout = KameaLayout(n, size);
+    final sq = square(type);
+    final letters = kernel.reducedConsonants;
+    final numbers = [for (var i = 0; i < letters.length; i++) letterNumber(letters[i], n)];
+    final cells = [for (final v in numbers) sq.indexOf(v)];
+    final nodes = [for (final c in cells) layout.cellCenter(c)];
 
-    if (nodes.isEmpty) return path;
+    final strokes = <SigilStroke>[];
+    final cumulative = <double>[];
+    if (nodes.isNotEmpty) {
+      final cell = layout.cell;
+      final startRadius = (cell * 0.14).clamp(3.0, 7.0);
+      strokes.add(SigilStroke(Path()..addOval(Rect.fromCircle(center: nodes.first, radius: startRadius)), role: StrokeRole.startMark));
 
-    // Start node: Traditional hollow circle (radius = 6.0)
-    final start = nodes.first;
-    const startRadius = 6.0;
-    path.addOval(Rect.fromCircle(center: start, radius: startRadius));
+      if (nodes.length > 1) {
+        final trace = Path()..moveTo(nodes.first.dx, nodes.first.dy);
+        final loopR = (cell * 0.2).clamp(4.0, 10.0);
+        cumulative.add(0);
+        for (var i = 1; i < nodes.length; i++) {
+          final p = nodes[i];
+          cumulative.add(cumulative.last + (p - nodes[i - 1]).distance);
+          if (cells[i] == cells[i - 1]) {
+            // Immediate repeat: a small loop above the node, back to the node.
+            trace.arcTo(Rect.fromCircle(center: p.translate(0, -loopR), radius: loopR), math.pi / 2, 2 * math.pi - 0.01, false);
+            trace.lineTo(p.dx, p.dy);
+            cumulative.last += 2 * math.pi * loopR;
+          } else {
+            trace.lineTo(p.dx, p.dy);
+          }
+        }
+        strokes.add(SigilStroke(trace));
 
-    if (nodes.length == 1) return path;
-
-    // Connect nodes
-    path.moveTo(start.dx, start.dy);
-    for (int i = 1; i < nodes.length; i++) {
-      final prev = nodes[i - 1];
-      final curr = nodes[i];
-
-      if (prev == curr) {
-        // Repeat node: create a small loop / rebound arc
-        path.relativeArcToPoint(
-          const Offset(10, -10),
-          radius: const Radius.circular(8),
-        );
-        path.relativeArcToPoint(
-          const Offset(-10, 10),
-          radius: const Radius.circular(8),
-        );
-      } else {
-        // Interpolate smooth curve between nodes
-        final mid = Offset((prev.dx + curr.dx) / 2, (prev.dy + curr.dy) / 2);
-        path.quadraticBezierTo(prev.dx, prev.dy, mid.dx, mid.dy);
-        path.lineTo(curr.dx, curr.dy);
+        // Terminal crossbar perpendicular to the last distinct segment.
+        var j = nodes.length - 2;
+        while (j > 0 && cells[j] == cells.last) {
+          j--;
+        }
+        final d = nodes.last - nodes[j];
+        if (d.distance > 0) {
+          final half = (cell * 0.24).clamp(5.0, 12.0);
+          final normal = Offset(-d.dy, d.dx) / d.distance * half;
+          strokes.add(SigilStroke(
+            Path()
+              ..moveTo(nodes.last.dx - normal.dx, nodes.last.dy - normal.dy)
+              ..lineTo(nodes.last.dx + normal.dx, nodes.last.dy + normal.dy),
+            role: StrokeRole.terminal,
+          ));
+        }
       }
     }
 
-    // Final node: Traditional perpendicular crossbar (T / ⟂)
-    if (nodes.length >= 2) {
-      final last = nodes.last;
-      final secondLast = nodes[nodes.length - 2];
-      final dx = last.dx - secondLast.dx;
-      final dy = last.dy - secondLast.dy;
-      final len = math.sqrt(dx * dx + dy * dy);
-
-      if (len > 0) {
-        // Normal vector (-dy, dx)
-        const barHalf = 10.0;
-        final nx = (-dy / len) * barHalf;
-        final ny = (dx / len) * barHalf;
-
-        path.moveTo(last.dx - nx, last.dy - ny);
-        path.lineTo(last.dx + nx, last.dy + ny);
-      }
-    }
-
-    return path;
+    final total = cumulative.isEmpty ? 0.0 : cumulative.last;
+    return KameaSigil(
+      visitFractions: [for (final c in cumulative) total > 0 ? c / total : 0.0],
+      type: type,
+      layout: layout,
+      letters: letters,
+      numbers: numbers,
+      cells: cells,
+      geometry: SigilGeometry(strokes: strokes, nodes: nodes),
+    );
   }
 }
