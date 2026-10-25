@@ -66,7 +66,8 @@ class IntentKernel {
 
     final codes = reduced.codeUnits;
 
-    // Agrippan / Gematria reduction: A=1, B=2 ... I=9, J=1 ... Z=8
+    // Pythagorean reduction: A=1, B=2 ... I=9, J=1 ... Z=8 (not Agrippan values).
+    // Hebrew gematria with Aiq Bekar lives in hebrew_letters.dart (Kamea, Rose).
     final gematria = codes.map((c) {
       final alphaIndex = c - 65; // 0 for A, 25 for Z
       return (alphaIndex % 9) + 1; // 1 to 9
