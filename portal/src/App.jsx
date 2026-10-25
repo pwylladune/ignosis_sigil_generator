@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Flame, ArrowRightLeft, ShieldAlert, Sparkles, ExternalLink, Activity, RefreshCw } from 'lucide-react';
 
-const IGNOSIS_MINT = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
+// No $IGNOSIS mint exists. The previous value (7xKXtg…sgAsU) is Samoyed Coin
+// (SAMO), a third-party token; linking it sent users to buy someone else's coin.
+const IGNOSIS_MINT = '';
 const BACKEND_URL = 'http://localhost:3001';
 
 export default function App() {
@@ -236,10 +238,10 @@ export default function App() {
             <div style={{ marginTop: '24px', padding: '16px', backgroundColor: '#0b0b12', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.4)', letterSpacing: '1px' }}>OFFICIAL $IGNOSIS SPL MINT ADDRESS</div>
-                <div style={{ fontSize: '12px', fontFamily: 'monospace', color: '#ffd700', marginTop: '2px' }}>{IGNOSIS_MINT}</div>
+                <div style={{ fontSize: '12px', fontFamily: 'monospace', color: '#ffd700', marginTop: '2px' }}>{IGNOSIS_MINT || 'Not minted: no official $IGNOSIS token exists'}</div>
               </div>
               <a
-                href={`https://solscan.io/token/${IGNOSIS_MINT}`}
+                href={IGNOSIS_MINT ? `https://solscan.io/token/${IGNOSIS_MINT}` : undefined}
                 target="_blank"
                 rel="noreferrer"
                 style={{ color: '#00e5ff', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
@@ -309,7 +311,7 @@ export default function App() {
               </div>
 
               <a
-                href={`https://jup.ag/swap/SOL-${IGNOSIS_MINT}`}
+                href={IGNOSIS_MINT ? `https://jup.ag/swap/SOL-${IGNOSIS_MINT}` : undefined}
                 target="_blank"
                 rel="noreferrer"
                 style={{
