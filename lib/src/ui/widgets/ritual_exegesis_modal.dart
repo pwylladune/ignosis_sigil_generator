@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../config/feature_flags.dart';
 import '../theme/ignosis_theme.dart';
 
 /// Modal dialog explaining the complete philosophy, science, and step-by-step
-/// ritual mechanics of Chaos Sigil crafting and the $IGNOSIS energetic combustion.
+/// ritual mechanics of Chaos Sigil crafting and combustion.
 class RitualExegesisModal extends StatelessWidget {
   const RitualExegesisModal({super.key});
 
@@ -105,12 +106,14 @@ class RitualExegesisModal extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
 
-                    _buildSectionHeader(r'5. THE $IGNOSIS ON-CHAIN COMBUSTION'),
-                    _buildParagraph(
-                      r'In classical alchemy, physical fire releases chemical bonds as thermal heat. In the digital universe, '
-                      r'$IGNOSIS bridges on-chain decentralization with energetic sacrifice. Burning $IGNOSIS sends real tokens to the Solana incinerator, '
-                      r'forever carving the mathematical proof-of-heat onto the distributed ledger while totally purging your intent text from local memory.',
-                    ),
+                    if (kEnableChain) ...[
+                      _buildSectionHeader(r'5. THE $IGNOSIS ON-CHAIN COMBUSTION'),
+                      _buildParagraph(
+                        r'In classical alchemy, physical fire releases chemical bonds as thermal heat. In the digital universe, '
+                        r'$IGNOSIS bridges on-chain decentralization with energetic sacrifice. Burning $IGNOSIS sends real tokens to the Solana incinerator, '
+                        r'forever carving the mathematical proof-of-heat onto the distributed ledger while totally purging your intent text from local memory.',
+                      ),
+                    ],
                   ],
                 ),
               ),

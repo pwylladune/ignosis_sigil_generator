@@ -1,3 +1,5 @@
+import '../config/feature_flags.dart';
+
 class WikiQuestion {
   final String category;
   final String title;
@@ -63,12 +65,20 @@ class ChaosMagicWikiData {
       prompt: 'Why is forgetting the desire considered the hardest yet most critical part of chaos magic? What happens when a practitioner continues to lust for results after casting?',
       hint: 'Explore the concept of "lust of result" as psychic drag that traps the intent in conscious ego.',
     ),
-    WikiQuestion(
-      category: 'IV. Destruction, Combustion & Forgetting',
-      title: 'Physical Fire vs. Digital & Cryptographic Combustion',
-      prompt: r'When physical paper burns, chemical energy is released as heat. In the digital world, how do you perceive the energetic exchange of burning cryptocurrency on a distributed ledger ($IGNOSIS proof-of-heat)? Is economic sacrifice a valid surrogate for physical ash?',
-      hint: 'Consider how irreversible transactions mirror the finality of flame: both destroy substrate to release will.',
-    ),
+    if (kEnableChain)
+      WikiQuestion(
+        category: 'IV. Destruction, Combustion & Forgetting',
+        title: 'Physical Fire vs. Digital & Cryptographic Combustion',
+        prompt: r'When physical paper burns, chemical energy is released as heat. In the digital world, how do you perceive the energetic exchange of burning cryptocurrency on a distributed ledger ($IGNOSIS proof-of-heat)? Is economic sacrifice a valid surrogate for physical ash?',
+        hint: 'Consider how irreversible transactions mirror the finality of flame: both destroy substrate to release will.',
+      )
+    else
+      WikiQuestion(
+        category: 'IV. Destruction, Combustion & Forgetting',
+        title: 'Physical Fire vs. Digital Combustion',
+        prompt: 'When physical paper burns, the substrate is irreversibly consumed. When a sigil is dissolved on a screen, is the act of release any less real? What makes a destruction ritual effective: the medium, or the finality of the gesture?',
+        hint: 'Consider how irreversibility, rather than material, mirrors the finality of flame: both destroy substrate to release will.',
+      ),
 
     // 5. Personal Philosophy & Ethics
     WikiQuestion(

@@ -4,12 +4,13 @@ import '../theme/ignosis_theme.dart';
 /// Clean Pen & Ink architectural modal for Gnosis breathing and combustion
 class PenInkWitualBurnDialog extends StatefulWidget {
   final VoidCallback onBurnComplete;
-  final VoidCallback onBurnOnChainRequested;
+  /// Null hides the on-chain option (see kEnableChain).
+  final VoidCallback? onBurnOnChainRequested;
 
   const PenInkWitualBurnDialog({
     super.key,
     required this.onBurnComplete,
-    required this.onBurnOnChainRequested,
+    this.onBurnOnChainRequested,
   });
 
   @override
@@ -172,27 +173,29 @@ class _PenInkWitualBurnDialogState extends State<PenInkWitualBurnDialog>
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: IgnosisTheme.sumiInk,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          widget.onBurnOnChainRequested();
-                        },
-                        icon: const Icon(Icons.bolt, size: 16, color: IgnosisTheme.vermilion),
-                        label: const Text(
-                          'BURN WITH \$IGNOSIS',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 1.0),
+                    if (widget.onBurnOnChainRequested != null) ...[
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: IgnosisTheme.sumiInk,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            widget.onBurnOnChainRequested!();
+                          },
+                          icon: const Icon(Icons.bolt, size: 16, color: IgnosisTheme.vermilion),
+                          label: const Text(
+                            'BURN WITH \$IGNOSIS',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 1.0),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ] else ...[

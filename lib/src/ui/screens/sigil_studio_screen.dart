@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import '../../config/feature_flags.dart';
 import '../../models/intent_kernel.dart';
 import '../../models/sigil_state.dart';
 import '../../services/sigil_print_service.dart';
@@ -184,7 +185,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
       barrierDismissible: false,
       builder: (context) => PenInkWitualBurnDialog(
         onBurnComplete: _triggerLocalBurn,
-        onBurnOnChainRequested: _showWalletBankModal,
+        onBurnOnChainRequested: kEnableChain ? _showWalletBankModal : null,
       ),
     );
   }
@@ -243,11 +244,12 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
             tooltip: 'Pay Schema & Memberships',
             onPressed: _showPayModal,
           ),
-          IconButton(
-            icon: Icon(Icons.account_balance_wallet_outlined, color: theme.inkSecondary, size: 20),
-            tooltip: '\$IGNOSIS Solana Bank & Burn',
-            onPressed: _showWalletBankModal,
-          ),
+          if (kEnableChain)
+            IconButton(
+              icon: Icon(Icons.account_balance_wallet_outlined, color: theme.inkSecondary, size: 20),
+              tooltip: '\$IGNOSIS Solana Bank & Burn',
+              onPressed: _showWalletBankModal,
+            ),
           IconButton(
             icon: Icon(Icons.ios_share, color: theme.inkSecondary, size: 20),
             tooltip: 'Export Vector / Seal',
