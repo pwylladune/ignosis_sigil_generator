@@ -1,15 +1,27 @@
 import 'package:flutter/material.dart';
 import '../../models/revenue_schema.dart';
+import '../../services/iap_service.dart';
 import '../theme/sigil_skins.dart';
+import 'purchase_feedback.dart';
 
 /// Modal dialog detailing the IGNOSIS transparent pay schema & micro-transactions
 class PaySchemaModal extends StatelessWidget {
   final SigilSkinTheme theme;
+  final IapService? iap;
 
-  const PaySchemaModal({super.key, required this.theme});
+  const PaySchemaModal({super.key, required this.theme, this.iap});
 
   @override
   Widget build(BuildContext context) {
+    final store = iap ?? IapService.instance;
+    return ListenableBuilder(listenable: store, builder: (context, _) => _buildDialog(context, store));
+  }
+
+  Widget _buildDialog(BuildContext context, IapService store) {
+    final bundleOwned = RevenueSchemaConfig.skinProductIds.keys.every(store.isSkinUnlocked);
+    // Only ever show prices the store returned (localised); never hard-coded USD.
+    final bundlePrice = store.product(RevenueSchemaConfig.allSkinsBundleId)?.price;
+    final skinPrice = store.product(RevenueSchemaConfig.skinChaosId)?.price;
     return Dialog(
       backgroundColor: theme.surface,
       shape: RoundedRectangleBorder(
@@ -81,39 +93,12 @@ class PaySchemaModal extends StatelessWidget {
                       benefits: [
                         'All 5 Mathematical Engines: Spare Monogram, Planetary Kameas (Saturn to Moon), Rose Cross, Chladni Cymatics, and SHA-256 Cyber Chaos.',
                         'Default Vellum & Ink light archival pen-and-ink aesthetic.',
-                        'Local gnosis breath charging and simulated digital combustion.',
+                        'Gnosis breath charging and ritual combustion of the seal.',
                         'High-resolution A4 / US-Letter PDF Print Sheets with cut-lines for physical parchment burns.',
-                        'Connect any external Solana wallet (Phantom, Solflare, etc.) to burn \$IGNOSIS acquired separately on decentralized exchanges at zero in-app surcharge.',
                       ],
                       isFeatured: false,
                       actionLabel: 'CURRENTLY ACTIVE',
                       onAction: null,
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // 2. IGNITION STARTER PACK ($1.99)
-                    _buildTierCard(
-                      title: 'IGNITION STARTER PACK',
-                      price: '\$${RevenueSchemaConfig.ignitionStarterPackPriceUsd.toStringAsFixed(2)} One-Time',
-                      badge: 'RECOMMENDED FOR BEGINNERS',
-                      benefits: [
-                        'Instantly establishes & provisions an in-app Solana \$IGNOSIS wallet.',
-                        'Deposits ${RevenueSchemaConfig.starterPackTokensDeposited} \$IGNOSIS directly into your vault.',
-                        'Pre-funds exactly 3 full classical rites (based on standard default of ${RevenueSchemaConfig.defaultBurnAmount} \$IGNOSIS per burn).',
-                        'Skip manual DEX swapping or crypto bridging.',
-                      ],
-                      isFeatured: true,
-                      actionLabel: 'ESTABLISH WALLET & CLAIM 279 \$IGNOSIS',
-                      onAction: () {
-                        Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            backgroundColor: theme.inkPrimary,
-                            content: const Text('Open Consecration modal to activate Ignition Starter Pack.'),
-                          ),
-                        );
-                      },
                     ),
 
                     const SizedBox(height: 16),
@@ -149,7 +134,7 @@ class PaySchemaModal extends StatelessWidget {
                                   border: Border.all(color: theme.hairline),
                                 ),
                                 child: Text(
-                                  '\$${RevenueSchemaConfig.individualSkinPriceUsd.toStringAsFixed(2)} EACH',
+                                  skinPrice == null ? 'ONE-TIME UNLOCK' : '$skinPrice EACH',
                                   style: TextStyle(
                                     fontSize: 9,
                                     fontWeight: FontWeight.bold,
@@ -189,12 +174,38 @@ class PaySchemaModal extends StatelessWidget {
                                 side: BorderSide(color: theme.hairline),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              },
+                              onPressed: bundleOwned
+                                  ? null
+                                  : () async {
+                                      final result = await store.buy(RevenueSchemaConfig.allSkinsBundleId);
+                                      if (context.mounted) showPurchaseFeedback(context, theme, result);
+                                    },
                               child: Text(
-                                'UNLOCK ALL 7 SKINS BUNDLE — \$${RevenueSchemaConfig.allSkinsBundlePriceUsd.toStringAsFixed(2)}',
+                                bundleOwned
+                                    ? 'ALL 7 SKINS UNLOCKED'
+                                    : bundlePrice == null
+                                        ? 'UNLOCK ALL 7 SKINS BUNDLE'
+                                        : 'UNLOCK ALL 7 SKINS BUNDLE — $bundlePrice',
                                 style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                              ),
+                            ),
+                          ),
+                          if (store.lastError != null) ...[
+                            const SizedBox(height: 10),
+                            PurchaseErrorNote(message: store.lastError!, theme: theme),
+                          ],
+                          const SizedBox(height: 8),
+                          Center(
+                            child: TextButton(
+                              onPressed: store.isRestoring
+                                  ? null
+                                  : () async {
+                                      final result = await store.restorePurchases();
+                                      if (context.mounted) showPurchaseFeedback(context, theme, result, restoring: true);
+                                    },
+                              child: Text(
+                                store.isRestoring ? 'RESTORING…' : 'RESTORE PURCHASES',
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: theme.inkSecondary),
                               ),
                             ),
                           ),
@@ -219,7 +230,7 @@ class PaySchemaModal extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'No paywalls on sigil creation or personal crypto burns. Default ritual burn is 93 \$IGNOSIS and fully modifiable.',
+                      'No paywalls on sigil creation, charging, burning or printing. Skins are cosmetic, one-time unlocks.',
                       style: TextStyle(fontSize: 10, color: theme.inkMuted, height: 1.3),
                     ),
                   ),

@@ -1,21 +1,45 @@
 import 'package:flutter/material.dart';
+import '../../models/revenue_schema.dart';
+import '../../services/iap_service.dart';
 import '../theme/sigil_skins.dart';
+import 'purchase_feedback.dart';
 
-/// Clean minimalist modal to select from the 8 aesthetic magic genre skins
+/// Clean minimalist modal to select from the 8 aesthetic magic genre skins.
+///
+/// Premium skins are gated on [IapService] entitlements: a locked skin shows
+/// its store price and starts a purchase instead of being applied.
 class SkinSelectorModal extends StatelessWidget {
   final SigilSkinId currentSkinId;
   final ValueChanged<SigilSkinId> onSkinSelected;
   final SigilSkinTheme theme;
+  final IapService? iap;
 
   const SkinSelectorModal({
     super.key,
     required this.currentSkinId,
     required this.onSkinSelected,
     required this.theme,
+    this.iap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final store = iap ?? IapService.instance;
+    return ListenableBuilder(
+      listenable: store,
+      builder: (context, _) => _buildDialog(context, store),
+    );
+  }
+
+  Future<void> _buy(BuildContext context, IapService store, String productId) async {
+    final result = await store.buy(productId);
+    if (context.mounted) showPurchaseFeedback(context, theme, result);
+  }
+
+  /// The store's localised price; never a hard-coded one.
+  String _price(IapService store, String productId) => store.product(productId)?.price ?? 'UNLOCK';
+
+  Widget _buildDialog(BuildContext context, IapService store) {
     return Dialog(
       backgroundColor: theme.surface,
       shape: RoundedRectangleBorder(
@@ -46,7 +70,8 @@ class SkinSelectorModal extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Column(
+                  Expanded(
+                    child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -64,7 +89,7 @@ class SkinSelectorModal extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const Spacer(),
+                  ),
                   IconButton(
                     icon: Icon(Icons.close, size: 18, color: theme.inkMuted),
                     onPressed: () => Navigator.of(context).pop(),
@@ -84,9 +109,15 @@ class SkinSelectorModal extends StatelessWidget {
                     final skinId = SigilSkinId.values[index];
                     final skin = SigilSkinTheme.getSkin(skinId);
                     final isSelected = skinId == currentSkinId;
+                    final unlocked = store.isSkinUnlocked(skinId.key);
+                    final productId = RevenueSchemaConfig.skinProductIds[skinId.key];
 
                     return InkWell(
                       onTap: () {
+                        if (!unlocked && productId != null) {
+                          _buy(context, store, productId);
+                          return;
+                        }
                         onSkinSelected(skinId);
                         Navigator.of(context).pop();
                       },
@@ -161,13 +192,55 @@ class SkinSelectorModal extends StatelessWidget {
                               ),
                             ),
                             if (isSelected)
-                              Icon(Icons.check_circle, size: 18, color: theme.accent),
+                              Icon(Icons.check_circle, size: 18, color: theme.accent)
+                            else if (!unlocked && productId != null)
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.lock_outline, size: 14, color: theme.inkMuted),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _price(store, productId),
+                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.inkSecondary),
+                                  ),
+                                ],
+                              ),
                           ],
                         ),
                       ),
                     );
                   },
                 ),
+              ),
+              if (store.lastError != null) ...[
+                const SizedBox(height: 10),
+                PurchaseErrorNote(message: store.lastError!, theme: theme),
+              ],
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  TextButton(
+                    onPressed: store.isRestoring
+                        ? null
+                        : () async {
+                            final result = await store.restorePurchases();
+                            if (context.mounted) showPurchaseFeedback(context, theme, result, restoring: true);
+                          },
+                    child: Text(
+                      store.isRestoring ? 'RESTORING…' : 'RESTORE PURCHASES',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: theme.inkSecondary),
+                    ),
+                  ),
+                  const Spacer(),
+                  if (RevenueSchemaConfig.skinProductIds.keys.any((k) => !store.isSkinUnlocked(k)))
+                    TextButton(
+                      onPressed: () => _buy(context, store, RevenueSchemaConfig.allSkinsBundleId),
+                      child: Text(
+                        'ALL 7 · ${_price(store, RevenueSchemaConfig.allSkinsBundleId)}',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: theme.accent),
+                      ),
+                    ),
+                ],
               ),
             ],
           ),

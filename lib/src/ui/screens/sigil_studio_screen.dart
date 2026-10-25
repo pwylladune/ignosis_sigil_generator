@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../engines/kamea_engine.dart';
 import '../../models/intent_kernel.dart';
 import '../../models/sigil_state.dart';
+import '../../services/iap_service.dart';
 import '../../services/sigil_print_service.dart';
 import '../../services/universal_export_service.dart';
 import '../../motion/breath.dart';
@@ -40,10 +42,48 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
   void initState() {
     super.initState();
     _textController = TextEditingController(text: _state.rawIntent);
+    IapService.instance.addListener(_enforceSkinEntitlement);
+    _restoreSkin();
+  }
+
+  static const _skinPrefsKey = 'ignosis_selected_skin';
+
+  /// Restores the last selected skin, if it is (still) unlocked.
+  Future<void> _restoreSkin() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_skinPrefsKey);
+    final match = SigilSkinId.values.where((s) => s.key == saved);
+    if (!mounted || match.isEmpty) return;
+    _savedSkin = match.first;
+    _enforceSkinEntitlement();
+  }
+
+  SigilSkinId? _savedSkin;
+
+  /// Applies the saved skin once entitled, and falls back to the free skin if
+  /// the current one is not (for example a saved skin whose unlock is not on
+  /// this device yet; refunds are not revoked locally, see IapService).
+  void _enforceSkinEntitlement() {
+    if (!mounted) return;
+    final iap = IapService.instance;
+    var next = _currentSkinId;
+    final saved = _savedSkin;
+    if (saved != null && iap.isSkinUnlocked(saved.key)) next = saved;
+    if (!iap.isSkinUnlocked(next.key)) next = SigilSkinId.vellumDraft;
+    if (next != _currentSkinId) setState(() => _currentSkinId = next);
+  }
+
+  Future<void> _selectSkin(SigilSkinId skin) async {
+    if (!IapService.instance.isSkinUnlocked(skin.key)) return;
+    setState(() => _currentSkinId = skin);
+    _savedSkin = skin;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_skinPrefsKey, skin.key);
   }
 
   @override
   void dispose() {
+    IapService.instance.removeListener(_enforceSkinEntitlement);
     _textController.dispose();
     _burn.dispose();
     _breath.dispose();
@@ -121,11 +161,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
       builder: (context) => SkinSelectorModal(
         currentSkinId: _currentSkinId,
         theme: _skinTheme,
-        onSkinSelected: (newSkin) {
-          setState(() {
-            _currentSkinId = newSkin;
-          });
-        },
+        onSkinSelected: _selectSkin,
       ),
     );
   }
@@ -463,9 +499,11 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                 border: Border(top: BorderSide(color: theme.hairline)),
               ),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Current Skin Label Tag
-                  InkWell(
+                  // Current Skin Label Tag (shrinks with an ellipsis on narrow phones)
+                  Flexible(
+                    child: InkWell(
                     onTap: _showSkinModal,
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -475,11 +513,15 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                         border: Border.all(color: theme.hairline),
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.palette_outlined, size: 14, color: theme.accent),
                           const SizedBox(width: 6),
-                          Text(
+                          Flexible(
+                            child: Text(
                             _currentSkinId.label.toUpperCase(),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
@@ -487,11 +529,13 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                               color: theme.inkPrimary,
                             ),
                           ),
+                          ),
                         ],
                       ),
                     ),
                   ),
-                  const Spacer(),
+                  ),
+                  const SizedBox(width: 12),
                   // The Burn Button (Refined minimal vermilion seal)
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(

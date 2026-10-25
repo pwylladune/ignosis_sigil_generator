@@ -1,11 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'src/services/iap_service.dart';
 import 'src/ui/screens/sigil_studio_screen.dart';
 import 'src/ui/theme/ignosis_theme.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await IapService.instance.initialize();
+  // Connect to the store in the background: a slow StoreKit / Play response
+  // must never hold the first frame. Entitlements update when it completes.
+  unawaited(IapService.instance.initialize());
   runApp(const IgnosisApp());
 }
 

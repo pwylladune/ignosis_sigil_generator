@@ -1,18 +1,15 @@
-/// Revenue Schema & In-App Purchase Catalog for IGNOSIS
+/// Revenue schema and in-app purchase catalogue for IGNOSIS v1.0.
 ///
-/// Principles:
-/// 1. Free version is 100% fully functional: All math engines, local burns, PDF printing,
-///    AND full external wallet connection (Phantom, Solflare, etc.) to burn externally acquired $IGNOSIS.
-/// 2. Aesthetic Skins: $0.99 one-time unlocks individual premium skins (or $3.99 for all-skins master pack).
-/// 3. Ignition Starter Pack: $1.99 provisions/links a fresh Solana wallet and deposits 279 $IGNOSIS tokens.
-/// 4. Burn Quantities: Fully modifiable by the practitioner (defaults to 93 $IGNOSIS).
+/// 1. The core studio is free and fully functional: all engines, the burn,
+///    PNG share and the printable PDF burn sheet.
+/// 2. Seven premium skins are one-time, non-consumable unlocks, sold
+///    individually or as a bundle. The default Vellum & Ink skin is free.
+/// 3. There are no cryptocurrency products (see kEnableChain and TASK.md §2).
 class RevenueSchemaConfig {
-  // One-time microtransactions
-  static const double individualSkinPriceUsd = 0.99;
-  static const double allSkinsBundlePriceUsd = 3.99;
-  static const double ignitionStarterPackPriceUsd = 1.99; // Sets up wallet + deposits 279 $IGNOSIS
+  // Prices are configured in App Store Connect / Play Console (USD 0.99 per
+  // skin, 3.99 for the bundle) and always displayed from the store, localised.
 
-  // Product IDs (iOS App Store & Google Play In-App Purchases)
+  // Product IDs (App Store and Google Play non-consumables).
   static const String skinTechOccultId = 'com.ignosis.skin.tech_occult';
   static const String skinDarkAcademiaId = 'com.ignosis.skin.dark_academia';
   static const String skinCosmicId = 'com.ignosis.skin.cosmic';
@@ -21,9 +18,18 @@ class RevenueSchemaConfig {
   static const String skinWiccanId = 'com.ignosis.skin.wiccan';
   static const String skinChaosId = 'com.ignosis.skin.chaos';
   static const String allSkinsBundleId = 'com.ignosis.skin.all_bundle';
-  static const String ignitionStarterPackId = 'com.ignosis.pack.ignition_279';
 
-  // Token amounts
-  static const int defaultBurnAmount = 93;
-  static const int starterPackTokensDeposited = 279;
+  /// Product that unlocks each premium skin, keyed by `SigilSkinId.key`.
+  /// Skins not listed here are free.
+  static const Map<String, String> skinProductIds = {
+    'techOccult': skinTechOccultId,
+    'darkAcademia': skinDarkAcademiaId,
+    'cosmic': skinCosmicId,
+    'surrealist': skinSurrealistId,
+    'alchemical': skinAlchemicalId,
+    'wiccan': skinWiccanId,
+    'chaos': skinChaosId,
+  };
+
+  static Set<String> get allProductIds => {...skinProductIds.values, allSkinsBundleId};
 }
