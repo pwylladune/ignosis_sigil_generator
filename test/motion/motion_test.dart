@@ -107,9 +107,20 @@ void main() {
       expect(d.fractionsAt(0), [0, 0]);
       expect(d.fractionsAt(0.5)[0], closeTo(0.5, 1e-9));
       expect(d.fractionsAt(0.5)[1], 0);
-      expect(d.fractionsAt(1.05), [1, 0]);
+      // Pen-up travel is 100 px: 100 / (2·100) = 0.5 s, clamped to 0.22 s.
+      expect(d.strokeStart(1), closeTo(1.22, 1e-9));
+      expect(d.fractionsAt(1.2), [1, 0]);
       expect(d.fractionsAt(d.duration), [1, 1]);
-      expect(d.timeAtFraction(1, 0.5), closeTo(1.6, 1e-6));
+      expect(d.timeAtFraction(1, 0.5), closeTo(1.72, 1e-6));
+    });
+
+    test('lift pause follows pen-up travel', () {
+      // Second stroke starts where the first ends: only the base pause.
+      final joined = SigilGeometry(strokes: [
+        SigilStroke(_line(100)),
+        SigilStroke(Path()..moveTo(100, 0)..lineTo(200, 0)),
+      ]);
+      expect(DuctusTimeline(joined, penSpeed: 100, liftPause: 0.06).strokeStart(1), closeTo(1.06, 1e-9));
     });
   });
 

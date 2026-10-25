@@ -13,26 +13,38 @@ class DuctusTimeline {
     SigilGeometry geometry, {
     this.penSpeed = 340,
     this.minStrokeDuration = 0.22,
-    this.liftPause = 0.08,
+    this.liftPause = 0.06,
     this.profileFor,
   }) {
     var t = 0.0;
-    for (final s in geometry.strokes) {
+    final strokes = geometry.strokes;
+    for (var i = 0; i < strokes.length; i++) {
+      final s = strokes[i];
       final d = s.length / penSpeed;
       final duration = d < minStrokeDuration ? minStrokeDuration : d;
       _starts.add(t);
       _durations.add(duration);
-      t += duration + liftPause;
+      t += duration;
+      if (i + 1 < strokes.length) t += _lift(s, strokes[i + 1]);
     }
-    duration = geometry.strokes.isEmpty ? 0 : t - liftPause;
+    duration = t;
   }
 
   /// Nominal pen speed in logical pixels per second.
   final double penSpeed;
   final double minStrokeDuration;
 
-  /// Pause while the pen is lifted between strokes.
+  /// Base pause while the pen is lifted between strokes. The actual pause
+  /// grows with the pen-up travel (distance / 2·penSpeed), clamped to
+  /// [liftPause, 0.22 s], so many short nearby strokes are not staccato and
+  /// long jumps read as the hand moving across the page.
   final double liftPause;
+
+  double _lift(SigilStroke from, SigilStroke to) {
+    final a = from.pointAt(1), b = to.pointAt(0);
+    if (a == null || b == null) return liftPause;
+    return ((a - b).distance / (2 * penSpeed)).clamp(liftPause, 0.22);
+  }
 
   /// Optional per-stroke position profile on [0, 1]; null means [minimumJerk].
   final double Function(double tau)? Function(int stroke)? profileFor;
@@ -53,7 +65,9 @@ class DuctusTimeline {
   /// Per-stroke reveal fractions at [t] seconds after writing began.
   List<double> fractionsAt(double t) => List.generate(
         _starts.length,
-        (i) => _durations[i] <= 0 ? (t >= _starts[i] ? 1.0 : 0.0) : _profile(i)((t - _starts[i]) / _durations[i]),
+        (i) => _durations[i] <= 0
+            ? (t >= _starts[i] ? 1.0 : 0.0)
+            : _profile(i)((t - _starts[i]) / _durations[i]).clamp(0.0, 1.0),
         growable: false,
       );
 

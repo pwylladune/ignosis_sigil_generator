@@ -73,13 +73,18 @@ class KameaScene extends SigilScene {
       canvas.drawRect(layout.cellRect(cell).deflate(1), Paint()..color = style.accent.withValues(alpha: 0.16 * g));
     });
 
-    // Numbers.
-    // Readable on screen whatever the plate size: clamp in screen pixels.
-    final fontSize = style.px((layout.cell * 0.3 * style.scale).clamp(6.0, 13.0));
+    // Numbers: the cells the sigil visits are readable (inkSecondary); the
+    // rest are faint, and hidden when cells are too small to read (< 14 px).
+    final cellOnScreen = layout.cell * style.scale;
+    final fontSize = style.px((cellOnScreen * 0.3).clamp(8.0, 13.0));
+    final visitedCells = sigil.cells.toSet();
     style.paintLettering(canvas, () {
       for (var i = 0; i < n * n; i++) {
+        final visited = visitedCells.contains(i);
+        if (!visited && cellOnScreen < 14) continue;
         final g = glow[i] ?? 0;
-        _drawText(canvas, '${sq[i]}', layout.cellCenter(i), fontSize, style.muted.withValues(alpha: 0.55), style.accent, g);
+        final base = visited ? style.secondary : style.muted.withValues(alpha: 0.7);
+        _drawText(canvas, '${sq[i]}', layout.cellCenter(i), fontSize, base, style.accent, g);
       }
     });
 
@@ -110,8 +115,9 @@ class KameaScene extends SigilScene {
       canvas,
       '${sigil.type.name.toUpperCase()}  ·  Σ = $m',
       Offset(layout.square.center.dx, layout.square.bottom + fontSize * 1.4),
-      style.px((fontSize * style.scale * 0.9).clamp(8.0, 11.0)),
-      style.muted,
+      // The payoff of the consecration: at least 12 pt on screen.
+      style.px(12),
+      style.secondary,
       style.accent,
       labelGlow,
       letterSpacing: 1.6,

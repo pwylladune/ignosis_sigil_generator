@@ -127,6 +127,7 @@ class Combustion {
         ..setFloat(11, style.burn.g)
         ..setFloat(12, style.burn.b)
         ..setFloat(13, 1)
+        ..setFloat(14, style.paper.computeLuminance() < 0.3 ? 1 : 0)
         ..setImageSampler(0, image, filterQuality: FilterQuality.low);
       canvas.drawRect(Offset.zero & size, Paint()..shader = shader);
     } else {

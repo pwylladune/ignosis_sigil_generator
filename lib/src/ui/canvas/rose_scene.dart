@@ -59,9 +59,12 @@ class RoseScene extends SigilScene {
         final p = RoseCrossEngine.petalPosition(petal, c, r, rotation);
         final dir = (p - c) / (p - c).distance;
         final isVisited = visited.contains(petal);
-        canvas.drawLine(p - dir * style.px(4), p + dir * style.px(4), style.guidePaint(width: isVisited ? 1.4 : 1));
-        _drawGlyph(canvas, petal.letter.glyph, p + dir * style.px(13), style.px(9),
-            isVisited ? style.muted : style.muted.withValues(alpha: 0.45));
+        // Rings told apart by tick length (3 / 7 / 12 → 4 / 6 / 8 px), not only
+        // by position; visited letters readable at 12 px (SC 1.4.1, 1.4.3).
+        final tick = style.px(4.0 + 2 * petal.ring);
+        canvas.drawLine(p - dir * tick, p + dir * tick, style.guidePaint(width: isVisited ? 1.4 : 1));
+        _drawGlyph(canvas, petal.letter.glyph, p + dir * style.px(isVisited ? 15 : 13), style.px(isVisited ? 12 : 9),
+            isVisited ? style.secondary : style.muted);
       }
     });
 

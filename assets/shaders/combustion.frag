@@ -17,6 +17,7 @@ uniform float uTime;
 uniform float uSeed;
 uniform vec4 uPaper;
 uniform vec4 uBurn;
+uniform float uDark; // 1 on dark paper, 0 on light paper
 uniform sampler2D uField;
 
 out vec4 fragColor;
@@ -75,16 +76,23 @@ void main() {
     float phi = d + 0.16 * n - uFront;
 
     if (phi < 0.0) {
-        // Consumed: bare paper with a faint scorch that cools away.
+        // Consumed: bare paper with a scorch that cools away. On dark paper
+        // the scorch darkens (a light tint would read as a glow).
         float scorch = clamp(1.0 + phi / (uBand * 2.0), 0.0, 1.0);
-        vec3 col = mix(uPaper.rgb, vec3(0.30, 0.17, 0.10), 0.10 * scorch * scorch);
-        fragColor = vec4(col, 1.0);
+        vec3 light = mix(uPaper.rgb, vec3(0.30, 0.17, 0.10), 0.10 * scorch * scorch);
+        vec3 dark = mix(uPaper.rgb, vec3(0.0), 0.25 * scorch);
+        fragColor = vec4(mix(light, dark, uDark), 1.0);
         return;
     }
     if (phi < uBand) {
         float heat = 1.0 - phi / uBand;
         float a = smoothstep(0.0, 0.35, heat);
-        vec3 col = blackbody(heat);
+        // Dark paper: full blackbody ramp. Light paper: incandescence cannot be
+        // brighter than white, so the edge is char-dominant (sumi to umber)
+        // with a thin line of the skin's burn colour at the very front.
+        vec3 charEdge = mix(vec3(0.08, 0.08, 0.09), vec3(0.35, 0.18, 0.10), smoothstep(0.0, 0.8, heat));
+        vec3 lightCol = mix(charEdge, uBurn.rgb, smoothstep(0.82, 0.97, heat));
+        vec3 col = mix(lightCol, blackbody(heat), uDark);
         fragColor = vec4(col * a, a);
         return;
     }
