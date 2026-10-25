@@ -50,3 +50,6 @@ backend/dist
 backend/.env
 deployer-keypair.json
 *.keypair.json
+
+# Golden test failure output
+test/goldens/failures/
