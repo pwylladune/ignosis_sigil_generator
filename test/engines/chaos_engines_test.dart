@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ignosis_sigil_generator/src/models/intent_kernel.dart';
 import 'package:ignosis_sigil_generator/src/engines/rose_cross_engine.dart';
-import 'package:ignosis_sigil_generator/src/engines/chladni_engine.dart';
 import 'package:ignosis_sigil_generator/src/engines/cyber_chaos_engine.dart';
 import 'package:ignosis_sigil_generator/src/engines/spare_monogram_engine.dart';
 import 'package:flutter/material.dart';
@@ -42,17 +41,6 @@ void main() {
       const size = Size(500, 500);
 
       final path = engine.generatePath(kernel, size);
-      expect(path.getBounds().isEmpty, isFalse);
-    });
-  });
-
-  group('ChladniEngine Tests', () {
-    test('Computes 2D acoustic resonance nodal paths', () {
-      final engine = ChladniEngine();
-      final kernel = IntentKernel.fromText('CHAOS AND HARMONY');
-      const size = Size(500, 500);
-
-      final path = engine.generatePath(kernel, size, animationPhase: 0.5);
       expect(path.getBounds().isEmpty, isFalse);
     });
   });
