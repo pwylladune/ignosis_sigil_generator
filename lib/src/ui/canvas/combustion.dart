@@ -42,10 +42,15 @@ class Combustion {
     // Longer sigils take a little longer to consume, within 4–7 s.
     duration = (3.5 + scene.geometry.totalLength / 2500).clamp(4.0, 7.0);
     CombustionShader.load().then((program) async {
-      if (program == null) return;
+      if (program == null || _disposed) return;
       final completer = Completer<ui.Image>();
       ui.decodeImageFromPixels(field!.toRgba(), field!.resolution, field!.resolution, ui.PixelFormat.rgba8888, completer.complete);
-      _fieldImage = await completer.future;
+      final image = await completer.future;
+      if (_disposed) {
+        image.dispose();
+        return;
+      }
+      _fieldImage = image;
       _shader = program.fragmentShader();
     });
   }
@@ -60,6 +65,17 @@ class Combustion {
   BurnField? field;
   ui.FragmentShader? _shader;
   ui.Image? _fieldImage;
+  bool _disposed = false;
+
+  /// Releases the field texture and shader instance; a load still in flight
+  /// is discarded when it completes.
+  void dispose() {
+    _disposed = true;
+    _fieldImage?.dispose();
+    _shader?.dispose();
+    _fieldImage = null;
+    _shader = null;
+  }
 
   /// Burn time in seconds. Reduce-motion uses a short crossfade instead.
   late final double duration;

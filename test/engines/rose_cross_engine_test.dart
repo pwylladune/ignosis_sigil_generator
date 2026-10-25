@@ -14,14 +14,27 @@ void main() {
     expect(RoseCrossEngine.rings[0], [HebrewLetter.aleph, HebrewLetter.mem, HebrewLetter.shin]);
   });
 
-  test('all 26 Latin letters map to exactly one petal', () {
-    expect(latinToHebrew.length, 26);
-    for (var c = 65; c <= 90; c++) {
-      final l = String.fromCharCode(c);
-      final matches = RoseCrossEngine.allPetals.where((p) => p.letter == latinToHebrew[l]);
-      expect(matches.length, 1, reason: l);
-      expect(RoseCrossEngine.petalFor(l), matches.single);
+  test('transliteration: every Latin letter reaches the rose; coverage is as documented', () {
+    final latin = [for (var c = 65; c <= 90; c++) String.fromCharCode(c)];
+    expect(latinToHebrew.keys.toSet(), latin.toSet());
+    final reached = {for (final l in latin) RoseCrossEngine.petalFor(l).letter};
+    // All three mothers are reachable (A, M, X) and so is every double.
+    expect(reached.containsAll(RoseCrossEngine.rings[0]), isTrue);
+    expect(reached.containsAll(RoseCrossEngine.rings[1]), isTrue);
+    // Teth and Tzaddi need digraphs (Th, Tz) and are the only petals unused.
+    expect(HebrewLetter.values.toSet().difference(reached), {HebrewLetter.teth, HebrewLetter.tzaddi});
+    // Shared letters are the documented ones only.
+    final byPetal = <HebrewLetter, List<String>>{};
+    for (final l in latin) {
+      byPetal.putIfAbsent(latinToHebrew[l]!, () => []).add(l);
     }
+    final shared = {for (final e in byPetal.entries) if (e.value.length > 1) e.key: e.value.join()};
+    expect(shared, {HebrewLetter.kaph: 'CK', HebrewLetter.yod: 'IJY', HebrewLetter.pe: 'FP', HebrewLetter.vav: 'UVW'});
+  });
+
+  test('a single letter is sealed with a terminal crossbar', () {
+    final s = RoseCrossEngine().build(IntentKernel.fromText('B'), const Size(500, 500));
+    expect(s.geometry.strokes.map((e) => e.role).toList(), [StrokeRole.startMark, StrokeRole.terminal]);
   });
 
   test('petals sit on their ring radius', () {

@@ -6,12 +6,17 @@ import '../../motion/ductus.dart';
 import '../../motion/easing.dart';
 import 'scene.dart';
 
-/// Kamea traversal: the pen travels cell to cell at constant arc speed; each
+/// Kamea traversal: the pen travels cell to cell at constant arc speed (a
+/// [cruise] profile with short ramps, so visits are evenly paced); each
 /// visited number glows briefly as it is reached. When the trace completes, the
 /// rows, columns and diagonals light in turn, each summing to the magic
 /// constant M: the square's invariance is the consecration. Then stillness.
 class KameaScene extends SigilScene {
-  KameaScene(this.sigil, {required super.startTime}) : timeline = DuctusTimeline(sigil.geometry) {
+  KameaScene(this.sigil, {required super.startTime})
+      : timeline = DuctusTimeline(
+          sigil.geometry,
+          profileFor: (i) => i == sigil.traversalStroke ? cruise : null,
+        ) {
     final trace = sigil.traversalStroke;
     _visitTimes = [
       for (var i = 0; i < sigil.cells.length; i++)
@@ -73,8 +78,7 @@ class KameaScene extends SigilScene {
     final fontSize = style.px((layout.cell * 0.3 * style.scale).clamp(6.0, 13.0));
     for (var i = 0; i < n * n; i++) {
       final g = glow[i] ?? 0;
-      final color = Color.lerp(style.muted.withValues(alpha: 0.55), style.accent, g)!;
-      _drawText(canvas, '${sq[i]}', layout.cellCenter(i), fontSize, color);
+      _drawText(canvas, '${sq[i]}', layout.cellCenter(i), fontSize, style.muted.withValues(alpha: 0.55), style.accent, g);
     }
 
     // Ink: the traversal, written by the ductus.
@@ -105,7 +109,9 @@ class KameaScene extends SigilScene {
       '${sigil.type.name.toUpperCase()}  ·  Σ = $m',
       Offset(layout.square.center.dx, layout.square.bottom + fontSize * 1.4),
       style.px((fontSize * style.scale * 0.9).clamp(8.0, 11.0)),
-      Color.lerp(style.muted, style.accent, labelGlow)!,
+      style.muted,
+      style.accent,
+      labelGlow,
       letterSpacing: 1.6,
     );
   }
@@ -120,15 +126,38 @@ class KameaScene extends SigilScene {
     return (l.cellCenter(n - 1), l.cellCenter((n - 1) * n));
   }
 
+  /// Laid-out text, keyed by fixed colours only (base and accent per skin), so
+  /// the cache stays small; glows are drawn as an accent layer at opacity.
   static final _textCache = <(String, double, int, double), TextPainter>{};
+  static const _textCacheLimit = 600;
 
-  static void _drawText(Canvas canvas, String text, Offset center, double size, Color color, {double letterSpacing = 0}) {
+  static TextPainter _painter(String text, double size, Color color, double letterSpacing) {
     final key = (text, size, color.toARGB32(), letterSpacing);
-    final tp = _textCache[key] ??= TextPainter(
+    final hit = _textCache[key];
+    if (hit != null) return hit;
+    if (_textCache.length >= _textCacheLimit) {
+      for (final tp in _textCache.values) {
+        tp.dispose();
+      }
+      _textCache.clear();
+    }
+    return _textCache[key] = TextPainter(
       text: TextSpan(text: text, style: TextStyle(fontSize: size, color: color, letterSpacing: letterSpacing, fontWeight: FontWeight.w500)),
       textDirection: TextDirection.ltr,
     )..layout();
-    if (_textCache.length > 2000) _textCache.clear();
-    tp.paint(canvas, center - Offset(tp.width / 2, tp.height / 2));
+  }
+
+  /// Draws [text] in [base], with [accent] blended over it at [glow] opacity.
+  static void _drawText(Canvas canvas, String text, Offset center, double size, Color base, Color accent, double glow,
+      {double letterSpacing = 0}) {
+    final tp = _painter(text, size, base, letterSpacing);
+    final at = center - Offset(tp.width / 2, tp.height / 2);
+    tp.paint(canvas, at);
+    if (glow > 0.01) {
+      final hot = _painter(text, size, accent, letterSpacing);
+      canvas.saveLayer(at & hot.size, Paint()..color = Color.fromRGBO(0, 0, 0, glow.clamp(0.0, 1.0)));
+      hot.paint(canvas, at);
+      canvas.restore();
+    }
   }
 }

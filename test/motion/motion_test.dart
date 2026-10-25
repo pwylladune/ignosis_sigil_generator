@@ -41,6 +41,31 @@ void main() {
     });
   });
 
+  group('cruise (constant-speed) profile', () {
+    test('ends at rest positions, cruises at constant speed in the middle', () {
+      expect(cruise(0), 0);
+      expect(cruise(1), 1);
+      const a = 0.12;
+      final v = (cruise(0.6) - cruise(0.4)) / 0.2;
+      expect(v, closeTo(1 / (1 - a), 1e-9));
+      expect(cruise(0.5), closeTo(0.5, 1e-12));
+      var prev = -1.0;
+      for (var t = 0.0; t <= 1.0; t += 0.01) {
+        expect(cruise(t), greaterThanOrEqualTo(prev));
+        expect(inverseProfile(cruise, cruise(t)), closeTo(t, 1e-6));
+        prev = cruise(t);
+      }
+    });
+
+    test('DuctusTimeline applies a per-stroke profile', () {
+      final g = SigilGeometry(strokes: [SigilStroke(_line(100))]);
+      final d = DuctusTimeline(g, penSpeed: 100, profileFor: (_) => cruise);
+      expect(d.fractionsAt(0.5).single, closeTo(0.5, 1e-9));
+      expect(d.fractionsAt(0.3).single, closeTo(cruise(0.3), 1e-9));
+      expect(d.timeAtFraction(0, cruise(0.3)), closeTo(0.3, 1e-6));
+    });
+  });
+
   group('BreathPattern', () {
     test('resonance breathing is 5.5 breaths per minute', () {
       expect(60 / BreathPattern.resonance.period, closeTo(5.5, 1e-9));

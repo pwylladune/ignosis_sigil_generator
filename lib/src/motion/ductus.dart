@@ -5,13 +5,16 @@ import 'easing.dart';
 ///
 /// The pen moves at a constant nominal speed, so a stroke's duration is its
 /// arc length divided by [penSpeed] and longer sigils honestly take longer to
-/// write. Within each stroke, progress follows [minimumJerk], as a hand does.
+/// write. Within each stroke, progress follows [minimumJerk], as a hand does,
+/// unless [profileFor] gives that stroke another profile (for example
+/// [cruise] for a constant-speed traversal).
 class DuctusTimeline {
   DuctusTimeline(
     SigilGeometry geometry, {
     this.penSpeed = 340,
     this.minStrokeDuration = 0.22,
     this.liftPause = 0.08,
+    this.profileFor,
   }) {
     var t = 0.0;
     for (final s in geometry.strokes) {
@@ -31,6 +34,11 @@ class DuctusTimeline {
   /// Pause while the pen is lifted between strokes.
   final double liftPause;
 
+  /// Optional per-stroke position profile on [0, 1]; null means [minimumJerk].
+  final double Function(double tau)? Function(int stroke)? profileFor;
+
+  double Function(double) _profile(int i) => profileFor?.call(i) ?? minimumJerk;
+
   final List<double> _starts = [];
   final List<double> _durations = [];
 
@@ -45,11 +53,13 @@ class DuctusTimeline {
   /// Per-stroke reveal fractions at [t] seconds after writing began.
   List<double> fractionsAt(double t) => List.generate(
         _starts.length,
-        (i) => minimumJerkBetween(t, _starts[i], _durations[i]),
+        (i) => _durations[i] <= 0 ? (t >= _starts[i] ? 1.0 : 0.0) : _profile(i)((t - _starts[i]) / _durations[i]),
         growable: false,
       );
 
   /// The time at which stroke [i] reaches [fraction] of its length.
-  double timeAtFraction(int i, double fraction) =>
-      _starts[i] + _durations[i] * inverseMinimumJerk(fraction);
+  double timeAtFraction(int i, double fraction) {
+    final p = profileFor?.call(i);
+    return _starts[i] + _durations[i] * (p == null ? inverseMinimumJerk(fraction) : inverseProfile(p, fraction));
+  }
 }

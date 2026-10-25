@@ -119,6 +119,7 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
   void _show(SigilSpec spec) {
     if (!mounted) return;
     _shownSpec = spec;
+    _combustion?.dispose();
     _combustion = null;
     _version++;
     if (_hasLayout) {
@@ -167,6 +168,7 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
     final c = _combustion;
     if (c != null) {
       if (c.isDone(now)) {
+        c.dispose();
         _combustion = null;
         _scene = null;
         // Report after this frame so the parent can rebuild safely.
@@ -197,6 +199,7 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
     widget.burn.removeListener(_onBurnRequested);
     widget.breath?.removeListener(_onBreath);
     WidgetsBinding.instance.removeObserver(this);
+    _combustion?.dispose();
     _clock.dispose();
     super.dispose();
   }

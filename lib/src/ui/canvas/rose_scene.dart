@@ -72,7 +72,14 @@ class RoseScene extends SigilScene {
   static final _glyphs = <(String, double, int), TextPainter>{};
 
   static void _drawGlyph(Canvas canvas, String glyph, Offset at, double fontSize, Color color) {
-    final tp = _glyphs[(glyph, fontSize, color.toARGB32())] ??= TextPainter(
+    final key = (glyph, fontSize, color.toARGB32());
+    if (!_glyphs.containsKey(key) && _glyphs.length >= 400) {
+      for (final tp in _glyphs.values) {
+        tp.dispose();
+      }
+      _glyphs.clear();
+    }
+    final tp = _glyphs[key] ??= TextPainter(
       text: TextSpan(text: glyph, style: TextStyle(fontSize: fontSize, color: color)),
       textDirection: TextDirection.rtl,
     )..layout();

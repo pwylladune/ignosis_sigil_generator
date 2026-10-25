@@ -117,6 +117,19 @@ class RoseCrossEngine {
             role: StrokeRole.terminal,
           ));
         }
+      } else {
+        // A single letter: no curve to follow, so seal it with a bar across
+        // the radial direction, just outside the start circle.
+        final out = nodes.first - center;
+        final dir = out.distance == 0 ? const Offset(0, -1) : out / out.distance;
+        final at = nodes.first + dir * 10;
+        final normal = Offset(-dir.dy, dir.dx) * 8;
+        strokes.add(SigilStroke(
+          Path()
+            ..moveTo(at.dx - normal.dx, at.dy - normal.dy)
+            ..lineTo(at.dx + normal.dx, at.dy + normal.dy),
+          role: StrokeRole.terminal,
+        ));
       }
     }
     return RoseSigil(center: center, radius: radius, petals: petals, geometry: SigilGeometry(strokes: strokes, nodes: nodes));

@@ -69,7 +69,7 @@ class KameaSigil {
   final List<double> visitFractions;
 
   /// Index of the traversal stroke in [geometry], or null for a single node.
-  int? get traversalStroke => geometry.strokes.length >= 2 ? 1 : null;
+  int? get traversalStroke => geometry.nodes.length >= 2 ? 1 : null;
 }
 
 /// Planetary Kamea sigils with classical grammar:
@@ -191,23 +191,32 @@ class KameaEngine {
         }
         strokes.add(SigilStroke(trace));
 
-        // Terminal crossbar perpendicular to the last distinct segment.
-        var j = nodes.length - 2;
-        while (j > 0 && cells[j] == cells.last) {
-          j--;
-        }
-        final d = nodes.last - nodes[j];
-        if (d.distance > 0) {
-          final half = (cell * 0.24).clamp(5.0, 12.0);
-          final normal = Offset(-d.dy, d.dx) / d.distance * half;
-          strokes.add(SigilStroke(
-            Path()
-              ..moveTo(nodes.last.dx - normal.dx, nodes.last.dy - normal.dy)
-              ..lineTo(nodes.last.dx + normal.dx, nodes.last.dy + normal.dy),
-            role: StrokeRole.terminal,
-          ));
-        }
       }
+
+      // Terminal crossbar perpendicular to the last distinct segment. With a
+      // single letter, or every letter in one cell, there is no segment: the
+      // pen is taken to have moved straight down, so the bar is horizontal and
+      // sits just below the start circle.
+      final half = (cell * 0.24).clamp(5.0, 12.0);
+      var j = nodes.length - 2;
+      while (j > 0 && cells[j] == cells.last) {
+        j--;
+      }
+      final d = j >= 0 ? nodes.last - nodes[j] : Offset.zero;
+      final Offset at, normal;
+      if (d.distance > 0) {
+        at = nodes.last;
+        normal = Offset(-d.dy, d.dx) / d.distance * half;
+      } else {
+        at = nodes.last.translate(0, startRadius * 2);
+        normal = Offset(half, 0);
+      }
+      strokes.add(SigilStroke(
+        Path()
+          ..moveTo(at.dx - normal.dx, at.dy - normal.dy)
+          ..lineTo(at.dx + normal.dx, at.dy + normal.dy),
+        role: StrokeRole.terminal,
+      ));
     }
 
     final total = cumulative.isEmpty ? 0.0 : cumulative.last;

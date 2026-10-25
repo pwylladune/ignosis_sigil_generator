@@ -80,6 +80,15 @@ void main() {
       expect(a.geometry.nodes, b.geometry.nodes);
     });
 
+    test('one letter, or every letter in one cell, still gets a terminal crossbar', () {
+      for (final intent in ['B', 'CK', 'JY']) {
+        final s = KameaEngine().build(IntentKernel.fromText(intent), PlanetaryKameaType.saturn, size);
+        expect(s.geometry.strokes.last.role, StrokeRole.terminal, reason: intent);
+        expect(s.geometry.strokes.last.length, greaterThan(0), reason: intent);
+      }
+      expect(KameaEngine().build(IntentKernel.fromText('B'), PlanetaryKameaType.saturn, size).traversalStroke, isNull);
+    });
+
     test('empty intent yields empty geometry', () {
       expect(KameaEngine().build(IntentKernel.fromText(''), PlanetaryKameaType.mars, size).geometry.isEmpty, isTrue);
     });
