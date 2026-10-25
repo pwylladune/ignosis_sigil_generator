@@ -7,7 +7,9 @@ enum SigilSkinId {
   cosmic('cosmic', 'Cosmic', 'Deep stellar void, astral nebular violet, ultraviolet starlight', true),
   surrealist('surrealist', 'Surrealist', 'Bone canvas, dreamscape cobalt ink, incandescent dream embers', false),
   alchemical('alchemical', 'Alchemical', 'Nigredo slate, mercury silver hairlines, aurum gold seal', true),
-  wiccan('wiccan', 'Wiccan', 'Lichen parchment, forest root ink, waxing moon silver glow', false),
+  // Key and product ID stay 'wiccan' for existing purchases; the name avoids
+  // presenting a living religion's name as an aesthetic.
+  wiccan('wiccan', 'Greenwood', 'Lichen parchment, forest root ink, waxing moon silver glow', false),
   chaos('chaos', 'Chaos (Liber Null)', 'Abyssal matte black, pure stark white vector, 8-fold chaosphere vermilion', true);
 
   final String key;
@@ -27,7 +29,13 @@ class SigilSkinTheme {
   final Color hairlineStrong;
   final Color inkPrimary;
   final Color inkSecondary;
+  /// Decorative ink only (guides, ticks, unvisited glyphs): below 4.5:1 by
+  /// design. Never use for text; see [inkTertiary].
   final Color inkMuted;
+
+  /// The quietest ink allowed for text: at least 4.5:1 on background and
+  /// surface (WCAG 2.2 SC 1.4.3).
+  final Color inkTertiary;
   final Color accent;
   final Color accentOn;
   final Color burn;
@@ -46,6 +54,7 @@ class SigilSkinTheme {
     required this.inkPrimary,
     required this.inkSecondary,
     required this.inkMuted,
+    required this.inkTertiary,
     required this.accent,
     required this.accentOn,
     required this.burn,
@@ -54,6 +63,45 @@ class SigilSkinTheme {
     this.strokeWidth = 2.0,
     this.inkWashOpacity = 0.08,
   });
+
+  /// The vermilion bind point, constant across skins (the Pen & Ink
+  /// identity), tuned per brightness to stay at least 3:1 on the canvas.
+  Color get seal => id.isDark ? const Color(0xFFE5484D) : const Color(0xFFC0392B);
+
+  /// Short display name (no qualifiers such as "(Default)").
+  String get shortLabel => id.label.replaceAll(RegExp(r'\s*\(.*\)'), '');
+
+  /// Material theme for this skin, so cursors, checkmarks, tooltips and
+  /// dialogs follow it (dark skins no longer inherit the light theme).
+  ThemeData toThemeData() {
+    final base = id.isDark ? ThemeData.dark(useMaterial3: true) : ThemeData.light(useMaterial3: true);
+    return base.copyWith(
+      scaffoldBackgroundColor: background,
+      colorScheme: base.colorScheme.copyWith(
+        brightness: id.isDark ? Brightness.dark : Brightness.light,
+        primary: inkPrimary,
+        onPrimary: surface,
+        secondary: accent,
+        onSecondary: accentOn,
+        surface: surface,
+        onSurface: inkPrimary,
+        outline: hairlineStrong,
+      ),
+      dividerColor: hairline,
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: seal,
+        selectionColor: seal.withValues(alpha: 0.25),
+        selectionHandleColor: seal,
+      ),
+      chipTheme: base.chipTheme.copyWith(checkmarkColor: inkPrimary),
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(color: inkPrimary, borderRadius: BorderRadius.circular(6)),
+        textStyle: TextStyle(color: surface, fontSize: 12),
+      ),
+      dialogTheme: DialogThemeData(backgroundColor: surface),
+      appBarTheme: AppBarTheme(backgroundColor: background, foregroundColor: inkPrimary, elevation: 0, centerTitle: true),
+    );
+  }
 
   static SigilSkinTheme getSkin(SigilSkinId id) {
     switch (id) {
@@ -68,6 +116,7 @@ class SigilSkinTheme {
           inkPrimary: Color(0xFF141416),
           inkSecondary: Color(0xFF52525B),
           inkMuted: Color(0xFFA1A1AA),
+          inkTertiary: Color(0xFF6B6B73),
           accent: Color(0xFFC0392B),
           accentOn: Color(0xFFFFFFFF),
           burn: Color(0xFFD97706),
@@ -88,6 +137,7 @@ class SigilSkinTheme {
           inkPrimary: Color(0xFF00FF66),
           inkSecondary: Color(0xFF4ADE80),
           inkMuted: Color(0xFF1E3A24),
+          inkTertiary: Color(0xFF3FA864),
           accent: Color(0xFF00FF66),
           accentOn: Color(0xFF070B08),
           burn: Color(0xFFFF3366),
@@ -108,6 +158,7 @@ class SigilSkinTheme {
           inkPrimary: Color(0xFF2C221E),
           inkSecondary: Color(0xFF5C4E44),
           inkMuted: Color(0xFF968779),
+          inkTertiary: Color(0xFF6E6052),
           accent: Color(0xFF8B2500),
           accentOn: Color(0xFFFFFFFF),
           burn: Color(0xFFC85A17),
@@ -128,6 +179,7 @@ class SigilSkinTheme {
           inkPrimary: Color(0xFFE2E8F0),
           inkSecondary: Color(0xFFA5B4FC),
           inkMuted: Color(0xFF4338CA),
+          inkTertiary: Color(0xFF8B8FD9),
           accent: Color(0xFF818CF8),
           accentOn: Color(0xFF06060E),
           burn: Color(0xFFF43F5E),
@@ -146,9 +198,10 @@ class SigilSkinTheme {
           hairline: Color(0xFFDDD9D0),
           hairlineStrong: Color(0xFFBEB8AA),
           inkPrimary: Color(0xFF0F2B5C),
-          inkSecondary: Color(0xFF2563EB),
+          inkSecondary: Color(0xFF2159DE), // #2563EB was 4.497:1, just under AA
           inkMuted: Color(0xFF94A3B8),
-          accent: Color(0xFFE11D48),
+          inkTertiary: Color(0xFF586A82),
+          accent: Color(0xFFBE123C),
           accentOn: Color(0xFFFFFFFF),
           burn: Color(0xFFEA580C),
           canvasBackground: Color(0xFFF8F6F1),
@@ -168,6 +221,7 @@ class SigilSkinTheme {
           inkPrimary: Color(0xFFF59E0B),
           inkSecondary: Color(0xFFD4D4D8),
           inkMuted: Color(0xFF52525B),
+          inkTertiary: Color(0xFF8A8A94),
           accent: Color(0xFFF59E0B),
           accentOn: Color(0xFF0B0D11),
           burn: Color(0xFFDC2626),
@@ -188,6 +242,7 @@ class SigilSkinTheme {
           inkPrimary: Color(0xFF1E3A2F),
           inkSecondary: Color(0xFF3F6254),
           inkMuted: Color(0xFF839E92),
+          inkTertiary: Color(0xFF50695D),
           accent: Color(0xFF9A3412),
           accentOn: Color(0xFFFFFFFF),
           burn: Color(0xFFC2410C),
@@ -208,7 +263,8 @@ class SigilSkinTheme {
           inkPrimary: Color(0xFFFAFAFA),
           inkSecondary: Color(0xFFA3A3A3),
           inkMuted: Color(0xFF525252),
-          accent: Color(0xFFE11D48),
+          inkTertiary: Color(0xFF8A8A8A),
+          accent: Color(0xFFF43F5E),
           accentOn: Color(0xFFFFFFFF),
           burn: Color(0xFFF97316),
           canvasBackground: Color(0xFF0A0A0A),

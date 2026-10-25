@@ -318,7 +318,7 @@ void paintPlate(
   }
 
   // Vermilion bind point.
-  canvas.drawCircle(center, style.px(2.5), Paint()..color = style.accent);
+  canvas.drawCircle(center, style.px(2.5), Paint()..color = style.seal);
   canvas.restore();
 }
 

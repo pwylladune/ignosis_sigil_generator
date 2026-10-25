@@ -2,7 +2,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import '../../motion/breath.dart';
-import '../theme/ignosis_theme.dart';
+import '../../motion/reduce_motion.dart';
+import '../theme/sigil_skins.dart';
 
 /// Clean Pen & Ink architectural modal for Gnosis breathing and combustion.
 ///
@@ -19,8 +20,12 @@ class PenInkRitualBurnDialog extends StatefulWidget {
 
   final int targetCycles;
 
+  /// Active skin, so the rite does not flash a white panel on a dark skin.
+  final SigilSkinTheme theme;
+
   const PenInkRitualBurnDialog({
     super.key,
+    required this.theme,
     required this.onBurnComplete,
     this.breath,
     this.targetCycles = 7,
@@ -77,7 +82,8 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
 
   @override
   Widget build(BuildContext context) {
-    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    final theme = widget.theme;
+    final reduceMotion = reduceMotionOf(context);
     final sample = _pattern.sample(_t - _patternStart);
     final peaked = sample.cycle >= widget.targetCycles;
     final b = sample.volume;
@@ -86,10 +92,10 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
     return Dialog(
       // Sit low so the breathing seal stays visible above the dialog.
       alignment: Alignment.bottomCenter,
-      backgroundColor: IgnosisTheme.surfaceElevated,
+      backgroundColor: theme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: IgnosisTheme.parchmentSubtle),
+        side: BorderSide(color: theme.hairline),
       ),
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       child: ConstrainedBox(
@@ -106,19 +112,19 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
                     width: 28,
                     height: 28,
                     decoration: BoxDecoration(
-                      color: IgnosisTheme.bone,
+                      color: theme.background,
                       shape: BoxShape.circle,
-                      border: Border.all(color: IgnosisTheme.parchmentSubtle),
+                      border: Border.all(color: theme.hairline),
                     ),
-                    child: const Center(
-                      child: Text('🜂', style: TextStyle(color: IgnosisTheme.vermilion, fontSize: 14)),
+                    child: Center(
+                      child: Text('🜂', style: TextStyle(color: theme.seal, fontSize: 14)),
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Text(
+                  Text(
                     'GNOSIS CHARGING RITE',
                     style: TextStyle(
-                      color: IgnosisTheme.sumiInk,
+                      color: theme.inkPrimary,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                       letterSpacing: 1.5,
@@ -126,20 +132,20 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close, size: 18, color: IgnosisTheme.pencilGraphite),
+                    icon: Icon(Icons.close, size: 18, color: theme.inkTertiary),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
-              const Divider(height: 24, color: IgnosisTheme.parchmentSubtle),
+              Divider(height: 24, color: theme.hairline),
 
-              const Text(
+              Text(
                 'Focus your attention on the centre bind-point. '
                 'Breathe with the ring; the seal breathes with you. '
                 'When your focus peaks, release the seal.\n'
                 'Breathe comfortably and stop if you feel dizzy or short of breath. '
                 'This is a focus exercise, not medical advice.',
-                style: TextStyle(color: IgnosisTheme.charcoal, fontSize: 13, height: 1.5),
+                style: TextStyle(color: theme.inkSecondary, fontSize: 13, height: 1.5),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -155,14 +161,14 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
                     tooltip: p.description,
                     selected: selected,
                     showCheckmark: false,
-                    selectedColor: IgnosisTheme.bone,
-                    backgroundColor: IgnosisTheme.surfaceElevated,
-                    side: BorderSide(color: selected ? IgnosisTheme.sumiInk : IgnosisTheme.parchmentSubtle),
+                    selectedColor: theme.background,
+                    backgroundColor: theme.surface,
+                    side: BorderSide(color: selected ? theme.inkPrimary : theme.hairline),
                     labelStyle: TextStyle(
                       fontSize: 10,
                       letterSpacing: 0.8,
                       fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                      color: selected ? IgnosisTheme.sumiInk : IgnosisTheme.pencilGraphite,
+                      color: selected ? theme.inkPrimary : theme.inkTertiary,
                     ),
                     onSelected: (_) => _selectPattern(p),
                   );
@@ -176,6 +182,7 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
                 height: 110,
                 child: CustomPaint(
                   painter: _BreathRingPainter(
+                    theme: theme,
                     volume: b,
                     scale: scale,
                     cycleFraction: reduceMotion ? ((_t - _patternStart) % _pattern.period) / _pattern.period : null,
@@ -185,8 +192,8 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
               const SizedBox(height: 14),
               Text(
                 _phaseLabel(sample.phase),
-                style: const TextStyle(
-                  color: IgnosisTheme.sumiInk,
+                style: TextStyle(
+                  color: theme.inkPrimary,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 2.0,
                   fontSize: 10,
@@ -195,7 +202,7 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
               const SizedBox(height: 4),
               Text(
                 'BREATH ${math.min(sample.cycle + 1, widget.targetCycles)} / ${widget.targetCycles}',
-                style: const TextStyle(color: IgnosisTheme.pencilGraphite, letterSpacing: 1.4, fontSize: 9),
+                style: TextStyle(color: theme.inkTertiary, letterSpacing: 1.4, fontSize: 9),
               ),
               const SizedBox(height: 24),
 
@@ -206,8 +213,8 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
                     child: peaked
                         ? ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: IgnosisTheme.sumiInk,
-                              foregroundColor: Colors.white,
+                              backgroundColor: theme.inkPrimary,
+                              foregroundColor: theme.surface,
                               elevation: 0,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -220,8 +227,8 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
                           )
                         : OutlinedButton(
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: IgnosisTheme.sumiInk,
-                              side: const BorderSide(color: IgnosisTheme.parchmentSubtle),
+                              foregroundColor: theme.inkPrimary,
+                              side: BorderSide(color: theme.hairline),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
@@ -249,7 +256,9 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
 }
 
 class _BreathRingPainter extends CustomPainter {
-  _BreathRingPainter({required this.volume, required this.scale, this.cycleFraction});
+  _BreathRingPainter({required this.theme, required this.volume, required this.scale, this.cycleFraction});
+
+  final SigilSkinTheme theme;
 
   final double volume;
   final double scale;
@@ -261,14 +270,14 @@ class _BreathRingPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
     final r = 40 * scale;
-    canvas.drawCircle(c, r, Paint()..color = IgnosisTheme.paperWhite);
+    canvas.drawCircle(c, r, Paint()..color = theme.canvasBackground);
     canvas.drawCircle(
       c,
       r,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5
-        ..color = IgnosisTheme.sumiInk.withValues(alpha: 0.2 + volume * 0.5),
+        ..color = theme.inkPrimary.withValues(alpha: 0.2 + volume * 0.5),
     );
     final f = cycleFraction;
     if (f != null) {
@@ -280,13 +289,13 @@ class _BreathRingPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1
-          ..color = IgnosisTheme.vermilion.withValues(alpha: 0.6),
+          ..color = theme.seal.withValues(alpha: 0.6),
       );
     }
-    canvas.drawCircle(c, 4, Paint()..color = IgnosisTheme.vermilion);
+    canvas.drawCircle(c, 4, Paint()..color = theme.seal);
   }
 
   @override
   bool shouldRepaint(covariant _BreathRingPainter old) =>
-      old.volume != volume || old.scale != scale || old.cycleFraction != cycleFraction;
+      old.volume != volume || old.scale != scale || old.cycleFraction != cycleFraction || old.theme != theme;
 }

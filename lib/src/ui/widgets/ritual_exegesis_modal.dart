@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 import '../../config/feature_flags.dart';
-import '../theme/ignosis_theme.dart';
+import '../theme/sigil_skins.dart';
 
 /// Modal dialog explaining the complete philosophy, science, and step-by-step
 /// ritual mechanics of Chaos Sigil crafting and combustion.
 class RitualExegesisModal extends StatelessWidget {
-  const RitualExegesisModal({super.key});
+  const RitualExegesisModal({super.key, required this.theme});
+
+  final SigilSkinTheme theme;
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: IgnosisTheme.surfaceElevated,
+      backgroundColor: theme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: IgnosisTheme.parchmentSubtle),
+        side: BorderSide(color: theme.hairline),
       ),
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       child: ConstrainedBox(
@@ -29,19 +31,19 @@ class RitualExegesisModal extends StatelessWidget {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: IgnosisTheme.paperWhite,
-                      border: Border.all(color: IgnosisTheme.parchmentSubtle),
+                      color: theme.canvasBackground,
+                      border: Border.all(color: theme.hairline),
                       shape: BoxShape.circle,
                     ),
-                    child: const Center(
+                    child: Center(
                       child: Text(
                         '🜂',
-                        style: TextStyle(fontSize: 16, color: IgnosisTheme.vermilion),
+                        style: TextStyle(fontSize: 16, color: theme.seal),
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -50,24 +52,24 @@ class RitualExegesisModal extends StatelessWidget {
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 2.0,
-                          color: IgnosisTheme.sumiInk,
+                          color: theme.inkPrimary,
                         ),
                       ),
                       Text(
                         'The "Why" and Mechanics of Sigil Combustion',
-                        style: TextStyle(fontSize: 12, color: IgnosisTheme.pencilGraphite),
+                        style: TextStyle(fontSize: 12, color: theme.inkTertiary),
                       ),
                     ],
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close, size: 20, color: IgnosisTheme.pencilGraphite),
+                    icon: Icon(Icons.close, size: 20, color: theme.inkTertiary),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
             ),
-            const Divider(height: 1, color: IgnosisTheme.parchmentSubtle),
+            Divider(height: 1, color: theme.hairline),
 
             // Scrollable Content
             Expanded(
@@ -127,16 +129,16 @@ class RitualExegesisModal extends StatelessWidget {
             // Bottom action
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-              decoration: const BoxDecoration(
-                color: IgnosisTheme.paperWhite,
-                border: Border(top: BorderSide(color: IgnosisTheme.parchmentSubtle)),
+              decoration: BoxDecoration(
+                color: theme.canvasBackground,
+                border: Border(top: BorderSide(color: theme.hairline)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
                     style: TextButton.styleFrom(
-                      foregroundColor: IgnosisTheme.sumiInk,
+                      foregroundColor: theme.inkPrimary,
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     ),
                     onPressed: () => Navigator.of(context).pop(),
@@ -156,11 +158,11 @@ class RitualExegesisModal extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.bold,
           letterSpacing: 1.5,
-          color: IgnosisTheme.charcoal,
+          color: theme.inkSecondary,
         ),
       ),
     );
@@ -169,10 +171,10 @@ class RitualExegesisModal extends StatelessWidget {
   Widget _buildParagraph(String text) {
     return Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 13,
         height: 1.6,
-        color: IgnosisTheme.charcoal,
+        color: theme.inkSecondary,
       ),
     );
   }
@@ -188,21 +190,21 @@ class RitualExegesisModal extends StatelessWidget {
             height: 20,
             margin: const EdgeInsets.only(top: 2, right: 10),
             decoration: BoxDecoration(
-              color: IgnosisTheme.bone,
-              border: Border.all(color: IgnosisTheme.parchmentSubtle),
+              color: theme.background,
+              border: Border.all(color: theme.hairline),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Center(
               child: Text(
                 letter,
-                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: IgnosisTheme.vermilion),
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.seal),
               ),
             ),
           ),
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: const TextStyle(fontSize: 13, color: IgnosisTheme.charcoal, height: 1.4),
+                style: TextStyle(fontSize: 13, color: theme.inkSecondary, height: 1.4),
                 children: [
                   TextSpan(text: '$title: ', style: const TextStyle(fontWeight: FontWeight.bold)),
                   TextSpan(text: description),

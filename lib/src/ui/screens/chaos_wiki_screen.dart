@@ -61,7 +61,7 @@ class _ChaosWikiScreenState extends State<ChaosWikiScreen> {
             ),
             Text(
               'Personal Philosophy & Rites Interview Repository',
-              style: TextStyle(fontSize: 11, color: theme.inkMuted),
+              style: TextStyle(fontSize: 11, color: theme.inkTertiary),
             ),
           ],
         ),
@@ -229,7 +229,7 @@ class _ChaosWikiScreenState extends State<ChaosWikiScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.lightbulb_outline, size: 14, color: theme.inkMuted),
+                Icon(Icons.lightbulb_outline, size: 14, color: theme.inkTertiary),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -237,7 +237,7 @@ class _ChaosWikiScreenState extends State<ChaosWikiScreen> {
                     style: TextStyle(
                       fontSize: 11,
                       fontStyle: FontStyle.italic,
-                      color: theme.inkMuted,
+                      color: theme.inkTertiary,
                       height: 1.4,
                     ),
                   ),

@@ -8,7 +8,13 @@ class SceneStyle {
   final Color ink;
   final Color guide;
   final Color muted;
+
+  /// Readable secondary ink (visited labels).
+  final Color secondary;
   final Color accent;
+
+  /// The vermilion bind point, constant across skins.
+  final Color seal;
   final Color burn;
   final Color paper;
   final double strokeWidth;
@@ -32,7 +38,9 @@ class SceneStyle {
         ink: ink,
         guide: guide,
         muted: muted,
+        secondary: secondary,
         accent: accent,
+        seal: seal,
         burn: burn,
         paper: paper,
         strokeWidth: strokeWidth,
@@ -58,7 +66,9 @@ class SceneStyle {
     required this.ink,
     required this.guide,
     required this.muted,
+    required this.secondary,
     required this.accent,
+    required this.seal,
     required this.burn,
     required this.paper,
     required this.strokeWidth,
@@ -72,6 +82,8 @@ class SceneStyle {
         ink: skin.inkPrimary,
         guide: skin.guideColor,
         muted: skin.inkMuted,
+        secondary: skin.inkSecondary,
+        seal: skin.seal,
         accent: skin.accent,
         burn: skin.burn,
         paper: skin.canvasBackground,

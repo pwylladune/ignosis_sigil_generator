@@ -152,32 +152,32 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
   void _showExegesisModal() {
     showDialog(
       context: context,
-      builder: (context) => const RitualExegesisModal(),
+      builder: (context) => _skinned(RitualExegesisModal(theme: _skinTheme)),
     );
   }
 
   void _showSkinModal() {
     showDialog(
       context: context,
-      builder: (context) => SkinSelectorModal(
+      builder: (context) => _skinned(SkinSelectorModal(
         currentSkinId: _currentSkinId,
         theme: _skinTheme,
         onSkinSelected: _selectSkin,
-      ),
+      )),
     );
   }
 
   void _showPayModal() {
     showDialog(
       context: context,
-      builder: (context) => PaySchemaModal(theme: _skinTheme),
+      builder: (context) => _skinned(PaySchemaModal(theme: _skinTheme)),
     );
   }
 
   void _openWikiScreen() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => ChaosWikiScreen(theme: _skinTheme),
+        builder: (context) => _skinned(ChaosWikiScreen(theme: _skinTheme)),
       ),
     );
   }
@@ -187,10 +187,11 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
       context: context,
       barrierDismissible: false,
       barrierColor: Colors.black.withValues(alpha: 0.12),
-      builder: (context) => PenInkRitualBurnDialog(
+      builder: (context) => _skinned(PenInkRitualBurnDialog(
+        theme: _skinTheme,
         onBurnComplete: _triggerLocalBurn,
         breath: _breath,
-      ),
+      )),
     );
   }
 
@@ -217,7 +218,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                     fontSize: 10,
                     letterSpacing: 0.6,
                     fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                    color: selected ? theme.inkPrimary : theme.inkMuted,
+                    color: selected ? theme.inkPrimary : theme.inkTertiary,
                   ),
                 ),
               ),
@@ -290,11 +291,15 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
     );
   }
 
+  /// Applies the active skin's Material theme (cursor, chips, tooltips,
+  /// dialogs), including to dialog routes, which sit above the studio.
+  Widget _skinned(Widget child) => Theme(data: _skinTheme.toThemeData(), child: child);
+
   @override
   Widget build(BuildContext context) {
     final theme = _skinTheme;
 
-    return Scaffold(
+    return _skinned(Scaffold(
       backgroundColor: theme.background,
       appBar: AppBar(
         backgroundColor: theme.background,
@@ -381,7 +386,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                     ),
                     decoration: InputDecoration(
                       hintText: 'Enter Statement of Intent (e.g. MY WILL IS UNBREAKABLE)',
-                      hintStyle: TextStyle(color: theme.inkMuted, fontSize: 13),
+                      hintStyle: TextStyle(color: theme.inkTertiary, fontSize: 13),
                       filled: true,
                       fillColor: theme.surface,
                       prefixIcon: Icon(Icons.edit_note, color: theme.inkSecondary, size: 20),
@@ -410,7 +415,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                         Text(
                           _tracesHebrew ? 'HEBREW: ' : 'KERNEL: ',
                           style: TextStyle(
-                            color: theme.inkMuted,
+                            color: theme.inkTertiary,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1.2,
@@ -421,7 +426,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                               ? transliterate(_kernel.normalized).map((l) => l.glyph).join()
                               : _kernel.reducedConsonants.split('').join(' · '),
                           style: TextStyle(
-                            color: theme.accent,
+                            color: theme.seal,
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1.8,
@@ -431,7 +436,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                           onTap: _showExegesisModal,
                           child: Text(
                             'Why reduce? 🛈',
-                            style: TextStyle(fontSize: 11, color: theme.inkMuted, decoration: TextDecoration.underline),
+                            style: TextStyle(fontSize: 11, color: theme.inkTertiary, decoration: TextDecoration.underline),
                           ),
                         ),
                       ],
@@ -495,7 +500,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                       selectedColor: theme.surfaceElevated,
                       backgroundColor: theme.surface,
                       labelStyle: TextStyle(
-                        color: isSelected ? theme.inkPrimary : theme.inkMuted,
+                        color: isSelected ? theme.inkPrimary : theme.inkTertiary,
                         fontSize: 11,
                         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                         letterSpacing: 0.5,
@@ -574,7 +579,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                     onPressed: _state.isIncinerated || _isBurning || _kernel.isEmpty ? null : _showBurnModal,
-                    icon: Icon(Icons.whatshot, size: 16, color: theme.accent),
+                    icon: Icon(Icons.whatshot, size: 16, color: theme.surface),
                     label: const Text(
                       'RITUAL COMBUSTION',
                       style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.0, fontSize: 11),
@@ -586,7 +591,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
           ],
         ),
       ),
-    );
+    ));
   }
 }
 
@@ -632,7 +637,7 @@ class _IncineratedPlateState extends State<_IncineratedPlate> {
             Text(
               '"Does not matter—need not be."\n(Spare, The Book of Pleasure)',
               textAlign: TextAlign.center,
-              style: TextStyle(color: theme.inkMuted, fontSize: 12, fontStyle: FontStyle.italic, height: 1.5),
+              style: TextStyle(color: theme.inkTertiary, fontSize: 12, fontStyle: FontStyle.italic, height: 1.5),
             ),
             const SizedBox(height: 14),
             TextButton(
