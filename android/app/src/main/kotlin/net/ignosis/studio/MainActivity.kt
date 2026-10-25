@@ -1,4 +1,4 @@
-package com.ignosis.ignosis_sigil_generator
+package net.ignosis.studio
 
 import io.flutter.embedding.android.FlutterActivity
 

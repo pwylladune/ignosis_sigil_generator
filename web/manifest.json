@@ -1,11 +1,11 @@
 {
-    "name": "ignosis_sigil_generator",
-    "short_name": "ignosis_sigil_generator",
+    "name": "IGNOSIS: Chaos Sigil Studio",
+    "short_name": "IGNOSIS",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Chaos-magic sigil studio: five sigil systems, Gnosis breathing and a ritual burn.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

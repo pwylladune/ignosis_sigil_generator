@@ -3,7 +3,7 @@
          from restored app data. -->
     <application
         android:allowBackup="false"
-        android:label="ignosis_sigil_generator"
+        android:label="IGNOSIS"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
