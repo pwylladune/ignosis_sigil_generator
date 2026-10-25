@@ -141,11 +141,12 @@ class SigilPrintService {
                       ),
                       pw.SizedBox(height: 6),
                       pw.Text(
-                        '1. Cut the circular seal above. Place in a heat-resistant crucible or fireproof dish.\n'
-                        '2. Enter Gnosis through steady breath regulation (inhale will, exhale thought).\n'
-                        '3. Fix eyes on the seal until the visual image burns into your optic nerve.\n'
-                        '4. Ignite the paper completely. As the flame consumes the seal, release all desire ("Does not matter, need not be").\n'
-                        '5. Scatter or bury the ashes. Turn away immediately and banish with laughter or grounding.',
+                        '1. Cut out the circular seal above.\n'
+                        '2. Gather your attention with slow, steady breathing.\n'
+                        '3. Gaze at the seal until its image stays with you when you close your eyes.\n'
+                        '4. Let the wish go: "Does not matter—need not be" (Spare). Destroying the seal is optional: Carroll says it '
+                        '"may be burnt, buried, or cast into an ocean". If you burn it, use a fireproof dish in a safe place.\n'
+                        '5. Turn away and do something mundane, or banish with laughter. Then strive to forget it.',
                         style: const pw.TextStyle(fontSize: 8.5, height: 1.4, color: PdfColors.grey800),
                       ),
                     ],

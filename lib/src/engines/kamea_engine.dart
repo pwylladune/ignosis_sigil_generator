@@ -4,15 +4,17 @@ import '../geometry/sigil_geometry.dart';
 import '../models/hebrew_letters.dart';
 import '../models/intent_kernel.dart';
 
-/// The 7 Classical Planetary Magic Squares.
+/// The 7 classical planetary magic squares, in Agrippa's order
+/// (De occulta philosophia II.22, 1533). [aspect] summarises the virtues
+/// Agrippa ascribes to each table engraved in its metal.
 enum PlanetaryKameaType {
-  saturn(3, 'Saturn (3x3)', 'Form, Boundaries, Endurance'),
-  jupiter(4, 'Jupiter (4x4)', 'Abundance, Expansion, Sovereign Power'),
-  mars(5, 'Mars (5x5)', 'Strength, Courage, Decisive Action'),
-  sol(6, 'Sol (6x6)', 'Illumination, Radiance, Vitality'),
-  venus(7, 'Venus (7x7)', 'Harmony, Attraction, Synthesis'),
-  mercury(8, 'Mercury (8x8)', 'Cunning, Speed, Magic & Communication'),
-  luna(9, 'Luna (9x9)', 'Subconscious, Dreams, The Deep Waters');
+  saturn(3, 'Saturn (3x3)', 'Safety, steadfastness, success in petitions'),
+  jupiter(4, 'Jupiter (4x4)', 'Gain, favour, peace, honours'),
+  mars(5, 'Mars (5x5)', 'Victory, courage in contest'),
+  sol(6, 'Sol (6x6)', 'Renown, the favour of the great'),
+  venus(7, 'Venus (7x7)', 'Concord, love, fertility'),
+  mercury(8, 'Mercury (8x8)', 'Gain, memory, understanding, dreams of hidden things'),
+  luna(9, 'Luna (9x9)', 'Safe journeys, good cheer, health');
 
   final int size;
   final String label;

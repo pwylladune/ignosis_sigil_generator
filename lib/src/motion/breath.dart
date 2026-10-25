@@ -6,8 +6,9 @@ import 'package:flutter/foundation.dart';
 /// The breath curve `b(t)` is the master rhythm during Gnosis: it drives the
 /// dialog's guide and the sigil on the canvas, so the two stay in sync.
 enum BreathPattern {
-  /// Resonance breathing at 5.5 breaths/min: inhale 5.45 s, exhale 5.45 s.
-  resonance('Resonance', 'Coherent 5.5 / min', inhale: 60 / 5.5 / 2, holdIn: 0, exhale: 60 / 5.5 / 2, holdOut: 0),
+  /// Slow paced breathing at 5.5 breaths/min (about 0.1 Hz, near the
+  /// "resonance frequency" of Lehrer & Vaschillo): inhale 5.45 s, exhale 5.45 s.
+  resonance('Slow paced', '5.5 breaths / min', inhale: 60 / 5.5 / 2, holdIn: 0, exhale: 60 / 5.5 / 2, holdOut: 0),
 
   /// Box breathing 4-4-4-4.
   box('Box', '4 · 4 · 4 · 4', inhale: 4, holdIn: 4, exhale: 4, holdOut: 4),

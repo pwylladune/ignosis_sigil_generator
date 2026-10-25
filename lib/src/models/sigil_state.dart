@@ -1,9 +1,9 @@
 import '../engines/kamea_engine.dart';
 
 enum SigilSystem {
-  spare('Austin Osman Spare', 'Letter reduction monogram assembled by a symmetry group'),
-  kamea('Planetary Kamea', 'Planetary magic square ciphers (Saturn to Luna)'),
-  roseCross('Rose Cross Dial', 'Hermetic 3 · 7 · 12 Rosicrucian petal rose'),
+  spare('Monogram (after Spare)', 'Letters merged into one glyph as in Spare (1913); the radial symmetry is IGNOSIS’s own'),
+  kamea('Planetary Kamea', 'Agrippa’s planetary magic squares (Saturn to Luna), traced as the Golden Dawn did'),
+  roseCross('Golden Dawn Rose', 'The 22-petal rose of the Golden Dawn Rose Cross lamen (3 · 7 · 12)'),
   chladni('Cymatic Resonance', '2D acoustic Chladni plate vibration nodal field'),
   cyberChaos('Cyber Chaos', 'SHA-256 seeded Clifford strange attractor');
 
@@ -30,6 +30,10 @@ class SigilState {
   final PlanetaryKameaType kameaType;
   final int symmetryFolds;
   final SymmetryGroup symmetryGroup;
+
+  /// Also strip vowels when reducing (a modern convention). Off by default:
+  /// Carroll's method strikes out repeated letters only.
+  final bool stripVowels;
   final bool isIncinerated;
 
   const SigilState({
@@ -38,6 +42,7 @@ class SigilState {
     this.kameaType = PlanetaryKameaType.sol,
     this.symmetryFolds = 4,
     this.symmetryGroup = SymmetryGroup.cyclic,
+    this.stripVowels = false,
     this.isIncinerated = false,
   });
 
@@ -47,6 +52,7 @@ class SigilState {
     PlanetaryKameaType? kameaType,
     int? symmetryFolds,
     SymmetryGroup? symmetryGroup,
+    bool? stripVowels,
     bool? isIncinerated,
   }) {
     return SigilState(
@@ -55,6 +61,7 @@ class SigilState {
       kameaType: kameaType ?? this.kameaType,
       symmetryFolds: symmetryFolds ?? this.symmetryFolds,
       symmetryGroup: symmetryGroup ?? this.symmetryGroup,
+      stripVowels: stripVowels ?? this.stripVowels,
       isIncinerated: isIncinerated ?? this.isIncinerated,
     );
   }

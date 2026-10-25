@@ -1,5 +1,6 @@
 /// The 22 Hebrew letters with their standard gematria values and their
-/// Sepher Yetzirah class (3 mothers, 7 doubles, 12 simples).
+/// Sepher Yetzirah class (3 mothers, 7 doubles, 12 simples), as used in the
+/// Hermetic Qabalah of the Golden Dawn (not Jewish Kabbalah practice).
 enum LetterClass { mother, double, simple }
 
 enum HebrewLetter {

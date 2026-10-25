@@ -92,7 +92,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
   void _onIntentChanged(String value) {
     setState(() {
       _state = _state.copyWith(rawIntent: value, isIncinerated: false);
-      _kernel = IntentKernel.fromText(value);
+      _kernel = IntentKernel.fromText(value, stripVowels: _state.stripVowels);
     });
   }
 
@@ -233,6 +233,25 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
         }
       case SigilSystem.spare:
       case SigilSystem.cyberChaos:
+      case SigilSystem.chladni:
+        if (_state.system != SigilSystem.cyberChaos) {
+          // How letters are reduced: Carroll's method, or the modern convention.
+          for (final strip in const [false, true]) {
+            chips.add(chip(
+              strip ? 'NO VOWELS (MODERN)' : 'KEEP VOWELS (CARROLL)',
+              _state.stripVowels == strip,
+              () => setState(() {
+                _state = _state.copyWith(stripVowels: strip);
+                _kernel = IntentKernel.fromText(_state.rawIntent, stripVowels: strip);
+              }),
+              tooltip: strip
+                  ? 'Strike out repeated letters and vowels (a later popular convention)'
+                  : 'Strike out repeated letters only (Carroll, Liber Null)',
+            ));
+          }
+          if (_state.system == SigilSystem.chladni) break;
+          chips.add(const SizedBox(width: 8));
+        }
         if (_state.system == SigilSystem.spare) {
           for (final g in SymmetryGroup.values) {
             chips.add(chip(
@@ -385,7 +404,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                       runSpacing: 4,
                       children: [
                         Text(
-                          'AUSTIN OSMAN SPARE KERNEL: ',
+                          'KERNEL: ',
                           style: TextStyle(
                             color: theme.inkMuted,
                             fontSize: 10,
@@ -605,7 +624,7 @@ class _IncineratedPlateState extends State<_IncineratedPlate> {
             ),
             const SizedBox(height: 6),
             Text(
-              '"Does not matter, need not be."\nReleased to subconscious execution.',
+              '"Does not matter—need not be."\n(Spare, The Book of Pleasure)',
               textAlign: TextAlign.center,
               style: TextStyle(color: theme.inkMuted, fontSize: 12, fontStyle: FontStyle.italic, height: 1.5),
             ),

@@ -133,7 +133,7 @@ class _ChaosWikiScreenState extends State<ChaosWikiScreen> {
                   Text(
                     'This section establishes the definitive body of knowledge for IGNOSIS. '
                     'Below is the structured questionnaire designed to distill your personal understanding '
-                    'of esoterica, Austin Osman Spare\'s method, Gnosis, and the digital proof-of-heat. '
+                    'of esoterica, Austin Osman Spare\'s method, gnosis, and the symbolic act of combustion. '
                     'As we develop this through long-form discussion, answers recorded here become the permanent app wiki.',
                     style: TextStyle(fontSize: 13, height: 1.5, color: theme.inkSecondary),
                   ),

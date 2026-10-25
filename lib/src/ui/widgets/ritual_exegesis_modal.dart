@@ -78,38 +78,43 @@ class RitualExegesisModal extends StatelessWidget {
                   children: [
                     _buildSectionHeader('1. THE FOUNDATIONAL PRINCIPLE (CHAOS MAGICK)'),
                     _buildParagraph(
-                      'Pioneered by artist-occultist Austin Osman Spare and codified by Peter J. Carroll (Liber Null), '
-                      'chaos magick treats ritual as pure psychological and informational technology. '
-                      'A sigil is an encoded glyph of conscious will designed to bypass your psychic censor—planting '
-                      'your intention deep into the subconscious matrix without the paralyzing friction of conscious doubt.',
+                      'Sigil magic in this form comes from the artist-occultist Austin Osman Spare (The Book of Pleasure, 1913) and was '
+                      'systematised by Peter J. Carroll (Liber Null, 1978). In chaos magick a sigil is understood as a glyph of intent '
+                      'meant to slip past what Carroll calls the "psychic censor", so the wish can work without the friction of conscious doubt.',
                     ),
                     const SizedBox(height: 20),
 
                     _buildSectionHeader('2. STATEMENT OF INTENT TO PURE GEOMETRY'),
-                    _buildStepRow('A', 'Formulate Intent', 'Phrase your will in the present or affirmative tense (e.g. "I EMBODY UNWAVERING CLARITY").'),
-                    _buildStepRow('B', 'Spare Reduction', 'Vowels and duplicate consonants are stripped, leaving an irreducible phonetic kernel.'),
-                    _buildStepRow('C', 'Geometric Transmutation', 'The remaining phonetic matrix is projected across mathematical ciphers (Planetary Kameas, Rose Cross Wheels, Chladni acoustic waves, or Cryptographic Entropy).'),
+                    _buildStepRow('A', 'Formulate Intent', 'Spare and Carroll phrase it as a wish ("This my wish to obtain…"); present-tense affirmations are a later convention. Use whichever your mind does not argue with.'),
+                    _buildStepRow('B', 'Reduce the Letters', 'Repeated letters are struck out (Carroll, Liber Null). Removing vowels too is a later popular convention, offered as an option. The Kamea and Rose Cross instead trace the Hebrew spelling, as the Golden Dawn did.'),
+                    _buildStepRow('C', 'Draw the Glyph', 'The letters are drawn through a system: Spare-style monogram, planetary kamea, Golden Dawn rose, Chladni plate or a hash-seeded attractor. The last two are IGNOSIS\'s own.'),
                     const SizedBox(height: 20),
 
                     _buildSectionHeader('3. GNOSIS (THE CHARGING TRANCE)'),
                     _buildParagraph(
-                      'A sigil must be charged during a state of Gnosis—a peak threshold of absolute singular focus where the discursive '
-                      'mind goes completely silent. In the studio, the breath-pacing ring brings your awareness into rhythmic theta/alpha harmony.',
+                      'Carroll teaches that a sigil is charged in "gnosis": a peak of single-pointed focus, reached by inhibitory methods '
+                      '(stillness, trance) or excitatory ones (dance, chanting). In the studio, the breath ring paces a slow, steady rhythm '
+                      'to help gather your attention.',
                     ),
                     const SizedBox(height: 20),
 
-                    _buildSectionHeader('4. THE "BURN" & "FREE BELIEF" (FORGETTING)'),
+                    _buildSectionHeader('4. FORGETTING (AND THE OPTIONAL BURN)'),
                     _buildParagraph(
-                      'Spare established the iron law of sigils: "Does not matter, need not be." Obsessing over your desire binds it to '
-                      'the conscious ego and prevents subconscious execution. Therefore, the physical or digital substrate must be '
-                      'DESTROYED. Burning the sigil breaks emotional attachment and releases the intention to chaos.',
+                      'Spare\'s formula of non-attachment was "Does not matter—need not be" (The Book of Pleasure). He advised '
+                      '"a deliberate striving to forget" the sigil; dwelling on the outcome, what Carroll (after Crowley) calls '
+                      '"lust of result", keeps the wish in doubting conscious thought. Destroying the sigil is a later, optional custom: '
+                      'Carroll says it "may be burnt, buried, or cast into an ocean". The studio\'s burn is that gesture.',
+                    ),
+                    const SizedBox(height: 20),
+                    _buildParagraph(
+                      'Symbolic and artistic practice. No physical, medical or financial effect is claimed.',
                     ),
                     const SizedBox(height: 20),
 
                     if (kEnableChain) ...[
                       _buildSectionHeader(r'5. THE $IGNOSIS ON-CHAIN COMBUSTION'),
                       _buildParagraph(
-                        r'In classical alchemy, physical fire releases chemical bonds as thermal heat. In the digital universe, '
+                        r'Fire consumes its substrate irreversibly. In the digital universe, '
                         r'$IGNOSIS bridges on-chain decentralization with energetic sacrifice. Burning $IGNOSIS sends real tokens to the Solana incinerator, '
                         r'forever carving the mathematical proof-of-heat onto the distributed ledger while totally purging your intent text from local memory.',
                       ),

@@ -134,9 +134,11 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
               const Divider(height: 24, color: IgnosisTheme.parchmentSubtle),
 
               const Text(
-                'Focus your undivided attention on the center bind-point. '
+                'Focus your attention on the centre bind-point. '
                 'Breathe with the ring; the seal breathes with you. '
-                'When your focus peaks, release the seal.',
+                'When your focus peaks, release the seal.\n'
+                'Breathe comfortably and stop if you feel dizzy or short of breath. '
+                'This is a focus exercise, not medical advice.',
                 style: TextStyle(color: IgnosisTheme.charcoal, fontSize: 13, height: 1.5),
                 textAlign: TextAlign.center,
               ),
