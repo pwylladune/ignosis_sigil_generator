@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'dart:ui';
 import 'package:crypto/crypto.dart';
 import '../geometry/sigil_geometry.dart';
+import '../motion/det_math.dart';
 import '../models/intent_kernel.dart';
 
 /// Parameters of a Clifford attractor:
@@ -26,18 +27,18 @@ class CliffordParams {
   double lyapunov({int iterations = 4000, int transient = 200}) {
     var x = 0.1, y = 0.1, vx = 1.0, vy = 0.0, sum = 0.0;
     for (var i = 0; i < transient + iterations; i++) {
-      final jxx = -a * c * math.sin(a * x), jxy = a * math.cos(a * y);
-      final jyx = b * math.cos(b * x), jyy = -b * d * math.sin(b * y);
+      final jxx = -a * c * detSin(a * x), jxy = a * detCos(a * y);
+      final jyx = b * detCos(b * x), jyy = -b * d * detSin(b * y);
       final nvx = jxx * vx + jxy * vy, nvy = jyx * vx + jyy * vy;
-      final nx = math.sin(a * y) + c * math.cos(a * x);
-      final ny = math.sin(b * x) + d * math.cos(b * y);
+      final nx = detSin(a * y) + c * detCos(a * x);
+      final ny = detSin(b * x) + d * detCos(b * y);
       x = nx;
       y = ny;
       final len = math.sqrt(nvx * nvx + nvy * nvy);
       if (len == 0) return double.negativeInfinity;
       vx = nvx / len;
       vy = nvy / len;
-      if (i >= transient) sum += math.log(len);
+      if (i >= transient) sum += detLog(len);
     }
     return sum / iterations;
   }
@@ -50,8 +51,8 @@ class CliffordParams {
     final w = 1 + c.abs(), h = 1 + d.abs();
     var x = 0.1, y = 0.1, count = 0;
     for (var i = 0; i < iterations + 100; i++) {
-      final nx = math.sin(a * y) + c * math.cos(a * x);
-      final ny = math.sin(b * x) + d * math.cos(b * y);
+      final nx = detSin(a * y) + c * detCos(a * x);
+      final ny = detSin(b * x) + d * detCos(b * y);
       x = nx;
       y = ny;
       if (i < 100) continue;
@@ -98,6 +99,10 @@ class ChaosSigil {
 
 /// Cyber Chaos: a strange attractor seeded from SHA-256 of the intent.
 ///
+/// The orbit is chaotic by construction, so it uses [detSin] / [detCos] /
+/// [detLog] rather than `dart:math`: a 1-ulp platform difference would
+/// otherwise grow into a different sigil on another device or on the web.
+///
 /// Seeds whose orbit is not chaotic (low Lyapunov exponent) or that collapse
 /// (low fill) are rejected and the digest is re-hashed, deterministically.
 class CyberChaosEngine {
@@ -122,14 +127,14 @@ class CyberChaosEngine {
     final raw = Float64List(pointCount * 2);
     var x = 0.1, y = 0.1;
     for (var i = 0; i < 200; i++) {
-      final nx = math.sin(p.a * y) + p.c * math.cos(p.a * x);
-      y = math.sin(p.b * x) + p.d * math.cos(p.b * y);
+      final nx = detSin(p.a * y) + p.c * detCos(p.a * x);
+      y = detSin(p.b * x) + p.d * detCos(p.b * y);
       x = nx;
     }
     var minX = double.infinity, maxX = -double.infinity, minY = double.infinity, maxY = -double.infinity;
     for (var i = 0; i < pointCount; i++) {
-      final nx = math.sin(p.a * y) + p.c * math.cos(p.a * x);
-      y = math.sin(p.b * x) + p.d * math.cos(p.b * y);
+      final nx = detSin(p.a * y) + p.c * detCos(p.a * x);
+      y = detSin(p.b * x) + p.d * detCos(p.b * y);
       x = nx;
       raw[2 * i] = x;
       raw[2 * i + 1] = y;
@@ -148,7 +153,7 @@ class CyberChaosEngine {
       final r = math.sqrt(dx * dx + dy * dy);
       if (r > maxR) maxR = r;
       final a = 2 * math.pi * (i % folds) / folds;
-      final ca = math.cos(a), sa = math.sin(a);
+      final ca = detCos(a), sa = detSin(a);
       raw[2 * i] = dx * ca - dy * sa;
       raw[2 * i + 1] = dx * sa + dy * ca;
     }
