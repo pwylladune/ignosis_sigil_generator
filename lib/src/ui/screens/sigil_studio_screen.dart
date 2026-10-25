@@ -219,6 +219,28 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
             tooltip: '${t.label}: ${t.aspect}',
           ));
         }
+      case SigilSystem.spare:
+      case SigilSystem.cyberChaos:
+        if (_state.system == SigilSystem.spare) {
+          for (final g in SymmetryGroup.values) {
+            chips.add(chip(
+              g == SymmetryGroup.cyclic ? 'ROTATE' : 'ROTATE + MIRROR',
+              _state.symmetryGroup == g,
+              () => setState(() => _state = _state.copyWith(symmetryGroup: g)),
+              tooltip: g == SymmetryGroup.cyclic ? 'Cyclic group Cₙ' : 'Dihedral group Dₙ',
+            ));
+          }
+          chips.add(const SizedBox(width: 8));
+        }
+        for (final n in const [1, 2, 3, 4, 5, 6, 8]) {
+          final sym = _state.system == SigilSystem.spare ? _state.symmetryGroup.symbol : 'C';
+          chips.add(chip(
+            '$sym$n',
+            _state.symmetryFolds == n,
+            () => setState(() => _state = _state.copyWith(symmetryFolds: n)),
+            tooltip: '$n-fold symmetry',
+          ));
+        }
       default:
         return const SizedBox.shrink();
     }

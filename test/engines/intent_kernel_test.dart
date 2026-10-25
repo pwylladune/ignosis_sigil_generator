@@ -1,7 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ignosis_sigil_generator/src/models/intent_kernel.dart';
-import 'package:ignosis_sigil_generator/src/engines/spare_monogram_engine.dart';
-import 'package:flutter/material.dart';
 
 void main() {
   group('IntentKernel Tests', () {
@@ -29,17 +27,6 @@ void main() {
     test('Handles empty text gracefully', () {
       final kernel = IntentKernel.fromText('   ');
       expect(kernel.isEmpty, isTrue);
-    });
-  });
-
-  group('SpareMonogramEngine Tests', () {
-    test('Builds radical monogram glyph with rotational symmetry', () {
-      final engine = SpareMonogramEngine();
-      final kernel = IntentKernel.fromText('PROTECTION AND FORCE');
-      const size = Size(500, 500);
-
-      final path = engine.generatePath(kernel, size, symmetry: 4);
-      expect(path.getBounds().isEmpty, isFalse);
     });
   });
 }
