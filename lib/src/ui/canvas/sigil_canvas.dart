@@ -67,6 +67,8 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
     widget.burn.addListener(_onBurnRequested);
     widget.breath?.addListener(_onBreath);
     WidgetsBinding.instance.addObserver(this);
+    // Warm the burn shader so the first burn never falls back.
+    CombustionShader.load();
   }
 
   @override
