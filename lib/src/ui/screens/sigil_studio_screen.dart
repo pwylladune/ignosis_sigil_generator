@@ -183,7 +183,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => PenInkWitualBurnDialog(
+      builder: (context) => PenInkRitualBurnDialog(
         onBurnComplete: _triggerLocalBurn,
         onBurnOnChainRequested: kEnableChain ? _showWalletBankModal : null,
       ),

@@ -30,7 +30,6 @@ class IgnosisTheme {
         surface: surfaceElevated,
         onSurface: sumiInk,
       ),
-      fontFamily: '-apple-system',
       appBarTheme: const AppBarTheme(
         backgroundColor: bone,
         foregroundColor: sumiInk,

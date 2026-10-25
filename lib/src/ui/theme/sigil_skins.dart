@@ -35,7 +35,6 @@ class SigilSkinTheme {
   final Color guideColor;
   final double strokeWidth;
   final double inkWashOpacity;
-  final String fontFamily;
 
   const SigilSkinTheme({
     required this.id,
@@ -54,7 +53,6 @@ class SigilSkinTheme {
     required this.guideColor,
     this.strokeWidth = 2.0,
     this.inkWashOpacity = 0.08,
-    this.fontFamily = '-apple-system',
   });
 
   static SigilSkinTheme getSkin(SigilSkinId id) {

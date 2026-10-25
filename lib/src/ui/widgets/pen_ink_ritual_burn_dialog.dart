@@ -2,22 +2,22 @@ import 'package:flutter/material.dart';
 import '../theme/ignosis_theme.dart';
 
 /// Clean Pen & Ink architectural modal for Gnosis breathing and combustion
-class PenInkWitualBurnDialog extends StatefulWidget {
+class PenInkRitualBurnDialog extends StatefulWidget {
   final VoidCallback onBurnComplete;
   /// Null hides the on-chain option (see kEnableChain).
   final VoidCallback? onBurnOnChainRequested;
 
-  const PenInkWitualBurnDialog({
+  const PenInkRitualBurnDialog({
     super.key,
     required this.onBurnComplete,
     this.onBurnOnChainRequested,
   });
 
   @override
-  State<PenInkWitualBurnDialog> createState() => _PenInkWitualBurnDialogState();
+  State<PenInkRitualBurnDialog> createState() => _PenInkRitualBurnDialogState();
 }
 
-class _PenInkWitualBurnDialogState extends State<PenInkWitualBurnDialog>
+class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog>
     with SingleTickerProviderStateMixin {
   late final AnimationController _breathController;
   int _ritualStep = 0; // 0: Charging / Gnosis, 1: Burning
