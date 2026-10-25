@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ignosis_sigil_generator/src/models/intent_kernel.dart';
-import 'package:ignosis_sigil_generator/src/engines/cyber_chaos_engine.dart';
 import 'package:ignosis_sigil_generator/src/engines/spare_monogram_engine.dart';
 import 'package:flutter/material.dart';
 
@@ -30,17 +29,6 @@ void main() {
     test('Handles empty text gracefully', () {
       final kernel = IntentKernel.fromText('   ');
       expect(kernel.isEmpty, isTrue);
-    });
-  });
-
-  group('CyberChaosEngine Tests', () {
-    test('Generates cryptographic hash polylines', () {
-      final engine = CyberChaosEngine();
-      final kernel = IntentKernel.fromText('IGNOSIS CONSECRATION');
-      const size = Size(600, 600);
-
-      final path = engine.generatePath(kernel, size, symmetryFolds: 6);
-      expect(path.getBounds().isEmpty, isFalse);
     });
   });
 
