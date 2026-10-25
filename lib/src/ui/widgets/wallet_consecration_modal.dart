@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../models/revenue_schema.dart';
+import '../../services/iap_service.dart';
+import '../../services/secure_key_storage_service.dart';
 import '../../services/solana_wallet_service.dart';
 import '../theme/sigil_skins.dart';
+import 'seed_phrase_export_modal.dart';
 
 /// Modal for connecting, inspecting, adjusting burn amount, and burning $IGNOSIS
 class WalletConsecrationModal extends StatefulWidget {
@@ -22,10 +25,12 @@ class WalletConsecrationModal extends StatefulWidget {
 
 class _WalletConsecrationModalState extends State<WalletConsecrationModal> {
   final _walletService = SolanaWalletService();
-  final _addressController = TextEditingController(text: '7xKy...IgnosisPractitioner42');
+  final _keyStorage = SecureKeyStorageService();
+  late final TextEditingController _addressController;
   late final TextEditingController _burnAmountController;
 
   bool _isTransacting = false;
+  bool _hasInAppWallet = false;
   final double _solBalance = 3.42;
   double _ignosisBalance = 777.0; // Externally acquired or starter pack balance
   double _burnAmount = RevenueSchemaConfig.defaultBurnAmount.toDouble();
@@ -33,7 +38,22 @@ class _WalletConsecrationModalState extends State<WalletConsecrationModal> {
   @override
   void initState() {
     super.initState();
+    _addressController = TextEditingController(text: '7xKy...IgnosisPractitioner42');
     _burnAmountController = TextEditingController(text: RevenueSchemaConfig.defaultBurnAmount.toString());
+    _loadInAppWallet();
+  }
+
+  Future<void> _loadInAppWallet() async {
+    final hasWallet = await _keyStorage.hasInAppWallet();
+    if (hasWallet) {
+      final addr = await _keyStorage.getPublicAddress();
+      if (addr != null && mounted) {
+        setState(() {
+          _hasInAppWallet = true;
+          _addressController.text = addr;
+        });
+      }
+    }
   }
 
   @override
@@ -86,17 +106,57 @@ class _WalletConsecrationModalState extends State<WalletConsecrationModal> {
     }
   }
 
-  void _buyStarterPack() {
-    // Simulates purchasing the $1.99 Ignition Pack (deposits 279 $IGNOSIS)
-    setState(() {
-      _ignosisBalance += RevenueSchemaConfig.starterPackTokensDeposited;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: widget.theme.inkPrimary,
-        content: const Text('Ignition Pack Activated! Deposited 279 \$IGNOSIS into your wallet.'),
-      ),
-    );
+  Future<void> _buyStarterPack() async {
+    setState(() => _isTransacting = true);
+
+    try {
+      await IapService.instance.buyIgnitionStarterPack();
+      final userAddress = await _keyStorage.getPublicAddress();
+
+      setState(() {
+        if (userAddress != null) {
+          _addressController.text = userAddress;
+          _hasInAppWallet = true;
+        }
+        _ignosisBalance += RevenueSchemaConfig.starterPackTokensDeposited;
+        _isTransacting = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: widget.theme.inkPrimary,
+            content: const Text('Ignition Pack Activated! 279 \$IGNOSIS deposited into your vault.'),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isTransacting = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: widget.theme.burn,
+            content: Text('Failed to complete starter pack: $e'),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showSeedPhraseModal() async {
+    final mnemonic = await _keyStorage.getRecoveryMnemonic();
+    final address = await _keyStorage.getPublicAddress() ?? _addressController.text;
+
+    if (mnemonic != null && mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => SeedPhraseExportModal(
+          mnemonic: mnemonic,
+          publicAddress: address,
+          theme: widget.theme,
+        ),
+      );
+    }
   }
 
   @override
@@ -173,13 +233,38 @@ class _WalletConsecrationModalState extends State<WalletConsecrationModal> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('ACTIVE SOLANA ADDRESS', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: theme.inkMuted)),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text('EXTERNAL WALLET LINKED', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Color(0xFF15803D))),
+                        Row(
+                          children: [
+                            if (_hasInAppWallet)
+                              InkWell(
+                                onTap: _showSeedPhraseModal,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.key, size: 11, color: theme.accent),
+                                      const SizedBox(width: 3),
+                                      Text('VIEW 12 WORDS', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: theme.accent)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: _hasInAppWallet ? theme.surfaceElevated : const Color(0xFFDCFCE7),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                _hasInAppWallet ? 'ENCLAVE VAULT' : 'EXTERNAL LINKED',
+                                style: TextStyle(
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                  color: _hasInAppWallet ? theme.inkPrimary : const Color(0xFF15803D),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -187,6 +272,7 @@ class _WalletConsecrationModalState extends State<WalletConsecrationModal> {
                     Text(
                       _addressController.text,
                       style: TextStyle(fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.w600, color: theme.inkPrimary),
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Divider(height: 18, color: theme.hairline),
                     Row(
@@ -239,7 +325,7 @@ class _WalletConsecrationModalState extends State<WalletConsecrationModal> {
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                       ),
-                      onPressed: _buyStarterPack,
+                      onPressed: _isTransacting ? null : _buyStarterPack,
                       child: const Text('\$1.99', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                     ),
                   ],
