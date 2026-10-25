@@ -103,6 +103,38 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
 
   bool get _canExport => !_state.isIncinerated && !_isBurning && !_kernel.isEmpty;
 
+  /// One entry point for getting the seal out of the app: share or print.
+  void _showExportSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => _skinned(SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.image_outlined),
+              title: const Text('Share seal (PNG)'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _exportSigil();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.print_outlined),
+              title: const Text('Print burn sheet'),
+              subtitle: const Text('A4 or US Letter, with the seal to cut out'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _printPhysicalSheet();
+              },
+            ),
+          ],
+        ),
+      )),
+    );
+  }
+
   Future<void> _exportSigil() async {
     final bytes = await _settledSealPng();
     if (bytes != null) {
@@ -181,7 +213,11 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
     );
   }
 
+  /// True while the Gnosis dialog is open.
+  bool _charging = false;
+
   void _showBurnModal() {
+    setState(() => _charging = true);
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -191,33 +227,46 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
         onBurnComplete: _triggerLocalBurn,
         breath: _breath,
       )),
-    );
+    ).whenComplete(() {
+      if (mounted) setState(() => _charging = false);
+    });
   }
 
   /// Options for the selected system (planet for Kamea; folds and group for
   /// the symmetric systems). Empty for systems without options.
   Widget _buildSystemOptions(SigilSkinTheme theme) {
     final chips = <Widget>[];
+    // A 36 pt chip inside a 44 pt hit area (HIG; WCAG 2.2 SC 2.5.8).
     Widget chip(String label, bool selected, VoidCallback onTap, {String? tooltip}) => Padding(
           padding: const EdgeInsets.only(right: 6),
           child: Tooltip(
             message: tooltip ?? '',
-            child: InkWell(
-              onTap: _isBurning ? null : onTap,
-              borderRadius: BorderRadius.circular(5),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(5),
-                  border: Border.all(color: selected ? theme.accent : theme.hairline),
-                ),
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 10,
-                    letterSpacing: 0.6,
-                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                    color: selected ? theme.inkPrimary : theme.inkTertiary,
+            child: Semantics(
+              button: true,
+              selected: selected,
+              child: InkWell(
+                onTap: _isBurning ? null : onTap,
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 44),
+                  alignment: Alignment.center,
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 36),
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: selected ? theme.seal : theme.hairlineStrong),
+                    ),
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 11,
+                        letterSpacing: 0.6,
+                        fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                        color: selected ? theme.inkPrimary : theme.inkTertiary,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -329,31 +378,26 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.palette_outlined, color: theme.inkSecondary, size: 20),
-            tooltip: 'Aesthetic Skins (${_currentSkinId.label})',
-            onPressed: _showSkinModal,
-          ),
-          IconButton(
-            icon: Icon(Icons.print_outlined, color: theme.inkSecondary, size: 20),
-            tooltip: 'Print Archival Burn Sheet',
-            onPressed: _canExport ? _printPhysicalSheet : null,
-          ),
-          IconButton(
-            icon: Icon(Icons.auto_stories_outlined, color: theme.inkSecondary, size: 20),
-            tooltip: 'Chaos Magic Archives & Interview Wiki',
+            icon: Icon(Icons.auto_stories_outlined, color: theme.inkSecondary, size: 22),
+            tooltip: 'Chaos magic wiki',
             onPressed: _openWikiScreen,
           ),
           IconButton(
-            icon: Icon(Icons.card_membership_outlined, color: theme.inkSecondary, size: 20),
-            tooltip: 'Pay Schema & Memberships',
-            onPressed: _showPayModal,
+            icon: Icon(Icons.ios_share, color: theme.inkSecondary, size: 22),
+            tooltip: 'Share or print the seal',
+            onPressed: _canExport ? _showExportSheet : null,
           ),
-          IconButton(
-            icon: Icon(Icons.ios_share, color: theme.inkSecondary, size: 20),
-            tooltip: 'Share seal (PNG)',
-            onPressed: _canExport ? _exportSigil : null,
+          PopupMenuButton<VoidCallback>(
+            icon: Icon(Icons.more_vert, color: theme.inkSecondary, size: 22),
+            tooltip: 'More',
+            onSelected: (action) => action(),
+            itemBuilder: (context) => [
+              PopupMenuItem(value: _showSkinModal, child: const Text('Skins')),
+              PopupMenuItem(value: _showPayModal, child: const Text('Skins & support')),
+              PopupMenuItem(value: _showExegesisModal, child: const Text('Why reduce?')),
+            ],
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 4),
         ],
       ),
       body: SafeArea(
@@ -385,7 +429,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                     ),
                     decoration: InputDecoration(
                       hintText: 'Enter Statement of Intent (e.g. MY WILL IS UNBREAKABLE)',
-                      hintStyle: TextStyle(color: theme.inkTertiary, fontSize: 13),
+                      hintStyle: TextStyle(color: theme.inkTertiary, fontSize: 14),
                       filled: true,
                       fillColor: theme.surface,
                       prefixIcon: Icon(Icons.edit_note, color: theme.inkSecondary, size: 20),
@@ -405,7 +449,8 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  if (_kernel.reducedConsonants.isNotEmpty)
+                  // Hidden during the rite: forgetting the intent is part of the practice.
+                  if (_kernel.reducedConsonants.isNotEmpty && !_charging && !_isBurning)
                     Wrap(
                       crossAxisAlignment: WrapCrossAlignment.center,
                       spacing: 8,
@@ -415,7 +460,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                           _tracesHebrew ? 'HEBREW: ' : 'KERNEL: ',
                           style: TextStyle(
                             color: theme.inkTertiary,
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1.2,
                           ),
@@ -431,12 +476,17 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                             letterSpacing: 1.8,
                           ),
                         ),
-                        InkWell(
-                          onTap: _showExegesisModal,
-                          child: Text(
-                            'Why reduce? 🛈',
-                            style:
-                                TextStyle(fontSize: 11, color: theme.inkTertiary, decoration: TextDecoration.underline),
+                        TextButton(
+                          // TextButton keeps a 48 pt hit area around the small link.
+                          onPressed: _showExegesisModal,
+                          style: TextButton.styleFrom(
+                            foregroundColor: theme.inkTertiary,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            minimumSize: const Size(44, 44),
+                          ),
+                          child: const Text(
+                            'Why reduce?',
+                            style: TextStyle(fontSize: 12, decoration: TextDecoration.underline),
                           ),
                         ),
                       ],
@@ -470,12 +520,16 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                     child: RepaintBoundary(
                       child: _state.isIncinerated
                           ? _IncineratedPlate(theme: theme)
-                          : SigilCanvas(
-                              spec: _spec,
-                              skin: theme,
-                              burn: _burn,
-                              onIncinerated: _onIncinerated,
-                              breath: _breath,
+                          : Semantics(
+                              image: true,
+                              label: _kernel.isEmpty ? 'Empty plate' : '${_state.system.title} sigil',
+                              child: SigilCanvas(
+                                spec: _spec,
+                                skin: theme,
+                                burn: _burn,
+                                onIncinerated: _onIncinerated,
+                                breath: _breath,
+                              ),
                             ),
                     ),
                   ),
@@ -550,11 +604,11 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                             const SizedBox(width: 6),
                             Flexible(
                               child: Text(
-                                _currentSkinId.label.toUpperCase(),
+                                _skinTheme.shortLabel.toUpperCase(),
                                 overflow: TextOverflow.ellipsis,
                                 maxLines: 1,
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 0.8,
                                   color: theme.inkPrimary,
@@ -579,7 +633,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                     onPressed: _state.isIncinerated || _isBurning || _kernel.isEmpty ? null : _showBurnModal,
                     icon: Icon(Icons.whatshot, size: 16, color: theme.surface),
                     label: const Text(
-                      'RITUAL COMBUSTION',
+                      'BEGIN THE RITE',
                       style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.0, fontSize: 11),
                     ),
                   ),
@@ -619,34 +673,37 @@ class _IncineratedPlateState extends State<_IncineratedPlate> {
   @override
   Widget build(BuildContext context) {
     final theme = widget.theme;
-    return AnimatedOpacity(
-      opacity: _visible ? 1 : 0,
-      duration: const Duration(milliseconds: 1200),
-      curve: Curves.easeInOut,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'SEAL DISSOLVED INTO THE VOID',
-              style:
-                  TextStyle(color: theme.inkSecondary, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2.0),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '"Does not matter—need not be."\n(Spare, The Book of Pleasure)',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: theme.inkTertiary, fontSize: 12, fontStyle: FontStyle.italic, height: 1.5),
-            ),
-            const SizedBox(height: 14),
-            TextButton(
-              onPressed: _laughed ? null : () => setState(() => _laughed = true),
-              child: Text(
-                _laughed ? 'Ha.' : 'BANISH WITH LAUGHTER',
-                style: TextStyle(color: theme.accent, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.4),
+    return Semantics(
+      liveRegion: true,
+      child: AnimatedOpacity(
+        opacity: _visible ? 1 : 0,
+        duration: const Duration(milliseconds: 1200),
+        curve: Curves.easeInOut,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'SEAL DISSOLVED INTO THE VOID',
+                style:
+                    TextStyle(color: theme.inkSecondary, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2.0),
               ),
-            ),
-          ],
+              const SizedBox(height: 6),
+              Text(
+                '"Does not matter—need not be."\n(Spare, The Book of Pleasure)',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: theme.inkTertiary, fontSize: 12, fontStyle: FontStyle.italic, height: 1.5),
+              ),
+              const SizedBox(height: 14),
+              TextButton(
+                onPressed: _laughed ? null : () => setState(() => _laughed = true),
+                child: Text(
+                  _laughed ? 'Ha.' : 'BANISH WITH LAUGHTER',
+                  style: TextStyle(color: theme.accent, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.4),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

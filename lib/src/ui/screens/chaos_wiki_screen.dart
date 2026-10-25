@@ -53,7 +53,7 @@ class _ChaosWikiScreenState extends State<ChaosWikiScreen> {
             Text(
               'CHAOS MAGIC ARCHIVES',
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 2.0,
                 color: theme.inkPrimary,
@@ -61,7 +61,7 @@ class _ChaosWikiScreenState extends State<ChaosWikiScreen> {
             ),
             Text(
               'Personal Philosophy & Rites Interview Repository',
-              style: TextStyle(fontSize: 11, color: theme.inkTertiary),
+              style: TextStyle(fontSize: 12, color: theme.inkTertiary),
             ),
           ],
         ),
@@ -80,7 +80,7 @@ class _ChaosWikiScreenState extends State<ChaosWikiScreen> {
                 const SizedBox(width: 6),
                 Text(
                   'INTERVIEW MODE',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: theme.inkSecondary),
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: theme.inkSecondary),
                 ),
               ],
             ),
@@ -135,7 +135,7 @@ class _ChaosWikiScreenState extends State<ChaosWikiScreen> {
                     'Below is the structured questionnaire designed to distill your personal understanding '
                     'of esoterica, Austin Osman Spare\'s method, gnosis, and the symbolic act of combustion. '
                     'As we develop this through long-form discussion, answers recorded here become the permanent app wiki.',
-                    style: TextStyle(fontSize: 13, height: 1.5, color: theme.inkSecondary),
+                    style: TextStyle(fontSize: 14, height: 1.5, color: theme.inkSecondary),
                   ),
                 ],
               ),
@@ -212,7 +212,7 @@ class _ChaosWikiScreenState extends State<ChaosWikiScreen> {
           Text(
             q.prompt,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               height: 1.5,
               fontWeight: FontWeight.w400,
               color: theme.inkSecondary,
@@ -235,7 +235,7 @@ class _ChaosWikiScreenState extends State<ChaosWikiScreen> {
                   child: Text(
                     'Prompts for discussion: ${q.hint}',
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 12,
                       fontStyle: FontStyle.italic,
                       color: theme.inkTertiary,
                       height: 1.4,

@@ -19,8 +19,8 @@ void main() {
     SharedPreferences.setMockInitialValues({'ignosis_selected_skin': 'chaos'});
     await tester.pumpWidget(const IgnosisApp());
     await tester.pump(const Duration(milliseconds: 50));
-    expect(find.text('VELLUM & INK (DEFAULT)'), findsOneWidget);
-    expect(find.text('CHAOS (LIBER NULL)'), findsNothing);
+    expect(find.text('VELLUM & INK'), findsOneWidget);
+    expect(find.text('CHAOS'), findsNothing);
   });
 
   testWidgets('the intent never enters the keyboard dictionary', (tester) async {

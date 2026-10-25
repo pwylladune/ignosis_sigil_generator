@@ -64,6 +64,7 @@ class RitualExegesisModal extends StatelessWidget {
                   const Spacer(),
                   IconButton(
                     icon: Icon(Icons.close, size: 20, color: theme.inkTertiary),
+                    tooltip: 'Close',
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -172,7 +173,7 @@ class RitualExegesisModal extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        fontSize: 13,
+        fontSize: 14,
         height: 1.6,
         color: theme.inkSecondary,
       ),
@@ -197,14 +198,14 @@ class RitualExegesisModal extends StatelessWidget {
             child: Center(
               child: Text(
                 letter,
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.seal),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.seal),
               ),
             ),
           ),
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: TextStyle(fontSize: 13, color: theme.inkSecondary, height: 1.4),
+                style: TextStyle(fontSize: 14, color: theme.inkSecondary, height: 1.4),
                 children: [
                   TextSpan(text: '$title: ', style: const TextStyle(fontWeight: FontWeight.bold)),
                   TextSpan(text: description),

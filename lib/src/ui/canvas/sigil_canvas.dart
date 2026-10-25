@@ -299,7 +299,19 @@ void paintPlate(
   // Drafting guides: three rings and quadrant ticks (outer ring only when the
   // scene draws its own construction).
   final guide = style.guidePaint();
-  canvas.drawCircle(center, radius, guide);
+  if (breath != null) {
+    // During Gnosis the outer ring carries the breath (shared with the dialog).
+    canvas.drawCircle(
+      center,
+      radius * (0.99 + 0.02 * breath),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = style.px(1 + breath)
+        ..color = Color.lerp(style.guide, style.ink, 0.15 + 0.35 * breath)!,
+    );
+  } else {
+    canvas.drawCircle(center, radius, guide);
+  }
   if (!(scene?.ownsGuides ?? false)) {
     canvas.drawCircle(center, radius * 0.70, guide);
     canvas.drawCircle(center, radius * 0.35, guide);
