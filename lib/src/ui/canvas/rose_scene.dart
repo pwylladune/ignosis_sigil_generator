@@ -58,8 +58,9 @@ class RoseScene extends SigilScene {
       final p = RoseCrossEngine.petalPosition(petal, c, r, rotation);
       final dir = (p - c) / (p - c).distance;
       final isVisited = visited.contains(petal);
-      canvas.drawLine(p - dir * 4, p + dir * 4, style.guidePaint(width: isVisited ? 1.4 : 1));
-      _drawGlyph(canvas, petal.letter.glyph, p + dir * 13, isVisited ? style.muted : style.muted.withValues(alpha: 0.45));
+      canvas.drawLine(p - dir * style.px(4), p + dir * style.px(4), style.guidePaint(width: isVisited ? 1.4 : 1));
+      _drawGlyph(canvas, petal.letter.glyph, p + dir * style.px(13), style.px(9),
+          isVisited ? style.muted : style.muted.withValues(alpha: 0.45));
     }
 
     // Ink: rebuilt between the moving petals while writing, static once locked.
@@ -68,11 +69,11 @@ class RoseScene extends SigilScene {
     style.drawInk(canvas, path);
   }
 
-  static final _glyphs = <(String, int), TextPainter>{};
+  static final _glyphs = <(String, double, int), TextPainter>{};
 
-  static void _drawGlyph(Canvas canvas, String glyph, Offset at, Color color) {
-    final tp = _glyphs[(glyph, color.toARGB32())] ??= TextPainter(
-      text: TextSpan(text: glyph, style: TextStyle(fontSize: 9, color: color)),
+  static void _drawGlyph(Canvas canvas, String glyph, Offset at, double fontSize, Color color) {
+    final tp = _glyphs[(glyph, fontSize, color.toARGB32())] ??= TextPainter(
+      text: TextSpan(text: glyph, style: TextStyle(fontSize: fontSize, color: color)),
       textDirection: TextDirection.rtl,
     )..layout();
     tp.paint(canvas, at - Offset(tp.width / 2, tp.height / 2));

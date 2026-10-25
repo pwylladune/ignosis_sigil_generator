@@ -17,6 +17,13 @@ class SceneStyle {
   /// Breath volume in [0, 1] while Gnosis breathing is active, else null.
   final double? breath;
 
+  /// Screen pixels per scene unit. Scenes are built in a fixed reference space
+  /// and scaled to the canvas, so on-screen widths are divided by this.
+  final double scale;
+
+  /// Converts a width in screen pixels to scene units.
+  double px(double screenPixels) => screenPixels / scale;
+
   const SceneStyle({
     required this.ink,
     required this.guide,
@@ -27,9 +34,10 @@ class SceneStyle {
     required this.strokeWidth,
     required this.washOpacity,
     this.breath,
+    this.scale = 1,
   });
 
-  factory SceneStyle.fromSkin(SigilSkinTheme skin, {double? breath}) => SceneStyle(
+  factory SceneStyle.fromSkin(SigilSkinTheme skin, {double? breath, double scale = 1}) => SceneStyle(
         ink: skin.inkPrimary,
         guide: skin.guideColor,
         muted: skin.inkMuted,
@@ -39,10 +47,11 @@ class SceneStyle {
         strokeWidth: skin.strokeWidth,
         washOpacity: skin.inkWashOpacity,
         breath: breath,
+        scale: scale,
       );
 
   /// Stroke weight, breathing by ±3 % with the Gnosis breath.
-  double get weight => breath == null ? strokeWidth : strokeWidth * (0.97 + 0.06 * breath!);
+  double get weight => px(breath == null ? strokeWidth : strokeWidth * (0.97 + 0.06 * breath!));
 
   Paint inkPaint({double opacity = 1, double? width}) => Paint()
     ..color = ink.withValues(alpha: ink.a * opacity)
@@ -61,7 +70,7 @@ class SceneStyle {
   Paint guidePaint({double width = 1}) => Paint()
     ..color = guide
     ..style = PaintingStyle.stroke
-    ..strokeWidth = width;
+    ..strokeWidth = px(width);
 
   /// Draws a path as ink on rag paper: a soft wash under a crisp line.
   void drawInk(Canvas canvas, Path path, {double opacity = 1}) {

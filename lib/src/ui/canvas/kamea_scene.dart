@@ -69,7 +69,8 @@ class KameaScene extends SigilScene {
     });
 
     // Numbers.
-    final fontSize = (layout.cell * 0.3).clamp(6.0, 13.0);
+    // Readable on screen whatever the plate size: clamp in screen pixels.
+    final fontSize = style.px((layout.cell * 0.3 * style.scale).clamp(6.0, 13.0));
     for (var i = 0; i < n * n; i++) {
       final g = glow[i] ?? 0;
       final color = Color.lerp(style.muted.withValues(alpha: 0.55), style.accent, g)!;
@@ -87,7 +88,7 @@ class KameaScene extends SigilScene {
       final paint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
-        ..strokeWidth = math.max(1.0, layout.cell * 0.08);
+        ..strokeWidth = math.max(style.px(1.0), layout.cell * 0.08);
       for (var k = 0; k < _lineCount; k++) {
         final a = hannPulse((tSum - k * _sumStagger) / _sumPulse);
         if (a <= 0) continue;
@@ -103,7 +104,7 @@ class KameaScene extends SigilScene {
       canvas,
       '${sigil.type.name.toUpperCase()}  ·  Σ = $m',
       Offset(layout.square.center.dx, layout.square.bottom + fontSize * 1.4),
-      (fontSize * 0.9).clamp(8.0, 11.0),
+      style.px((fontSize * style.scale * 0.9).clamp(8.0, 11.0)),
       Color.lerp(style.muted, style.accent, labelGlow)!,
       letterSpacing: 1.6,
     );

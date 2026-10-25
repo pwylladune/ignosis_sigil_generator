@@ -6,6 +6,7 @@ import '../../models/intent_kernel.dart';
 import '../../models/sigil_state.dart';
 import '../../services/sigil_print_service.dart';
 import '../../services/universal_export_service.dart';
+import '../../motion/breath.dart';
 import '../canvas/sigil_canvas.dart';
 import '../canvas/sigil_spec.dart';
 import '../theme/sigil_skins.dart';
@@ -26,7 +27,7 @@ class SigilStudioScreen extends StatefulWidget {
 class _SigilStudioScreenState extends State<SigilStudioScreen> {
   late final TextEditingController _textController;
   final SigilBurnController _burn = SigilBurnController();
-  final ValueNotifier<double?> _breath = ValueNotifier(null);
+  final BreathSignal _breath = BreathSignal();
   bool _isBurning = false;
 
   final GlobalKey _canvasKey = GlobalKey();
@@ -187,7 +188,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
           child: Tooltip(
             message: tooltip ?? '',
             child: InkWell(
-              onTap: onTap,
+              onTap: _isBurning ? null : onTap,
               borderRadius: BorderRadius.circular(5),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -334,6 +335,8 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                 children: [
                   TextField(
                     controller: _textController,
+                    // A released seal burns to the end; the intent is fixed meanwhile.
+                    enabled: !_isBurning,
                     onChanged: _onIntentChanged,
                     style: TextStyle(
                       color: theme.inkPrimary,
@@ -465,9 +468,11 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                         color: isSelected ? theme.inkPrimary : theme.hairline,
                         width: isSelected ? 1.2 : 1.0,
                       ),
-                      onSelected: (val) {
-                        if (val) setState(() => _state = _state.copyWith(system: sys));
-                      },
+                      onSelected: _isBurning
+                          ? null
+                          : (val) {
+                              if (val) setState(() => _state = _state.copyWith(system: sys));
+                            },
                     ),
                   );
                 }).toList(),

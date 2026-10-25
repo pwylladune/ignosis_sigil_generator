@@ -17,7 +17,7 @@ class PenInkRitualBurnDialog extends StatefulWidget {
   final VoidCallback? onBurnOnChainRequested;
 
   /// Shared breath volume, null when not breathing.
-  final ValueNotifier<double?>? breath;
+  final BreathSignal? breath;
 
   final int targetCycles;
 

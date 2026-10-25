@@ -43,6 +43,11 @@ class SigilCanvas extends StatefulWidget {
   /// Delay after the last keystroke before the pen starts writing.
   static const typingDebounce = Duration(milliseconds: 260);
 
+  /// Scenes are built once in this square reference space and scaled to the
+  /// canvas, so a resize (window drag, keyboard) never rebuilds geometry or
+  /// restarts motion.
+  static const referenceSize = Size(512, 512);
+
   @override
   State<SigilCanvas> createState() => _SigilCanvasState();
 }
@@ -89,9 +94,11 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
       old.breath?.removeListener(_onBreath);
       widget.breath?.addListener(_onBreath);
     }
+    // A burn, once released, is not interrupted: changes apply afterwards.
+    if (_combustion != null) return;
     if (widget.spec != _shownSpec) {
       _debounce?.cancel();
-      if (widget.spec.sameSettings(_shownSpec) && !_reduceMotion) {
+      if (widget.spec.sameSettings(_shownSpec)) {
         // Typing: let the pen wait until the word is finished.
         _debounce = Timer(SigilCanvas.typingDebounce, () => _show(widget.spec));
       } else {
@@ -114,9 +121,8 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
     _shownSpec = spec;
     _combustion = null;
     _version++;
-    final size = _size;
-    if (size != null) {
-      _scene = buildScene(spec, size, _startTime(), previous: _scene);
+    if (_hasLayout) {
+      _scene = buildScene(spec, SigilCanvas.referenceSize, _startTime(), previous: _scene);
       _clock.wake();
     } else {
       _scene = null;
@@ -131,14 +137,13 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
     if (widget.burn.generation == _burnGeneration) return;
     _burnGeneration = widget.burn.generation;
     final scene = _scene;
-    final size = _size;
-    if (scene == null || scene.geometry.isEmpty || size == null || size.isEmpty) {
+    if (scene == null || scene.geometry.isEmpty || !_hasLayout) {
       widget.onIncinerated();
       return;
     }
     _combustion = Combustion(
       scene: scene,
-      size: size,
+      size: SigilCanvas.referenceSize,
       startTime: _clock.now,
       reduceMotion: _reduceMotion,
       seed: _stableSeed(widget.spec),
@@ -175,14 +180,15 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
     return s != null && !s.isSettled(now);
   }
 
+  bool get _hasLayout => !(_size?.isEmpty ?? true);
+
   void _onLayout(Size size) {
-    if (_size == size) return;
-    final first = _size == null;
     _size = size;
-    // On resize, rebuild without replaying; on first layout, write it out.
-    final start = first ? _startTime() : _clock.now - 1e6;
-    _scene = buildScene(_shownSpec, size, start, previous: _scene);
-    if (first) _clock.wake();
+    // Resizes only rescale at paint time. The first real layout writes it out.
+    if (_scene == null && _hasLayout) {
+      _scene = buildScene(_shownSpec, SigilCanvas.referenceSize, _startTime(), previous: _scene);
+      _clock.wake();
+    }
   }
 
   @override
@@ -235,10 +241,17 @@ class _SigilPlatePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
     final now = clock.now;
-    final style = SceneStyle.fromSkin(skin, breath: breath?.value);
-    final center = size.center(Offset.zero);
-    final radius = math.min(size.width, size.height) * 0.44;
+    // Paint in the reference space, scaled and centred on the canvas.
+    const ref = SigilCanvas.referenceSize;
+    final scale = math.min(size.width, size.height) / ref.width;
+    canvas.save();
+    canvas.translate((size.width - ref.width * scale) / 2, (size.height - ref.height * scale) / 2);
+    canvas.scale(scale);
+    final style = SceneStyle.fromSkin(skin, breath: breath?.value, scale: scale);
+    final center = ref.center(Offset.zero);
+    final radius = ref.width * 0.44;
 
     final c = combustion();
     final s = scene();
@@ -255,17 +268,18 @@ class _SigilPlatePainter extends CustomPainter {
     for (var i = 0; i < 4; i++) {
       final a = i * math.pi / 2;
       final d = Offset(math.cos(a), math.sin(a));
-      canvas.drawLine(center + d * (radius - 8), center + d * (radius + 8), tick);
+      canvas.drawLine(center + d * (radius - style.px(8)), center + d * (radius + style.px(8)), tick);
     }
 
     if (c != null) {
-      c.paint(canvas, size, now, style);
+      c.paint(canvas, ref, now, style);
     } else if (s != null) {
-      s.paint(canvas, size, now, style);
+      s.paint(canvas, ref, now, style);
     }
 
     // Vermilion bind point.
-    canvas.drawCircle(center, 2.5, Paint()..color = style.accent);
+    canvas.drawCircle(center, style.px(2.5), Paint()..color = style.accent);
+    canvas.restore();
   }
 
   @override

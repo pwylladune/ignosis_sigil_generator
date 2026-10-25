@@ -219,7 +219,7 @@ class Combustion {
       if (pts.isEmpty) continue;
       final paint = Paint()
         ..color = style.burn.withValues(alpha: young ? 0.85 : 0.4)
-        ..strokeWidth = young ? 2.2 : 1.6
+        ..strokeWidth = style.px(young ? 2.2 : 1.6)
         ..strokeCap = StrokeCap.round;
       canvas.drawRawPoints(ui.PointMode.points, Float32List.fromList(pts), paint);
     }

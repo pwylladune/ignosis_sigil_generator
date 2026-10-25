@@ -16,7 +16,7 @@ import 'package:ignosis_sigil_generator/src/ui/theme/sigil_skins.dart';
 
 /// Renders preview frames of every engine through its motion, for review.
 ///
-///   VISUAL_OUT=/tmp/frames flutter test --tags visual --run-skipped
+///   VISUAL_OUT=build/visual flutter test --tags visual --run-skipped
 Future<void> _loadFont() async {
   final root = Platform.environment['FLUTTER_ROOT'] ?? File(Platform.resolvedExecutable).parent.parent.parent.parent.parent.path;
   final file = File('$root/bin/cache/artifacts/material_fonts/Roboto-Regular.ttf');
@@ -40,7 +40,8 @@ void main() {
 
   for (final system in systems) {
     testWidgets('frames: ${system.name}', (tester) async {
-      tester.view.physicalSize = const Size(520, 520);
+      final px = double.parse(Platform.environment['VISUAL_PX'] ?? '520');
+      tester.view.physicalSize = Size(px, px);
       tester.view.devicePixelRatio = 1;
       final key = GlobalKey();
       final burn = SigilBurnController();

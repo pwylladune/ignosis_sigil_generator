@@ -15,12 +15,12 @@ SigilSpec spec(String intent, SigilSystem system) => SigilSpec(
       symmetryGroup: SymmetryGroup.cyclic,
     );
 
-Widget host(SigilSpec s, SigilBurnController burn, VoidCallback onDone, {bool reduceMotion = false}) => MaterialApp(
+Widget host(SigilSpec s, SigilBurnController burn, VoidCallback onDone, {bool reduceMotion = false, double side = 320}) => MaterialApp(
       home: MediaQuery(
         data: MediaQueryData(size: const Size(400, 800), disableAnimations: reduceMotion),
         child: Center(
           child: SizedBox.square(
-            dimension: 320,
+            dimension: side,
             child: SigilCanvas(
               spec: s,
               skin: SigilSkinTheme.getSkin(SigilSkinId.vellumDraft),
@@ -60,5 +60,29 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
     expect(tester.hasRunningAnimations, isFalse);
+  });
+
+  testWidgets('a burn is not cancelled by a change of system or intent', (tester) async {
+    final burn = SigilBurnController();
+    var done = 0;
+    await tester.pumpWidget(host(spec('FOCUS', SigilSystem.spare), burn, () => done++));
+    await tester.pumpAndSettle();
+    burn.ignite();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpWidget(host(spec('FOCUS', SigilSystem.kamea), burn, () => done++));
+    await tester.pumpWidget(host(spec('OTHER', SigilSystem.kamea), burn, () => done++));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100), EnginePhase.sendSemanticsUpdate, const Duration(seconds: 30));
+    expect(done, 1);
+  });
+
+  testWidgets('resizing rescales without rebuilding or replaying', (tester) async {
+    final burn = SigilBurnController();
+    await tester.pumpWidget(host(spec('CHAOS AND HARMONY', SigilSystem.chladni), burn, () {}));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100), EnginePhase.sendSemanticsUpdate, const Duration(seconds: 30));
+    for (final side in [300.0, 250.0, 200.0, 0.0, 320.0]) {
+      await tester.pumpWidget(host(spec('CHAOS AND HARMONY', SigilSystem.chladni), burn, () {}, side: side));
+      await tester.pump();
+      expect(tester.hasRunningAnimations, isFalse, reason: 'side $side');
+    }
   });
 }

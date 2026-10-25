@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 
 /// A breathing pattern expressed as phase durations in seconds.
 ///
@@ -70,4 +71,25 @@ class BreathSample {
   final int cycle;
 
   const BreathSample(this.phase, this.volume, this.cycle);
+}
+
+/// The shared breath value: volume in [0, 1] while Gnosis breathing runs,
+/// null otherwise. Writes after [dispose] are ignored, so a dialog torn down in
+/// the same frame as its owner cannot touch a disposed notifier.
+class BreathSignal extends ValueNotifier<double?> {
+  BreathSignal() : super(null);
+
+  bool _disposed = false;
+
+  @override
+  set value(double? v) {
+    if (_disposed) return;
+    super.value = v;
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 }
