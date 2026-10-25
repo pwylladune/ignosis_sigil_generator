@@ -4,31 +4,30 @@ import { Flame, ArrowRightLeft, ShieldAlert, Sparkles, ExternalLink, Activity, R
 // No $IGNOSIS mint exists. The previous value (7xKXtg…sgAsU) is Samoyed Coin
 // (SAMO), a third-party token; linking it sent users to buy someone else's coin.
 const IGNOSIS_MINT = '';
-const BACKEND_URL = 'http://localhost:3001';
+// Configure with VITE_BACKEND_URL (https in production). Empty: no live data.
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? '';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('pyre'); // 'pyre' | 'trade'
   const [solAmount, setSolAmount] = useState('1.0');
   const [ignosisQuote, setIgnosisQuote] = useState('93,000');
   const [isWalletConnected, setIsWalletConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState('8x3F...d92A');
+  const [walletAddress, setWalletAddress] = useState('');
   const [isLoadingStats, setIsLoadingStats] = useState(false);
 
+  // Real data only: zeros and an empty list until the indexer answers
+  // (previously seeded with made-up totals and burns).
   const [pyreStats, setPyreStats] = useState({
-    totalBurned: 14782093,
-    totalBurnEvents: 1589,
-    heatJoulesReleased: '1.37 × 10^12 J',
-    activePractitioners24h: 312,
+    totalBurned: 0,
+    totalBurnEvents: 0,
+    activePractitioners24h: 0,
   });
 
-  const [recentBurns, setRecentBurns] = useState([
-    { signature: '4kJ...7wP', amount: 93, time: '18s ago', practitioner: '7xKy...42AA' },
-    { signature: '9xL...2qR', amount: 93, time: '1m ago', practitioner: '9bKz...99XF' },
-    { signature: '2mP...8sW', amount: 279, time: '4m ago', practitioner: '3tLp...12WQ' },
-  ]);
+  const [recentBurns, setRecentBurns] = useState([]);
 
   // Fetch live stats from backend relay
   const fetchLiveStats = async () => {
+    if (!BACKEND_URL) return;
     setIsLoadingStats(true);
     try {
       const res = await fetch(`${BACKEND_URL}/api/v1/pyre/stats`);
@@ -193,10 +192,10 @@ export default function App() {
               <div style={{ backgroundColor: '#0f0f18', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: '16px', padding: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#00e5ff', marginBottom: '8px' }}>
                   <Sparkles size={16} />
-                  <span style={{ fontSize: '11px', fontWeight: 'bold', letterSpacing: '1px' }}>HEAT EQUIVALENT</span>
+                  <span style={{ fontSize: '11px', fontWeight: 'bold', letterSpacing: '1px' }}>PRACTITIONERS (24H)</span>
                 </div>
-                <div style={{ fontSize: '26px', fontWeight: 'bold' }}>{pyreStats.heatJoulesReleased}</div>
-                <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.4)', marginTop: '4px' }}>Sacrifice released to ether</div>
+                <div style={{ fontSize: '26px', fontWeight: 'bold' }}>{pyreStats.activePractitioners24h.toLocaleString()}</div>
+                <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.4)', marginTop: '4px' }}>Symbolic practice; no physical effect is claimed</div>
               </div>
             </div>
 
