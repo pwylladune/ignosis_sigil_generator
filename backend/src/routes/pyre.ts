@@ -35,17 +35,18 @@ export function createPyreRouter(indexer: PyreIndexerService): Router {
 
   // GET /api/v1/pyre/recent
   router.get('/recent', (req: Request, res: Response) => {
-    const limit = parseInt((req.query.limit as string) || '20', 10);
+    const parsed = parseInt((req.query.limit as string) || '20', 10);
+    const limit = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 50) : 20;
     const burns = indexer.getRecentBurns(limit);
     res.json({ success: true, burns });
   });
 
   // POST /api/v1/pyre/record-burn (Client-side / Relay notification)
   const burnRecordSchema = z.object({
-    signature: z.string().min(10),
-    practitioner: z.string().min(30),
-    amount: z.number().positive().default(93),
-    intentHashHex: z.string().length(64),
+    signature: z.string().min(10).max(128),
+    practitioner: z.string().min(30).max(64),
+    amount: z.number().positive().max(1e12),
+    intentHashHex: z.string().regex(/^[0-9a-f]{64}$/i),
     source: z.enum(['mobile_app', 'web_portal', 'on_chain_solana']).default('mobile_app'),
   });
 
@@ -53,7 +54,7 @@ export function createPyreRouter(indexer: PyreIndexerService): Router {
     if (!requireWriteSecret(req, res)) return;
     const parsed = burnRecordSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ success: false, error: parsed.error.format() });
+      return res.status(400).json({ success: false, error: 'Invalid request body' });
     }
 
     const { signature, practitioner, amount, intentHashHex, source } = parsed.data;
@@ -75,9 +76,9 @@ export function createPyreRouter(indexer: PyreIndexerService): Router {
   // never invents values. Parsing provider payloads (e.g. Helius enhanced
   // transactions, SPL Memo) belongs to the v1.1 indexer (TASK.md §2.4 B).
   const webhookEventSchema = z.object({
-    signature: z.string().min(10),
-    feePayer: z.string().min(30),
-    amount: z.number().positive(),
+    signature: z.string().min(10).max(128),
+    feePayer: z.string().min(30).max(64),
+    amount: z.number().positive().max(1e12),
     intentHashHex: z.string().regex(/^[0-9a-f]{64}$/i),
   });
 

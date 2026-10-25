@@ -90,6 +90,19 @@ async function testBackend() {
   const stats: any = await fetch(`${baseUrl}/api/v1/pyre/stats`).then((r) => r.json());
   if (stats.stats.totalBurned !== 100) throw new Error(`Expected 100 burned, got ${stats.stats.totalBurned}`);
 
+  // 6. Hardening: JSON errors, bounded limits, no configuration leak.
+  const bad = await fetch(`${baseUrl}/api/v1/pyre/record-burn`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-pyre-secret': 'test-secret' },
+    body: '{not json',
+  });
+  const badBody = await bad.text();
+  if (bad.status !== 400 || !badBody.startsWith('{')) throw new Error(`Malformed JSON must get a JSON 400, got ${bad.status}`);
+  const neg: any = await fetch(`${baseUrl}/api/v1/pyre/recent?limit=-1`).then((r) => r.json());
+  if (neg.burns.length !== 0) throw new Error('A negative limit must return nothing');
+  const root: any = await fetch(`${baseUrl}/`).then((r) => r.json());
+  if ('mintAddress' in root || 'treasuryPublicAddress' in root) throw new Error('Root must not expose configuration');
+
   server.close();
   console.log('✅ Backend fails closed as expected.\n');
 }

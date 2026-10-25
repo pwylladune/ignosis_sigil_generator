@@ -23,8 +23,8 @@ export const config = {
   treasuryPrivateKey: process.env.TREASURY_PRIVATE_KEY || '',
 
   // In-App Purchase Verification Credentials
-  appleBundleId: process.env.APPLE_BUNDLE_ID || 'com.ignosis.sigilgenerator',
-  googlePackageName: process.env.GOOGLE_PACKAGE_NAME || 'com.ignosis.sigilgenerator',
+  appleBundleId: process.env.APPLE_BUNDLE_ID || 'net.ignosis.studio',
+  googlePackageName: process.env.GOOGLE_PACKAGE_NAME || 'net.ignosis.studio',
 
   // Quantities
   starterPackTokenAmount: 279,

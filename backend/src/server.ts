@@ -1,6 +1,7 @@
-import express from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { config } from './config.js';
 import { SolanaTreasuryService } from './services/solanaTreasury.js';
 import { ReceiptValidatorService } from './services/receiptValidator.js';
@@ -13,8 +14,12 @@ export function createApp() {
 
   // Security and Middleware
   app.use(helmet());
-  app.use(cors({ origin: '*' }));
-  app.use(express.json({ limit: '1mb' }));
+  // CORS: only the configured portal origins (comma-separated CORS_ORIGINS).
+  const origins = (process.env.CORS_ORIGINS ?? '').split(',').map((o) => o.trim()).filter(Boolean);
+  app.use(cors({ origin: origins.length > 0 ? origins : false }));
+  app.use(express.json({ limit: '64kb' }));
+  // Basic abuse protection: 120 requests per minute per IP across the API.
+  app.use('/api/', rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: 'draft-7', legacyHeaders: false }));
 
   // Initialize Core Services
   const treasuryService = new SolanaTreasuryService();
@@ -22,21 +27,9 @@ export function createApp() {
   const pyreIndexer = new PyreIndexerService();
 
   // Root info
+  // Root: no configuration details (cluster, mint, treasury) are exposed.
   app.get('/', (_req, res) => {
-    res.json({
-      service: 'IGNOSIS Relay & Pyre Indexer',
-      version: '1.0.0',
-      status: 'online',
-      cluster: config.solanaCluster,
-      mintAddress: config.ignosisMintAddress,
-      treasuryPublicAddress: treasuryService.getTreasuryPublicKey(),
-      endpoints: {
-        health: '/health',
-        pyreStats: '/api/v1/pyre/stats',
-        pyreRecent: '/api/v1/pyre/recent',
-        fulfillStarterPack: 'POST /api/v1/iap/fulfill-starter-pack (410 Gone: discontinued)',
-      },
-    });
+    res.json({ service: 'IGNOSIS Relay & Pyre Indexer', status: 'online' });
   });
 
   // Health check
@@ -51,6 +44,14 @@ export function createApp() {
   // Mount Feature Routers
   app.use('/api/v1/iap', createIapRouter(treasuryService, receiptValidator));
   app.use('/api/v1/pyre', createPyreRouter(pyreIndexer));
+
+  // JSON errors only: malformed bodies and unexpected failures never return
+  // Express's HTML page or a stack trace.
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = typeof err?.status === 'number' && err.status >= 400 && err.status < 500 ? err.status : 500;
+    if (status === 500) console.error('[server] Unhandled error', err);
+    res.status(status).json({ success: false, error: status === 500 ? 'Internal error' : 'Bad request' });
+  });
 
   return app;
 }
