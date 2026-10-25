@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../engines/kamea_engine.dart';
+import '../../models/hebrew_letters.dart';
 import '../../models/intent_kernel.dart';
 import '../../models/sigil_state.dart';
 import '../../services/iap_service.dart';
@@ -120,6 +121,9 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
       );
     }
   }
+
+  /// Kamea and Rose trace the Hebrew transliteration, not the reduced kernel.
+  bool get _tracesHebrew => _state.system == SigilSystem.kamea || _state.system == SigilSystem.roseCross;
 
   SigilSpec get _spec => SigilSpec(
         kernel: _kernel,
@@ -404,7 +408,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                       runSpacing: 4,
                       children: [
                         Text(
-                          'KERNEL: ',
+                          _tracesHebrew ? 'HEBREW: ' : 'KERNEL: ',
                           style: TextStyle(
                             color: theme.inkMuted,
                             fontSize: 10,
@@ -413,7 +417,9 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                           ),
                         ),
                         Text(
-                          _kernel.reducedConsonants.split('').join(' · '),
+                          _tracesHebrew
+                              ? transliterate(_kernel.normalized).map((l) => l.glyph).join()
+                              : _kernel.reducedConsonants.split('').join(' · '),
                           style: TextStyle(
                             color: theme.accent,
                             fontSize: 11,

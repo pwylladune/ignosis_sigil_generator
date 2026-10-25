@@ -53,15 +53,17 @@ class RoseScene extends SigilScene {
     for (final f in RoseCrossEngine.ringRadii) {
       canvas.drawCircle(c, r * f, guide);
     }
-    final visited = sigil.petals.toSet();
-    for (final petal in RoseCrossEngine.allPetals) {
-      final p = RoseCrossEngine.petalPosition(petal, c, r, rotation);
-      final dir = (p - c) / (p - c).distance;
-      final isVisited = visited.contains(petal);
-      canvas.drawLine(p - dir * style.px(4), p + dir * style.px(4), style.guidePaint(width: isVisited ? 1.4 : 1));
-      _drawGlyph(canvas, petal.letter.glyph, p + dir * style.px(13), style.px(9),
-          isVisited ? style.muted : style.muted.withValues(alpha: 0.45));
-    }
+    style.paintLettering(canvas, () {
+      final visited = sigil.petals.toSet();
+      for (final petal in RoseCrossEngine.allPetals) {
+        final p = RoseCrossEngine.petalPosition(petal, c, r, rotation);
+        final dir = (p - c) / (p - c).distance;
+        final isVisited = visited.contains(petal);
+        canvas.drawLine(p - dir * style.px(4), p + dir * style.px(4), style.guidePaint(width: isVisited ? 1.4 : 1));
+        _drawGlyph(canvas, petal.letter.glyph, p + dir * style.px(13), style.px(9),
+            isVisited ? style.muted : style.muted.withValues(alpha: 0.45));
+      }
+    });
 
     // Ink: rebuilt between the moving petals while writing, static once locked.
     final current = settled ? sigil : RoseCrossEngine().build(kernel, size, ringRotation: rotation);

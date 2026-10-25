@@ -10,26 +10,46 @@ void main() {
   test('the rose has 3 mothers, 7 doubles and 12 simples', () {
     expect(RoseCrossEngine.rings.map((r) => r.length).toList(), [3, 7, 12]);
     expect(RoseCrossEngine.allPetals.length, 22);
-    expect(RoseCrossEngine.allPetals.map((p) => p.letter).toSet().length, 22);
-    expect(RoseCrossEngine.rings[0], [HebrewLetter.aleph, HebrewLetter.mem, HebrewLetter.shin]);
+    expect(RoseCrossEngine.allPetals.map((p) => p.letter).toSet(), HebrewLetter.values.toSet());
+    for (var r = 0; r < 3; r++) {
+      final cls = [LetterClass.mother, LetterClass.double, LetterClass.simple][r];
+      expect(RoseCrossEngine.rings[r].every((l) => l.letterClass == cls), isTrue);
+    }
   });
 
-  test('transliteration: every Latin letter reaches the rose; coverage is as documented', () {
-    final latin = [for (var c = 65; c <= 90; c++) String.fromCharCode(c)];
-    expect(latinToHebrew.keys.toSet(), latin.toSet());
-    final reached = {for (final l in latin) RoseCrossEngine.petalFor(l).letter};
-    // All three mothers are reachable (A, M, X) and so is every double.
-    expect(reached.containsAll(RoseCrossEngine.rings[0]), isTrue);
-    expect(reached.containsAll(RoseCrossEngine.rings[1]), isTrue);
-    // Teth and Tzaddi need digraphs (Th, Tz) and are the only petals unused.
-    expect(HebrewLetter.values.toSet().difference(reached), {HebrewLetter.teth, HebrewLetter.tzaddi});
-    // Shared letters are the documented ones only.
-    final byPetal = <HebrewLetter, List<String>>{};
-    for (final l in latin) {
-      byPetal.putIfAbsent(latinToHebrew[l]!, () => []).add(l);
-    }
-    final shared = {for (final e in byPetal.entries) if (e.value.length > 1) e.key: e.value.join()};
-    expect(shared, {HebrewLetter.kaph: 'CK', HebrewLetter.yod: 'IJY', HebrewLetter.pe: 'FP', HebrewLetter.vav: 'UVW'});
+  test('lamen layout: Aleph and He at the top, zodiac anticlockwise, planets straddling the top', () {
+    const c = Offset(250, 250);
+    Offset at(HebrewLetter l) => RoseCrossEngine.petalPosition(RoseCrossEngine.petalOf(l), c, 200);
+    // Inner: Aleph at the top, then Shin clockwise (to the right).
+    expect(at(HebrewLetter.aleph).dx, closeTo(250, 1e-9));
+    expect(at(HebrewLetter.aleph).dy, lessThan(250));
+    expect(at(HebrewLetter.shin).dx, greaterThan(250));
+    // Outer: He (Aries) at the top, Vav (Taurus) next anticlockwise (to the left),
+    // Lamed (Libra) at the bottom, Qoph (Pisces) just right of the top.
+    expect(at(HebrewLetter.he).dx, closeTo(250, 1e-9));
+    expect(at(HebrewLetter.vav).dx, lessThan(250));
+    expect(at(HebrewLetter.lamed).dy, greaterThan(250));
+    expect(at(HebrewLetter.lamed).dx, closeTo(250, 1e-6));
+    expect(at(HebrewLetter.qoph).dx, greaterThan(250));
+    // Middle: Pe at 11 o'clock and Kaph at 1 o'clock, symmetric about the top.
+    expect(at(HebrewLetter.pe).dx, lessThan(250));
+    expect(at(HebrewLetter.kaph).dx, greaterThan(250));
+    expect(at(HebrewLetter.pe).dy, closeTo(at(HebrewLetter.kaph).dy, 1e-9));
+  });
+
+  test('transliteration (Golden Dawn / 777): digraphs first, every letter reachable', () {
+    String spell(String s) => transliterate(s).map((l) => l.title).join('-');
+    expect(spell('SHT'), 'Shin-Teth');
+    expect(spell('THE'), 'Tav-He');
+    expect(spell('CHAOS'), 'Heth-Aleph-Ayin-Samekh');
+    expect(spell('HE'), 'He-He');
+    expect(spell('PHX'), 'Pe-Samekh');
+    expect(spell('TZADDI'), 'Tzaddi-Aleph-Daleth-Daleth-Yod');
+    final reached = <HebrewLetter>{
+      for (var c = 65; c <= 90; c++) ...transliterate(String.fromCharCode(c)),
+      for (final d in latinDigraphs.keys) ...transliterate(d),
+    };
+    expect(reached, HebrewLetter.values.toSet());
   });
 
   test('a single letter is sealed with a terminal crossbar', () {

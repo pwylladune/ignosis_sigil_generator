@@ -24,6 +24,36 @@ class SceneStyle {
   /// Converts a width in screen pixels to scene units.
   double px(double screenPixels) => screenPixels / scale;
 
+  /// Opacity of construction lettering (kamea numbers, Hebrew petal glyphs).
+  /// The burn fades it out before the flame, so letters are never shown burning.
+  final double letterOpacity;
+
+  SceneStyle withLetterOpacity(double opacity) => SceneStyle(
+        ink: ink,
+        guide: guide,
+        muted: muted,
+        accent: accent,
+        burn: burn,
+        paper: paper,
+        strokeWidth: strokeWidth,
+        washOpacity: washOpacity,
+        breath: breath,
+        scale: scale,
+        letterOpacity: opacity.clamp(0.0, 1.0),
+      );
+
+  /// Runs [draw] with construction lettering at [letterOpacity].
+  void paintLettering(Canvas canvas, void Function() draw) {
+    if (letterOpacity <= 0) return;
+    if (letterOpacity >= 1) {
+      draw();
+      return;
+    }
+    canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, letterOpacity));
+    draw();
+    canvas.restore();
+  }
+
   const SceneStyle({
     required this.ink,
     required this.guide,
@@ -35,6 +65,7 @@ class SceneStyle {
     required this.washOpacity,
     this.breath,
     this.scale = 1,
+    this.letterOpacity = 1,
   });
 
   factory SceneStyle.fromSkin(SigilSkinTheme skin, {double? breath, double scale = 1}) => SceneStyle(

@@ -29,11 +29,10 @@ void main() {
   });
 
   group('Aiq Bekar letter mapping', () {
-    test('every Latin letter lands inside every square', () {
+    test('every Hebrew letter lands inside every square', () {
       for (final t in PlanetaryKameaType.values) {
-        for (var c = 65; c <= 90; c++) {
-          final v = KameaEngine.letterNumber(String.fromCharCode(c), t.size);
-          expect(v, inInclusiveRange(1, t.size * t.size));
+        for (final l in HebrewLetter.values) {
+          expect(KameaEngine.letterNumber(l, t.size), inInclusiveRange(1, t.size * t.size));
         }
       }
     });
@@ -44,8 +43,8 @@ void main() {
       expect(aiqBekarReduce(100, 81), 10); // Qoph on Luna
       expect(aiqBekarReduce(90, 81), 9); // Tzaddi on Luna
       expect(aiqBekarReduce(40, 81), 40); // Mem fits on Luna
-      expect(KameaEngine.letterNumber('R', 3), 2);
-      expect(KameaEngine.letterNumber('M', 6), 4); // 40 > 36 → 4
+      expect(KameaEngine.letterNumber(HebrewLetter.resh, 3), 2);
+      expect(KameaEngine.letterNumber(HebrewLetter.mem, 6), 4); // 40 > 36 → 4
     });
   });
 
@@ -56,7 +55,7 @@ void main() {
     test('one node per letter, every node in a square cell', () {
       for (final t in PlanetaryKameaType.values) {
         final s = KameaEngine().build(kernel, t, size);
-        expect(s.numbers.length, kernel.length);
+        expect(s.numbers.length, transliterate(kernel.normalized).length);
         expect(s.cells.every((c) => c >= 0), isTrue);
         expect(s.layout.square.width, closeTo(s.layout.square.height, 1e-9));
         expect(s.layout.square.center, const Offset(200, 150));
@@ -87,6 +86,16 @@ void main() {
         expect(s.geometry.strokes.last.length, greaterThan(0), reason: intent);
       }
       expect(KameaEngine().build(IntentKernel.fromText('B'), PlanetaryKameaType.saturn, size).traversalStroke, isNull);
+    });
+
+    test('every letter is traced, repeats kept: a doubled letter makes a loop', () {
+      // WILL -> Vav Yod Lamed Lamed: the doubled Lamed is an immediate repeat.
+      final s = KameaEngine().build(IntentKernel.fromText('WILL'), PlanetaryKameaType.sol, size);
+      expect(s.letters, [HebrewLetter.vav, HebrewLetter.yod, HebrewLetter.lamed, HebrewLetter.lamed]);
+      expect(s.cells[2], s.cells[3]);
+      // The loop adds length beyond the straight segments.
+      final straight = (s.geometry.nodes[1] - s.geometry.nodes[0]).distance + (s.geometry.nodes[2] - s.geometry.nodes[1]).distance;
+      expect(s.geometry.strokes[1].length, greaterThan(straight + 10));
     });
 
     test('empty intent yields empty geometry', () {

@@ -110,7 +110,8 @@ class Combustion {
     final f = front(now);
     final shader = _shader, image = _fieldImage;
     if (shader != null && image != null) {
-      scene.paint(canvas, size, double.infinity, style);
+      // Lettering (Hebrew petals, kamea numbers) fades out before the flame.
+      scene.paint(canvas, size, double.infinity, style.withLetterOpacity(1 - minimumJerk(t / 0.6)));
       shader
         ..setFloat(0, size.width)
         ..setFloat(1, size.height)

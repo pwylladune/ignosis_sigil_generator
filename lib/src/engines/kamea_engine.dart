@@ -58,7 +58,8 @@ class KameaSigil {
 
   final PlanetaryKameaType type;
   final KameaLayout layout;
-  final String letters;
+  /// The Hebrew letters traced, in order (repeats kept).
+  final List<HebrewLetter> letters;
 
   /// Aiq Bekar–reduced gematria value of each letter, in `[1, n²]`.
   final List<int> numbers;
@@ -75,9 +76,8 @@ class KameaSigil {
 }
 
 /// Planetary Kamea sigils with classical grammar:
-/// - each letter → Hebrew gematria (see [latinToHebrew]) → Aiq Bekar reduction
-///   into the square's range `[1, n²]`, so no two letters collide by accident
-///   of the alphabet index;
+/// - the typed text → Hebrew letters ([transliterate], Golden Dawn / 777) →
+///   gematria → Aiq Bekar reduction into the square's range `[1, n²]`;
 /// - a hollow circle where the pen starts, straight traversal from cell to
 ///   cell, a loop on an immediate repeat, and a perpendicular crossbar at the end.
 class KameaEngine {
@@ -153,18 +153,17 @@ class KameaEngine {
   /// Magic constant `M = n(n² + 1) / 2`: every row, column and diagonal sums to it.
   static int magicConstant(int n) => n * (n * n + 1) ~/ 2;
 
-  /// Gematria value of a Latin letter reduced into `[1, n²]`.
-  static int letterNumber(String letter, int n) {
-    final hebrew = latinToHebrew[letter] ?? HebrewLetter.aleph;
-    return aiqBekarReduce(hebrew.value, n * n);
-  }
+  /// Gematria value of a Hebrew letter reduced into `[1, n²]` (Aiq Bekar).
+  static int letterNumber(HebrewLetter letter, int n) => aiqBekarReduce(letter.value, n * n);
 
   KameaSigil build(IntentKernel kernel, PlanetaryKameaType type, Size size) {
     final n = type.size;
     final layout = KameaLayout(n, size);
     final sq = square(type);
-    final letters = kernel.reducedConsonants;
-    final numbers = [for (var i = 0; i < letters.length; i++) letterNumber(letters[i], n)];
+    // Golden Dawn practice traces every letter of the Hebrew spelling (no
+    // deduplication); an immediate repeat is drawn as a loop.
+    final letters = transliterate(kernel.normalized);
+    final numbers = [for (final l in letters) letterNumber(l, n)];
     final cells = [for (final v in numbers) sq.indexOf(v)];
     final nodes = [for (final c in cells) layout.cellCenter(c)];
 

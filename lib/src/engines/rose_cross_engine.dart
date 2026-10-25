@@ -6,17 +6,19 @@ import '../models/intent_kernel.dart';
 
 /// A petal of the rose: one Hebrew letter on one of the three rings.
 class RosePetal {
-  const RosePetal(this.letter, this.ring, this.index, this.count);
+  const RosePetal(this.letter, this.ring, this.index, this.count, this.angle);
 
   final HebrewLetter letter;
 
   /// 0 = inner (3 mothers), 1 = middle (7 doubles), 2 = outer (12 simples).
   final int ring;
+
+  /// Position in the ring's sequence (see [RoseCrossEngine.rings]).
   final int index;
   final int count;
 
-  /// Rest angle on its ring, starting at the top and running clockwise.
-  double get angle => -math.pi / 2 + 2 * math.pi * index / count;
+  /// Rest angle on the canvas (radians; 0 = 3 o'clock, y down).
+  final double angle;
 }
 
 /// The traced rose sigil for a given ring rotation.
@@ -35,8 +37,17 @@ class RoseSigil {
 
 /// The Golden Dawn Rose Cross lamen: three concentric rings of petals holding
 /// the 22 Hebrew letters by Sepher Yetzirah class (inner 3 mothers, middle 7
-/// doubles, outer 12 simples). Latin letters reach the rose through the
-/// published table in [latinToHebrew], so all 26 land deterministically.
+/// doubles, outer 12 simples), arranged as on the lamen (Crowley, The
+/// Equinox I:3, 1910, Diagram 63; Regardie, The Golden Dawn):
+/// - inner: Aleph at the top (under the arm of Air), then Shin and Mem
+///   clockwise;
+/// - outer: the zodiac from Aries (He) at the top, running anticlockwise
+///   He, Vav, Zayin, Cheth, Teth, Yod, Lamed, Nun, Samekh, Ayin, Tzaddi, Qoph;
+/// - middle: the planets anticlockwise in King-scale spectral order
+///   Pe, Resh, Beth, Daleth, Gimel, Tav, Kaph, the top falling between Pe
+///   (11 o'clock) and Kaph (1 o'clock). Secondary sources disagree on the
+///   Kaph/Tav order; check against the plate before relying on it.
+/// The typed text reaches the rose through [transliterate].
 class RoseCrossEngine {
   /// Ring radii as fractions of the rose radius.
   static const ringRadii = [0.30, 0.60, 0.90];
@@ -44,23 +55,39 @@ class RoseCrossEngine {
   /// Relative angular speeds of the rings: 3 : 7 : 12 (the letters they hold).
   static const ringRatios = [3, 7, 12];
 
-  static final List<List<HebrewLetter>> rings = [
-    HebrewLetter.ofClass(LetterClass.mother),
-    HebrewLetter.ofClass(LetterClass.double),
-    HebrewLetter.ofClass(LetterClass.simple),
+  /// Each ring's letters in the order they run around the lamen.
+  static const List<List<HebrewLetter>> rings = [
+    [HebrewLetter.aleph, HebrewLetter.shin, HebrewLetter.mem],
+    [
+      HebrewLetter.pe, HebrewLetter.resh, HebrewLetter.beth, HebrewLetter.daleth, //
+      HebrewLetter.gimel, HebrewLetter.tav, HebrewLetter.kaph,
+    ],
+    [
+      HebrewLetter.he, HebrewLetter.vav, HebrewLetter.zayin, HebrewLetter.heth, //
+      HebrewLetter.teth, HebrewLetter.yod, HebrewLetter.lamed, HebrewLetter.nun,
+      HebrewLetter.samekh, HebrewLetter.ayin, HebrewLetter.tzaddi, HebrewLetter.qoph,
+    ],
   ];
+
+  /// Ring direction on screen (+1 clockwise, −1 anticlockwise) and the angle
+  /// of the first letter (offset from the top in units of one petal step).
+  static const _direction = [1, -1, -1];
+  static const _startOffset = [0.0, -0.5, 0.0];
+
+  static double _angle(int ring, int index) {
+    final step = 2 * math.pi / rings[ring].length;
+    // Screen angles grow clockwise (y points down).
+    return -math.pi / 2 + _startOffset[ring] * step + _direction[ring] * step * index;
+  }
 
   /// Every petal on the rose.
   static final List<RosePetal> allPetals = [
     for (var r = 0; r < 3; r++)
-      for (var i = 0; i < rings[r].length; i++) RosePetal(rings[r][i], r, i, rings[r].length),
+      for (var i = 0; i < rings[r].length; i++) RosePetal(rings[r][i], r, i, rings[r].length, _angle(r, i)),
   ];
 
-  /// The petal a Latin letter lands on.
-  static RosePetal petalFor(String latin) {
-    final hebrew = latinToHebrew[latin] ?? HebrewLetter.aleph;
-    return allPetals.firstWhere((p) => p.letter == hebrew);
-  }
+  /// The petal that holds a Hebrew letter.
+  static RosePetal petalOf(HebrewLetter letter) => allPetals.firstWhere((p) => p.letter == letter);
 
   static double roseRadius(Size size) => math.min(size.width, size.height) * 0.42;
 
@@ -75,8 +102,7 @@ class RoseCrossEngine {
   RoseSigil build(IntentKernel kernel, Size size, {List<double> ringRotation = const [0, 0, 0]}) {
     final center = size.center(Offset.zero);
     final radius = roseRadius(size);
-    final letters = kernel.reducedConsonants;
-    final petals = [for (var i = 0; i < letters.length; i++) petalFor(letters[i])];
+    final petals = [for (final l in transliterate(kernel.normalized)) petalOf(l)];
     final nodes = [for (final p in petals) petalPosition(p, center, radius, ringRotation)];
 
     final strokes = <SigilStroke>[];

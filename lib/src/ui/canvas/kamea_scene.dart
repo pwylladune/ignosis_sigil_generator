@@ -76,10 +76,12 @@ class KameaScene extends SigilScene {
     // Numbers.
     // Readable on screen whatever the plate size: clamp in screen pixels.
     final fontSize = style.px((layout.cell * 0.3 * style.scale).clamp(6.0, 13.0));
-    for (var i = 0; i < n * n; i++) {
-      final g = glow[i] ?? 0;
-      _drawText(canvas, '${sq[i]}', layout.cellCenter(i), fontSize, style.muted.withValues(alpha: 0.55), style.accent, g);
-    }
+    style.paintLettering(canvas, () {
+      for (var i = 0; i < n * n; i++) {
+        final g = glow[i] ?? 0;
+        _drawText(canvas, '${sq[i]}', layout.cellCenter(i), fontSize, style.muted.withValues(alpha: 0.55), style.accent, g);
+      }
+    });
 
     // Ink: the traversal, written by the ductus.
     final path = t >= timeline.duration ? geometry.path : geometry.reveal(timeline.fractionsAt(t));
