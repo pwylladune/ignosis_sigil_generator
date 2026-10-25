@@ -269,6 +269,7 @@ Replace the generic ember spray and diagonal shader sweep with a burn that *know
 - **New:** the Pen & Ink painter ignored the active skin for guides and the bind point; they used fixed `IgnosisTheme` colours. Scenes now take every colour from the skin.
 - **New:** at phone width (390 pt) the bottom bar (skin tag + burn button) and the skin dialog header overflowed. Fixed in the review batch, since those files also carry payment changes.
 - **New (Kamea):** with true Aiq Bekar reduction, several consonants share a chamber. On Sol, M (40), D (4) and T (400) all land on cell 4, so traces can revisit a cell and retrace lines. This is faithful to the tradition but looks sparse for some intents. Options: draw a small bounce or teardrop on non-consecutive revisits, or let the user pick the planet that gives the most distinct cells.
+- **The Rose maps all 26 letters exactly once:** taken literally, this is impossible, because C/K, I/J/Y, F/P and U/V/W share Hebrew letters and Teth and Tzaddi need digraphs. The test now checks the documented coverage instead.
 - **Own bug, fixed:** Chladni sand was seeded from `Object.hash`, which is randomised per process, so the same intent settled differently between runs. Seeds are now stable (74cb7b10).
 - The `combustion.frag` shader compiles and runs under Impeller. In `flutter test`, only the first test in a file gets it; later tests fall back to reverse ductus because the asynchronous load does not finish under fake async. This is a harness artifact; the canvas now preloads the shader.
 
@@ -280,6 +281,34 @@ Per the rule "stop and show the diff before any commit touching payments, keys o
 - Backend (fails closed): the receipt validator refuses everything (no dev, mock or sandbox bypass); the treasury never generates a keypair or fabricates a signature; the Pyre starts empty with writes requiring `PYRE_WRITE_SECRET`; there is no SAMO default mint and no invalid program id. `npm test` runs `test-server.ts`, which now asserts this.
 - Portal: the mint is blank, so there are no Solscan or Jupiter links to SAMO.
 - Tests: `test/services/iap_service_test.dart` (no store, no unlock) and a widget test proving a saved premium skin is not applied without an entitlement.
+- After the sub-agent review (§6.5), it also:
+  - Grants on Android only when Play's purchase state is `purchased`. Restore marks pending purchases "restored", and those are no longer unlocked or acknowledged.
+  - Re-syncs owned purchases on Android at startup and on resume, so purchases completed while the app was closed get acknowledged.
+  - Catches store exceptions and shows the last store error inline in both dialogs.
+  - Re-queries products when a purchase is attempted offline.
+  - Never shows a hard-coded USD price.
+  - Backend: timing-safe secret compare; the webhook records only complete events; no internal error text in responses; the starter-pack route answers 410 Gone; a malformed mint no longer crashes startup.
+
+### 6.5 Sub-agent review (2026-10-25) and fixes
+Three read-only reviewers covered payments, maths and determinism, and Flutter runtime.
+- **Process error (fixed):** commit `1f6d4982` had swept in the staged deletions of the wallet and key code, against the review rule, and left HEAD uncompilable. The last three local commits were rebuilt without them (old state kept as `backup/before-history-fix`). Nothing had been pushed.
+- **Cyber Chaos was not deterministic across platforms (fixed, a838f67b):** a 1-ulp libm difference grows chaotically. It now uses `det_math.dart`, and the result is pinned bit-for-bit on the VM and Chrome; CI runs both.
+- **Burn field (fixed, 7b20d6e3):**
+  - It depended on stroke grouping; it is now a Dijkstra fuse network.
+  - The shader's 16-bit decode was off by up to 0.4 % with colliding codes.
+  - A zero-size canvas crashed.
+- **Runtime (fixed, e65e26a9):**
+  - A burn was cancelled by a mid-burn change and the button stayed locked.
+  - Resizes rebuilt scenes and re-ran Chladni (65–82 ms per frame). Scenes now live in a 512² reference space.
+  - Reduce-motion typing cost about 89 ms per key.
+  - The breath notifier could be written after dispose.
+- **Engines and hygiene (fixed, e1db5f33):**
+  - Kamea now has a true constant-speed pen.
+  - Short sigils had no terminal crossbar.
+  - The Kamea and Rose text caches churned and leaked.
+  - Combustion never released its shader or texture.
+  - The Rose 26-letter test was trivially true.
+- **Payments (fixed in the uncommitted batch):** see §6.3.
 
 ### 6.4 Still open (beyond the checkboxes)
 - Bundle ID decision (iOS `com.ignosis.ignosisSigilGenerator`, Android `com.ignosis.ignosis_sigil_generator`, backend `com.ignosis.sigilgenerator`).
