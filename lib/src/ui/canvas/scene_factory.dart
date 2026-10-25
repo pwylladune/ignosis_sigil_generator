@@ -9,12 +9,14 @@ import '../../geometry/sigil_geometry.dart';
 import '../../models/sigil_state.dart';
 import 'chladni_scene.dart';
 import 'kamea_scene.dart';
+import 'rose_scene.dart';
 import 'scene.dart';
 import 'sigil_spec.dart';
 
 final _cache = GeometryCache<SigilGeometry>();
 final _kameaCache = GeometryCache<KameaSigil>();
 final _chladniCache = GeometryCache<ChladniSigil>();
+final _roseCache = GeometryCache<RoseSigil>();
 
 /// Builds the scene for [spec] at canvas [size], starting at [startTime].
 ///
@@ -29,6 +31,9 @@ SigilScene buildScene(SigilSpec spec, Size size, double startTime, {SigilScene? 
     case SigilSystem.chladni:
       final sigil = _chladniCache.putIfAbsent(key, () => ChladniEngine().build(spec.kernel, size));
       return ChladniScene(sigil, startTime: startTime, previous: previous is ChladniScene ? previous : null);
+    case SigilSystem.roseCross:
+      final sigil = _roseCache.putIfAbsent(key, () => RoseCrossEngine().build(spec.kernel, size));
+      return RoseScene(spec.kernel, size, sigil, startTime: startTime);
     default:
       break;
   }
@@ -45,7 +50,7 @@ SigilGeometry _legacyGeometry(SigilSpec spec, Size size) {
     case SigilSystem.kamea:
       throw StateError('Kamea has its own scene');
     case SigilSystem.roseCross:
-      path = RoseCrossEngine().generatePath(k, size);
+      throw StateError('Rose Cross has its own scene');
     case SigilSystem.chladni:
       throw StateError('Chladni has its own scene');
     case SigilSystem.cyberChaos:

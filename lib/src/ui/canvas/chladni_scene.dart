@@ -58,6 +58,9 @@ class ChladniScene extends SigilScene {
   double get _settleSim => (_from == null ? 0 : _morphDuration) + 3.2;
 
   @override
+  bool get ownsGuides => true;
+
+  @override
   double get settleTime => sigil.geometry.isEmpty ? 0 : _settleSim + 1.2;
 
   /// The (possibly morphing) mode at time [t] after start, as f and ∇f.

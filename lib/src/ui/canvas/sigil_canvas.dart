@@ -222,11 +222,17 @@ class _SigilPlatePainter extends CustomPainter {
     final center = size.center(Offset.zero);
     final radius = math.min(size.width, size.height) * 0.44;
 
-    // Drafting guides: three rings and quadrant ticks.
+    final c = combustion();
+    final s = scene();
+
+    // Drafting guides: three rings and quadrant ticks (outer ring only when
+    // the scene draws its own construction).
     final guide = style.guidePaint();
     canvas.drawCircle(center, radius, guide);
-    canvas.drawCircle(center, radius * 0.70, guide);
-    canvas.drawCircle(center, radius * 0.35, guide);
+    if (!(s?.ownsGuides ?? false)) {
+      canvas.drawCircle(center, radius * 0.70, guide);
+      canvas.drawCircle(center, radius * 0.35, guide);
+    }
     final tick = style.guidePaint(width: 0.8);
     for (var i = 0; i < 4; i++) {
       final a = i * math.pi / 2;
@@ -234,8 +240,6 @@ class _SigilPlatePainter extends CustomPainter {
       canvas.drawLine(center + d * (radius - 8), center + d * (radius + 8), tick);
     }
 
-    final c = combustion();
-    final s = scene();
     if (c != null) {
       c.paint(canvas, size, now, style);
     } else if (s != null) {

@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ignosis_sigil_generator/src/models/intent_kernel.dart';
-import 'package:ignosis_sigil_generator/src/engines/rose_cross_engine.dart';
 import 'package:ignosis_sigil_generator/src/engines/cyber_chaos_engine.dart';
 import 'package:ignosis_sigil_generator/src/engines/spare_monogram_engine.dart';
 import 'package:flutter/material.dart';
@@ -31,17 +30,6 @@ void main() {
     test('Handles empty text gracefully', () {
       final kernel = IntentKernel.fromText('   ');
       expect(kernel.isEmpty, isTrue);
-    });
-  });
-
-  group('RoseCrossEngine Tests', () {
-    test('Generates continuous Rose Cross dial paths', () {
-      final engine = RoseCrossEngine();
-      final kernel = IntentKernel.fromText('TRANSCENDENCE');
-      const size = Size(500, 500);
-
-      final path = engine.generatePath(kernel, size);
-      expect(path.getBounds().isEmpty, isFalse);
     });
   });
 

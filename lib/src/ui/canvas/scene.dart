@@ -85,6 +85,10 @@ abstract class SigilScene {
 
   bool isSettled(double now) => now - startTime >= settleTime;
 
+  /// True when the scene draws its own construction (square, rose, plate), so
+  /// the canvas keeps only its outer ring and ticks.
+  bool get ownsGuides => false;
+
   /// Paints the scene at clock time [now].
   void paint(Canvas canvas, Size size, double now, SceneStyle style);
 

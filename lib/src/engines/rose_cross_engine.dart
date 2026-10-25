@@ -1,94 +1,124 @@
 import 'dart:math' as math;
-import 'package:flutter/material.dart';
+import 'dart:ui';
+import '../geometry/sigil_geometry.dart';
+import '../models/hebrew_letters.dart';
 import '../models/intent_kernel.dart';
 
-/// Implements the Rosicrucian / Golden Dawn Rose Cross Lamen Dial.
-///
-/// Letters of the alphabet are mapped to concentric petal tiers:
-/// - Inner tier (3 Mother elements: Air, Water, Fire)
-/// - Middle tier (7 Planetary paths)
-/// - Outer tier (12 Zodiacal signs)
-/// Total: 22 paths of the Hebrew Tree of Life / expanded 26-letter Latin Rose.
+/// A petal of the rose: one Hebrew letter on one of the three rings.
+class RosePetal {
+  const RosePetal(this.letter, this.ring, this.index, this.count);
+
+  final HebrewLetter letter;
+
+  /// 0 = inner (3 mothers), 1 = middle (7 doubles), 2 = outer (12 simples).
+  final int ring;
+  final int index;
+  final int count;
+
+  /// Rest angle on its ring, starting at the top and running clockwise.
+  double get angle => -math.pi / 2 + 2 * math.pi * index / count;
+}
+
+/// The traced rose sigil for a given ring rotation.
+class RoseSigil {
+  RoseSigil({required this.center, required this.radius, required this.petals, required this.geometry});
+
+  final Offset center;
+
+  /// Outer radius of the rose; ring k sits at [RoseCrossEngine.ringRadii][k]·radius.
+  final double radius;
+
+  /// Petal visited by each letter, in order.
+  final List<RosePetal> petals;
+  final SigilGeometry geometry;
+}
+
+/// The Golden Dawn Rose Cross lamen: three concentric rings of petals holding
+/// the 22 Hebrew letters by Sepher Yetzirah class (inner 3 mothers, middle 7
+/// doubles, outer 12 simples). Latin letters reach the rose through the
+/// published table in [latinToHebrew], so all 26 land deterministically.
 class RoseCrossEngine {
-  /// Standard 26-letter Latin distribution on the Rose Cross petals
-  static const List<String> _petalOrder = [
-    'A', 'L', 'P', 'H', 'A', 'B', 'E', 'T', 'O', 'S',
-    'C', 'D', 'F', 'G', 'I', 'J', 'K', 'M', 'N', 'Q',
-    'R', 'U', 'V', 'W', 'X', 'Y', 'Z'
+  /// Ring radii as fractions of the rose radius.
+  static const ringRadii = [0.30, 0.60, 0.90];
+
+  /// Relative angular speeds of the rings: 3 : 7 : 12 (the letters they hold).
+  static const ringRatios = [3, 7, 12];
+
+  static final List<List<HebrewLetter>> rings = [
+    HebrewLetter.ofClass(LetterClass.mother),
+    HebrewLetter.ofClass(LetterClass.double),
+    HebrewLetter.ofClass(LetterClass.simple),
   ];
 
-  /// Computes petal polar coordinates for a given letter
-  static Offset getPetalPosition(String char, Offset center, double maxRadius) {
-    // 3 Concentric rings
-    final index = _petalOrder.indexOf(char);
-    final posIndex = index != -1 ? index : (char.codeUnitAt(0) - 65) % 26;
+  /// Every petal on the rose.
+  static final List<RosePetal> allPetals = [
+    for (var r = 0; r < 3; r++)
+      for (var i = 0; i < rings[r].length; i++) RosePetal(rings[r][i], r, i, rings[r].length),
+  ];
 
-    // Distribute into 3 concentric tiers
-    final tier = posIndex % 3; // 0, 1, 2
-    final ringRadius = maxRadius * (0.35 + (tier * 0.30));
-
-    // Radial angle (golden angle distribution for organic balance)
-    final angle = (posIndex / 26.0) * 2 * math.pi - (math.pi / 2);
-
-    return Offset(
-      center.dx + ringRadius * math.cos(angle),
-      center.dy + ringRadius * math.sin(angle),
-    );
+  /// The petal a Latin letter lands on.
+  static RosePetal petalFor(String latin) {
+    final hebrew = latinToHebrew[latin] ?? HebrewLetter.aleph;
+    return allPetals.firstWhere((p) => p.letter == hebrew);
   }
 
-  /// Generates the Rose Cross sigil path from an intent kernel
-  Path generatePath(IntentKernel kernel, Size size, {bool drawBackgroundPetals = false}) {
-    final path = Path();
-    if (kernel.isEmpty) return path;
+  static double roseRadius(Size size) => math.min(size.width, size.height) * 0.42;
 
-    final center = Offset(size.width / 2, size.height / 2);
-    final maxRadius = math.min(size.width, size.height) * 0.42;
+  /// Position of [petal] with ring k turned by `ringRotation[k]` radians.
+  static Offset petalPosition(RosePetal petal, Offset center, double radius, [List<double> ringRotation = const [0, 0, 0]]) {
+    final a = petal.angle + ringRotation[petal.ring];
+    final r = radius * ringRadii[petal.ring];
+    return Offset(center.dx + r * math.cos(a), center.dy + r * math.sin(a));
+  }
 
-    final nodes = <Offset>[];
-    for (int i = 0; i < kernel.reducedConsonants.length; i++) {
-      final char = kernel.reducedConsonants[i];
-      nodes.add(getPetalPosition(char, center, maxRadius));
-    }
+  /// Builds the sigil; [ringRotation] turns each ring (used by the astrolabe lock).
+  RoseSigil build(IntentKernel kernel, Size size, {List<double> ringRotation = const [0, 0, 0]}) {
+    final center = size.center(Offset.zero);
+    final radius = roseRadius(size);
+    final letters = kernel.reducedConsonants;
+    final petals = [for (var i = 0; i < letters.length; i++) petalFor(letters[i])];
+    final nodes = [for (final p in petals) petalPosition(p, center, radius, ringRotation)];
 
-    if (nodes.isEmpty) return path;
+    final strokes = <SigilStroke>[];
+    if (nodes.isNotEmpty) {
+      strokes.add(SigilStroke(Path()..addOval(Rect.fromCircle(center: nodes.first, radius: 5)), role: StrokeRole.startMark));
+      if (nodes.length > 1) {
+        final trace = Path()..moveTo(nodes.first.dx, nodes.first.dy);
+        for (var i = 1; i < nodes.length; i++) {
+          final prev = nodes[i - 1], cur = nodes[i];
+          if (petals[i] == petals[i - 1]) {
+            // Same petal twice (e.g. C then K): a small loop outward.
+            final out = cur - center;
+            final dir = out.distance == 0 ? const Offset(0, -1) : out / out.distance;
+            trace.arcTo(Rect.fromCircle(center: cur + dir * 7, radius: 7), math.atan2(-dir.dy, -dir.dx), 2 * math.pi - 0.01, false);
+            trace.lineTo(cur.dx, cur.dy);
+            continue;
+          }
+          // Petal flow: curves bow gently toward the centre of the rose.
+          final mid = (prev + cur) / 2;
+          final control = mid + (center - mid) * 0.2;
+          trace.quadraticBezierTo(control.dx, control.dy, cur.dx, cur.dy);
+        }
+        strokes.add(SigilStroke(trace));
 
-    // Start node: Traditional circle
-    final start = nodes.first;
-    const startRadius = 5.0;
-    path.addOval(Rect.fromCircle(center: start, radius: startRadius));
-
-    if (nodes.length == 1) return path;
-
-    // Connect petal nodes with continuous Bézier splines
-    path.moveTo(start.dx, start.dy);
-    for (int i = 1; i < nodes.length; i++) {
-      final prev = nodes[i - 1];
-      final curr = nodes[i];
-
-      // Pull toward center slightly for organic curved flower petal flow
-      final controlX = (prev.dx + curr.dx) / 2 + (center.dx - (prev.dx + curr.dx) / 2) * 0.2;
-      final controlY = (prev.dy + curr.dy) / 2 + (center.dy - (prev.dy + curr.dy) / 2) * 0.2;
-
-      path.quadraticBezierTo(controlX, controlY, curr.dx, curr.dy);
-    }
-
-    // Termination crossbar
-    if (nodes.length >= 2) {
-      final last = nodes.last;
-      final secondLast = nodes[nodes.length - 2];
-      final dx = last.dx - secondLast.dx;
-      final dy = last.dy - secondLast.dy;
-      final len = math.sqrt(dx * dx + dy * dy);
-
-      if (len > 0) {
-        const barHalf = 8.0;
-        final nx = (-dy / len) * barHalf;
-        final ny = (dx / len) * barHalf;
-        path.moveTo(last.dx - nx, last.dy - ny);
-        path.lineTo(last.dx + nx, last.dy + ny);
+        var j = nodes.length - 2;
+        while (j > 0 && petals[j] == petals.last) {
+          j--;
+        }
+        final mid = (nodes[j] + nodes.last) / 2;
+        final control = mid + (center - mid) * 0.2;
+        final d = nodes.last - control; // tangent at the end of the last curve
+        if (d.distance > 0) {
+          final normal = Offset(-d.dy, d.dx) / d.distance * 8;
+          strokes.add(SigilStroke(
+            Path()
+              ..moveTo(nodes.last.dx - normal.dx, nodes.last.dy - normal.dy)
+              ..lineTo(nodes.last.dx + normal.dx, nodes.last.dy + normal.dy),
+            role: StrokeRole.terminal,
+          ));
+        }
       }
     }
-
-    return path;
+    return RoseSigil(center: center, radius: radius, petals: petals, geometry: SigilGeometry(strokes: strokes, nodes: nodes));
   }
 }

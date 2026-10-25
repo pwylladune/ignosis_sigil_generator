@@ -34,6 +34,9 @@ class KameaScene extends SigilScene {
   SigilGeometry get geometry => sigil.geometry;
 
   @override
+  bool get ownsGuides => true;
+
+  @override
   double get settleTime => timeline.duration + _sumDelay + (_lineCount - 1) * _sumStagger + _sumPulse;
 
   @override
