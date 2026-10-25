@@ -4,9 +4,9 @@
 
 // Level-set burn front over a baked ignition-distance field.
 //
-// uField holds d(x): the distance a flame travels from the sigil's last stroke
-// (backward along the ink by arc length, then across the paper), normalised to
-// [0, 1] and packed as 16 bits in R (high) and G (low). The front is
+// uField holds d(x): the time a flame takes to reach x, igniting at the end of
+// the last stroke, running along the ink and creeping across paper. It is
+// normalised to [0, 1] and packed as v = 256*R + G over 65535. The front is
 //   phi(x, t) = d(x) + A * fbm(x, t) - front(t)
 // Burned where phi < 0, an incandescent rim for 0 <= phi < band, untouched beyond.
 
@@ -69,7 +69,7 @@ void main() {
     }
 
     vec4 f = texture(uField, uv);
-    float d = f.r + f.g / 255.0;
+    float d = f.r * (65280.0 / 65535.0) + f.g * (255.0 / 65535.0);
     // Slow drift only: no luminance flicker above a few hertz.
     float n = fbm(uv * 9.0 + vec2(uSeed * 7.0, uTime * 0.18)) - 0.5;
     float phi = d + 0.16 * n - uFront;

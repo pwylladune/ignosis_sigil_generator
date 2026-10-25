@@ -131,13 +131,14 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
     if (widget.burn.generation == _burnGeneration) return;
     _burnGeneration = widget.burn.generation;
     final scene = _scene;
-    if (scene == null || scene.geometry.isEmpty) {
+    final size = _size;
+    if (scene == null || scene.geometry.isEmpty || size == null || size.isEmpty) {
       widget.onIncinerated();
       return;
     }
     _combustion = Combustion(
       scene: scene,
-      size: _size ?? Size.zero,
+      size: size,
       startTime: _clock.now,
       reduceMotion: _reduceMotion,
       seed: _stableSeed(widget.spec),

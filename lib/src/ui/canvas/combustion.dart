@@ -75,7 +75,8 @@ class Combustion {
   static const _dt = 1 / 60;
   static const _emberLife = 2.2;
 
-  /// Front position in field units: −band → 1 + band with minimum-jerk pacing.
+  /// Front position in field units: −band → 1 + 2·band with minimum-jerk pacing,
+  /// so the rim fully clears the farthest point before the burn ends.
   double front(double now) => lerp(-band, 1 + band * 2, minimumJerk((now - startTime) / duration));
 
   bool isDone(double now) => now - startTime >= duration + (reduceMotion ? 0 : _emberLife);
@@ -125,10 +126,9 @@ class Combustion {
     final fld = field;
     final total = scene.geometry.totalLength;
     if (fld == null || fld.samples.isEmpty) return total * (1 - f).clamp(0.0, 1.0);
-    // Samples are ordered from the ignition point; count how many have burned.
     var burned = 0;
-    while (burned < fld.sampleDistances.length && fld.sampleDistances[burned] < f) {
-      burned++;
+    for (final d in fld.sampleDistances) {
+      if (d < f) burned++;
     }
     return total * (1 - burned / fld.sampleDistances.length);
   }
