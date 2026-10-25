@@ -1,6 +1,6 @@
 # IGNOSIS — Current State & Path to Production
 
-_Last reviewed: 2026-10-25 · Scope: full repo (Flutter app, `backend/`, `contracts/`, `portal/`, `scripts/`, `docs/`)_
+_Last reviewed: 2026-10-25 · Updated 2026-10-25 (local session; see §6) · Scope: full repo (Flutter app, `backend/`, `contracts/`, `portal/`, `scripts/`, `docs/`)_
 
 This document records what has been built, what is real versus simulated, and the work needed to ship. It has three parts:
 
@@ -195,32 +195,32 @@ Replace the generic ember spray and diagonal shader sweep with a burn that *know
 ## 4. Prioritized Task List
 
 ### P0: blockers before any store submission (v1.0, no-token release)
-- [ ] **Feature-flag off all crypto UI** (wallet modal, seed export, starter pack, `$IGNOSIS` copy, portal trade tab) behind `kEnableChain = false`.
-- [ ] Delete or quarantine the fake paths: `SecureKeyStorageService.createInAppWallet`, `submitBurnConsecration`, the IAP simulated fallbacks, and the hard-coded balances.
-- [ ] **Gate skins by entitlement.** Read `IapService.unlockedSkins` in `SkinSelectorModal`, wire the purchase buttons in `PaySchemaModal`, and add **Restore Purchases**. Persist the selected skin.
-- [ ] Move IAP init off the critical path in `main()`.
-- [ ] Unify the bundle ID / applicationId. Configure Android release signing. Add the `INTERNET` permission if any network call remains.
-- [ ] Register `assets/shaders/` under `flutter: shaders:`, or remove the shader until §3.3 lands.
-- [ ] Fix the Spare rotation discontinuity, or remove idle rotation (moot once §3 lands).
+- [x] **Feature-flag off all crypto UI** (wallet modal, seed export, starter pack, `$IGNOSIS` copy, portal trade tab) behind `kEnableChain = false`. _(a1c27a9f; the portal no longer links the SAMO mint, see the review batch.)_
+- [ ] ⏳ Delete or quarantine the fake paths: `SecureKeyStorageService.createInAppWallet`, `submitBurnConsecration`, the IAP simulated fallbacks, and the hard-coded balances. _Done in the working tree, **uncommitted, awaiting review** (payments/keys rule): wallet UI and Solana services deleted; the crypto IAP removed; the backend fails closed (§6)._
+- [ ] ⏳ **Gate skins by entitlement.** Read `IapService.unlockedSkins` in `SkinSelectorModal`, wire the purchase buttons in `PaySchemaModal`, and add **Restore Purchases**. Persist the selected skin. _Done in the working tree, **awaiting review**._
+- [ ] ⏳ Move IAP init off the critical path in `main()`. _Done in the working tree, **awaiting review**._
+- [ ] Unify the bundle ID / applicationId. Configure Android release signing. Add the `INTERNET` permission if any network call remains. _**Needs your decision on the ID.** Release signing needs your keystore. INTERNET is not needed once the review batch lands: the app makes no network calls of its own (`http` removed), and Play Billing declares its own permissions._
+- [x] Register `assets/shaders/` under `flutter: shaders:`, or remove the shader until §3.3 lands. _(registered; rewritten as the level-set burn, a865c25c)_
+- [x] Fix the Spare rotation discontinuity, or remove idle rotation (moot once §3 lands). _(no idle rotation; single clock, b55dd3a0)_
 - [ ] Privacy policy, ToS, age rating, App Store / Play listing copy. Mark energetic and "Joules" language as symbolic.
-- [ ] Replace the README with real setup, architecture and run instructions. Mark `docs/deployment_guide.md` sections that describe simulated features.
-- [ ] CI (GitHub Actions): `flutter analyze`, `flutter test`, backend `tsc` and tests.
+- [x] Replace the README with real setup, architecture and run instructions. Mark `docs/deployment_guide.md` sections that describe simulated features. _(05274561)_
+- [x] CI (GitHub Actions): `flutter analyze`, `flutter test`, backend `tsc` and tests. _(6144b66c. Goldens are excluded on Linux. Backend `npm test` runs the fail-closed integration test once the review batch lands.)_
 
 ### P1: Motion & symbol (the v1.0 differentiator; see §3)
-- [ ] Motion core: single clock, minimum-jerk easing, reduce-motion, ticker paused when idle.
-- [ ] `SigilGeometry` refactor (ordered strokes) plus a geometry cache.
-- [ ] Ductus draw-on for all engines.
-- [ ] Kamea: Aiq Bekar mapping, centered square, traversal and magic-sum consecration.
-- [ ] Rose Cross: correct 3/7/12 rose and transliteration table, astrolabe lock.
-- [ ] Chladni: real nodal field, marching squares, sand-particle physics, mode morphing.
-- [ ] Cyber Chaos: hash-seeded Clifford attractor with chaos validation and density render.
-- [ ] Spare: armature merge, Dₙ / Cₙ group-assembly animation.
-- [ ] Combustion: reverse-ductus, SDF level-set shader, curl-noise embers.
-- [ ] Gnosis breath master curve shared by the dialog and the canvas (resonance / box / 4-7-8).
-- [ ] System-switch morph and typing write-on / lift-off.
+- [x] Motion core: single clock, minimum-jerk easing, reduce-motion, ticker paused when idle. _(b55dd3a0)_
+- [x] `SigilGeometry` refactor (ordered strokes) plus a geometry cache.
+- [x] Ductus draw-on for all engines. _(Chladni draws with sand and Cyber Chaos with accretion instead of a pen.)_
+- [x] Kamea: Aiq Bekar mapping, centered square, traversal and magic-sum consecration. _(4990638e)_
+- [x] Rose Cross: correct 3/7/12 rose and transliteration table, astrolabe lock. _(b3ee653d)_
+- [x] Chladni: real nodal field, marching squares, sand-particle physics, mode morphing. _(7f359dc3)_
+- [x] Cyber Chaos: hash-seeded Clifford attractor with chaos validation and density render. _(57c9d7ef; overdraw approximates log density; idle parameter drift intentionally omitted to keep stillness by default)_
+- [x] Spare: armature merge, Dₙ / Cₙ group-assembly animation. _(005e525e)_
+- [x] Combustion: reverse-ductus, SDF level-set shader, curl-noise embers. _(a865c25c; also the 2 s silence and "Banish with laughter")_
+- [x] Gnosis breath master curve shared by the dialog and the canvas (resonance / box / 4-7-8). _(b55dd3a0. Not done: the φ-ratio fixation rings of §3.2.1.)_
+- [ ] System-switch morph and typing write-on / lift-off. _Partial: typing is debounced (260 ms), then the pen rewrites; Chladni sand morphs between modes. No cross-system path morph yet._
 - [ ] Real SVG export (static and animated) plus vector PDF.
-- [ ] Remove dead code: `SigilPainter`, `RitualBurnDialog`, `SolanaIgnosisBridge` (or fold it into §2.4 B), unused deps. Rename `PenInkWitualBurnDialog`.
-- [ ] Golden and property tests for every engine.
+- [x] Remove dead code: `SigilPainter`, `RitualBurnDialog`, `SolanaIgnosisBridge` (or fold it into §2.4 B), unused deps. Rename `PenInkWitualBurnDialog`. _(09bc63ec; the bridge and `http` / `flutter_secure_storage` go with the review batch)_
+- [x] Golden and property tests for every engine. _(74cb7b10 plus the per-engine commits)_
 
 ### P2: v1.1 non-custodial consecration (Option B)
 - [ ] Commitment scheme: `SHA-256(nonce ‖ NFC(intent))`, nonce in secure storage, and an optional "prove" view.
@@ -243,3 +243,45 @@ Replace the generic ember spray and diagonal shader sweep with a burn that *know
 - `backend`: `npm ci && npx tsc --noEmit` passes.
 - Flutter, Anchor and the portal were **not built** in this review: no Flutter SDK or Anchor CLI in the review environment, and the portal was not installed. The Anchor build failure (C8) is inferred from the invalid base58 in `declare_id!` and the missing `initialize`.
 - C7 (mint identity) could not be checked live because the Solana RPC was unreachable from the review environment. Confirm on a block explorer before relying on it.
+
+---
+
+## 6. Local session log (2026-10-25)
+
+### 6.1 Tooling baseline (before any code change)
+| Tool | Result |
+|---|---|
+| Flutter | 3.44.8 stable, Dart 3.12.2. `flutter doctor`: all green except **Android licences not accepted**. Run `flutter doctor --android-licenses` yourself; it accepts licence terms. |
+| Xcode / CocoaPods | Xcode 27.1, CocoaPods 1.17.0 (CocoaPods warns unless the shell uses a UTF-8 locale; set `LANG=en_US.UTF-8`) |
+| Android | SDK 36, JDK 17 |
+| Node | Homebrew `node` 26 was already installed; `node@22` was added (keg-only) for CI parity. **Side effect:** installing `node@22` upgraded `simdjson`, which broke `node` 26 (`libsimdjson.33.dylib` missing). Fixed by upgrading `node` to 26.12.1. |
+| Rust | Homebrew `rustup` (keg-only), toolchain 1.99.1 stable. Add `/opt/homebrew/opt/rustup/bin` and `~/.cargo/bin` to `PATH`. |
+| Solana | Agave CLI 4.3.2 (current stable). Add `~/.local/share/solana/install/active_release/bin` to `PATH`. |
+| Anchor | `avm` 1.2.1 → `anchor-cli` **1.2.1** (latest stable; 2.0 is still a release candidate). Note: the crates.io crate named `avm` is an unrelated Node version manager, so install `avm` from the Anchor git tag. |
+| `flutter pub get` / `analyze` / `test` | Clean / no issues / 10 of 10 passed |
+| Backend `npm ci && tsc --noEmit` | Passes |
+| Portal `vite build` | Builds (first time it has been built) |
+| Anchor program `cargo check` | **Fails as predicted (C8):** `failed to decode base58 string` in `declare_id!`, then `cannot find value ID`. |
+
+### 6.2 Verified or contradicted
+- **C7 confirmed.** On mainnet, `7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU` is **Samoyed Coin (SAMO)**: a live mint with mint and freeze authority `null`, about 5.7 B supply and about 90 k holders. Removed from backend defaults, `.env.example` and the portal (review batch).
+- **C8 confirmed** by a real build (above).
+- **New:** the Pen & Ink painter ignored the active skin for guides and the bind point; they used fixed `IgnosisTheme` colours. Scenes now take every colour from the skin.
+- **New:** at phone width (390 pt) the bottom bar (skin tag + burn button) and the skin dialog header overflowed. Fixed in the review batch, since those files also carry payment changes.
+- **New (Kamea):** with true Aiq Bekar reduction, several consonants share a chamber. On Sol, M (40), D (4) and T (400) all land on cell 4, so traces can revisit a cell and retrace lines. This is faithful to the tradition but looks sparse for some intents. Options: draw a small bounce or teardrop on non-consecutive revisits, or let the user pick the planet that gives the most distinct cells.
+- **Own bug, fixed:** Chladni sand was seeded from `Object.hash`, which is randomised per process, so the same intent settled differently between runs. Seeds are now stable (74cb7b10).
+- The `combustion.frag` shader compiles and runs under Impeller. In `flutter test`, only the first test in a file gets it; later tests fall back to reverse ductus because the asynchronous load does not finish under fake async. This is a harness artifact; the canvas now preloads the shader.
+
+### 6.3 Review batch (uncommitted on purpose)
+Per the rule "stop and show the diff before any commit touching payments, keys or on-chain code", these changes are in the working tree but **not committed**:
+- Client: delete `wallet_consecration_modal`, `seed_phrase_export_modal`, `secure_key_storage_service` (the `sha256(mnemonic)` wallet), `solana_wallet_service` (fake burns) and `solana_ignosis_bridge`. The studio no longer opens a wallet. `http` and `flutter_secure_storage` are removed.
+- IAP: `IapService` is now a `ChangeNotifier` with no simulated or offline fulfilment, no starter pack, and `buyNonConsumable` for skins and the bundle. Restore Purchases is available, unlocks are cached locally, and `main()` no longer awaits the store.
+- UI: locked skins show their store price and buy on tap. The bundle and Restore are wired in both dialogs. The selected skin is persisted and falls back to the free skin when there is no entitlement.
+- Backend (fails closed): the receipt validator refuses everything (no dev, mock or sandbox bypass); the treasury never generates a keypair or fabricates a signature; the Pyre starts empty with writes requiring `PYRE_WRITE_SECRET`; there is no SAMO default mint and no invalid program id. `npm test` runs `test-server.ts`, which now asserts this.
+- Portal: the mint is blank, so there are no Solscan or Jupiter links to SAMO.
+- Tests: `test/services/iap_service_test.dart` (no store, no unlock) and a widget test proving a saved premium skin is not applied without an entitlement.
+
+### 6.4 Still open (beyond the checkboxes)
+- Bundle ID decision (iOS `com.ignosis.ignosisSigilGenerator`, Android `com.ignosis.ignosis_sigil_generator`, backend `com.ignosis.sigilgenerator`).
+- Skin entitlements are cached client-side in `SharedPreferences`. That is acceptable for cosmetic non-consumables, but it can be edited on a rooted device.
+- Not started: variant nonce (re-roll), hiding the kernel after charging, φ-ratio fixation rings, cross-system path morph, SVG / animated SVG / vector PDF export (`exportSvg` is still a stub), store listing, privacy policy, ToS.
