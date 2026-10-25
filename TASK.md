@@ -196,9 +196,9 @@ Replace the generic ember spray and diagonal shader sweep with a burn that *know
 
 ### P0: blockers before any store submission (v1.0, no-token release)
 - [x] **Feature-flag off all crypto UI** (wallet modal, seed export, starter pack, `$IGNOSIS` copy, portal trade tab) behind `kEnableChain = false`. _(a1c27a9f; the portal no longer links the SAMO mint, see the review batch.)_
-- [ ] ⏳ Delete or quarantine the fake paths: `SecureKeyStorageService.createInAppWallet`, `submitBurnConsecration`, the IAP simulated fallbacks, and the hard-coded balances. _Done in the working tree, **uncommitted, awaiting review** (payments/keys rule): wallet UI and Solana services deleted; the crypto IAP removed; the backend fails closed (§6)._
-- [ ] ⏳ **Gate skins by entitlement.** Read `IapService.unlockedSkins` in `SkinSelectorModal`, wire the purchase buttons in `PaySchemaModal`, and add **Restore Purchases**. Persist the selected skin. _Done in the working tree, **awaiting review**._
-- [ ] ⏳ Move IAP init off the critical path in `main()`. _Done in the working tree, **awaiting review**._
+- [x] Delete or quarantine the fake paths: `SecureKeyStorageService.createInAppWallet`, `submitBurnConsecration`, the IAP simulated fallbacks, and the hard-coded balances. _(8a954ac1 client, d0d1ecf2 backend, 2371d50a portal; reviewed by you before commit.)_
+- [x] **Gate skins by entitlement.** Read `IapService.unlockedSkins` in `SkinSelectorModal`, wire the purchase buttons in `PaySchemaModal`, and add **Restore Purchases**. Persist the selected skin. _(d259bda9)_
+- [x] Move IAP init off the critical path in `main()`. _(d259bda9)_
 - [ ] Unify the bundle ID / applicationId. Configure Android release signing. Add the `INTERNET` permission if any network call remains. _**Needs your decision on the ID.** Release signing needs your keystore. INTERNET is not needed once the review batch lands: the app makes no network calls of its own (`http` removed), and Play Billing declares its own permissions._
 - [x] Register `assets/shaders/` under `flutter: shaders:`, or remove the shader until §3.3 lands. _(registered; rewritten as the level-set burn, a865c25c)_
 - [x] Fix the Spare rotation discontinuity, or remove idle rotation (moot once §3 lands). _(no idle rotation; single clock, b55dd3a0)_
@@ -273,8 +273,8 @@ Replace the generic ember spray and diagonal shader sweep with a burn that *know
 - **Own bug, fixed:** Chladni sand was seeded from `Object.hash`, which is randomised per process, so the same intent settled differently between runs. Seeds are now stable (74cb7b10).
 - The `combustion.frag` shader compiles and runs under Impeller. In `flutter test`, only the first test in a file gets it; later tests fall back to reverse ductus because the asynchronous load does not finish under fake async. This is a harness artifact; the canvas now preloads the shader.
 
-### 6.3 Review batch (uncommitted on purpose)
-Per the rule "stop and show the diff before any commit touching payments, keys or on-chain code", these changes are in the working tree but **not committed**:
+### 6.3 Payments batch (reviewed, then committed)
+Held back for review under the rule "stop and show the diff before any commit touching payments, keys or on-chain code". After your review it was committed as 8a954ac1 (client wallet removal), d259bda9 (IAP gating and fixes), d0d1ecf2 (backend fail-closed) and 2371d50a (portal). It contains:
 - Client: delete `wallet_consecration_modal`, `seed_phrase_export_modal`, `secure_key_storage_service` (the `sha256(mnemonic)` wallet), `solana_wallet_service` (fake burns) and `solana_ignosis_bridge`. The studio no longer opens a wallet. `http` and `flutter_secure_storage` are removed.
 - IAP: `IapService` is now a `ChangeNotifier` with no simulated or offline fulfilment, no starter pack, and `buyNonConsumable` for skins and the bundle. Restore Purchases is available, unlocks are cached locally, and `main()` no longer awaits the store.
 - UI: locked skins show their store price and buy on tap. The bundle and Restore are wired in both dialogs. The selected skin is persisted and falls back to the free skin when there is no entitlement.
