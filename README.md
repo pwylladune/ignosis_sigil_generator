@@ -11,14 +11,15 @@ function that made the symbol.
 
 | System | Mathematics | Motion |
 |---|---|---|
-| **Austin Osman Spare** | Letters → radicals on one shared armature, coincident strokes merged; the domain is replicated by the cyclic group Cₙ or the dihedral group Dₙ | The domain is written, then each copy turns (and in Dₙ flips) into place |
-| **Planetary Kamea** | Latin → Hebrew gematria → Aiq Bekar reduction into the planetary square (Saturn 3×3 … Luna 9×9) | The pen traverses cell to cell; numbers glow; every row, column and diagonal lights to the magic constant M |
-| **Rose Cross** | Golden Dawn rose: 3 mothers, 7 doubles, 12 simples; all 26 Latin letters map through a published table | Rings counter-rotate in ratio 3 : 7 : 12 and lock as the last stroke lands |
+| **Monogram (after Spare)** | Repeated letters struck out (Carroll; optionally vowels too, a modern convention) → radicals on one shared armature, coincident strokes merged; the domain is replicated by Cₙ or Dₙ (the symmetry is IGNOSIS's own) | The domain is written, then each copy turns (and in Dₙ flips) into place |
+| **Planetary Kamea** | Every letter → Hebrew (Golden Dawn / *777* transliteration, digraphs first) → gematria → Aiq Bekar reduction into Agrippa's square (Saturn 3×3 … Luna 9×9); repeats loop | The pen traverses cell to cell at constant speed; numbers glow; every row, column and diagonal lights to the magic constant M |
+| **Golden Dawn Rose** | The 22-petal rose of the Rose Cross lamen (3 mothers, 7 doubles, 12 simples) in the lamen's order and direction | Rings counter-rotate in ratio 3 : 7 : 12 and lock as the last stroke lands |
 | **Cymatic (Chladni)** | Free square plate mode `cos(nπx)cos(mπy) ± cos(mπx)cos(nπy)`; nodal set by marching squares | 3,600 grains descend `f²` onto the nodal lines; a new intent morphs the mode and the sand flows |
 | **Cyber Chaos** | SHA-256 → Clifford attractor parameters, rejected unless chaotic (Lyapunov > 0) and well filled | The orbit accretes like ink soaking into paper |
 
-**Ritual Combustion** burns the seal in reverse ductus. A baked ignition-distance field drives a
-level-set shader, the ink acts as the fuse, and embers ride curl noise. Before the release, a Gnosis
+**Ritual Combustion** burns the seal in reverse ductus from the last glyph stroke. A baked
+ignition-distance field drives a level-set shader (char-dominant on light paper, blackbody on dark),
+the ink acts as the fuse, embers ride curl noise, and construction lettering fades before the flame. Before the release, a Gnosis
 breath guide (resonance 5.5/min, box, or 4-7-8) sets the rhythm for both the dialog and the canvas.
 Reduce-motion settings are honoured everywhere.
 

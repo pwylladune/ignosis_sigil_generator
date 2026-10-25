@@ -269,6 +269,11 @@ Replace the generic ember spray and diagonal shader sweep with a burn that *know
 - **New:** the Pen & Ink painter ignored the active skin for guides and the bind point; they used fixed `IgnosisTheme` colours. Scenes now take every colour from the skin.
 - **New:** at phone width (390 pt) the bottom bar (skin tag + burn button) and the skin dialog header overflowed. Fixed in the review batch, since those files also carry payment changes.
 - **New (Kamea):** with true Aiq Bekar reduction, several consonants share a chamber. On Sol, M (40), D (4) and T (400) all land on cell 4, so traces can revisit a cell and retrace lines. This is faithful to the tradition but looks sparse for some intents. Options: draw a small bounce or teardrop on non-consecutive revisits, or let the user pick the planet that gives the most distinct cells.
+- **Not done from round 2:**
+  - Alchemical bone body text (Ellie's note was non-binding).
+  - `FLAG_SECURE` / app-switcher privacy (optional).
+  - Anchor `contracts/` hardening (deferred; it does not build).
+  - Vite 6 for the two dev-server advisories.
 - **The Rose maps all 26 letters exactly once:** taken literally, this is impossible, because C/K, I/J/Y, F/P and U/V/W share Hebrew letters and Teth and Tzaddi need digraphs. The test now checks the documented coverage instead.
 - **Own bug, fixed:** Chladni sand was seeded from `Object.hash`, which is randomised per process, so the same intent settled differently between runs. Seeds are now stable (74cb7b10).
 - The `combustion.frag` shader compiles and runs under Impeller. In `flutter test`, only the first test in a file gets it; later tests fall back to reverse ductus because the asynchronous load does not finish under fake async. This is a harness artifact; the canvas now preloads the shader.
@@ -309,6 +314,53 @@ Three read-only reviewers covered payments, maths and determinism, and Flutter r
   - Combustion never released its shader or texture.
   - The Rose 26-letter test was trivially true.
 - **Payments (fixed in the uncommitted batch):** see §6.3.
+
+### 6.6 Six-specialist review round 2 (/leeloo) and remediation (2026-10-25)
+Six reviewers took part: esoteric-researcher, research, ellie, code-reviewer, security-auditor and performance-profiler. The esoteric findings were cross-checked against the research brief, and the Rose outer ring against a third source. Every item was actioned:
+
+- **Phase 1, bugs and privacy (b9d63af8, cd056a25):**
+  - A burn started during the typing debounce locked the studio.
+  - The plate never painted its paper, so dark-skin exports were transparent.
+  - iOS Reduce Motion was ignored (`reduceMotionOf`).
+  - Chladni reduce-motion morph cost about 110 ms.
+  - The burn now ignites at the last glyph stroke, not the binding.
+  - The intent field no longer feeds keyboard learning.
+  - Export and print use a settled offscreen render and are disabled while burning.
+  - The print sheet drops "SOLANA" and uses the dialog's paper size.
+  - The SVG stub is removed.
+- **Phase 2, esoteric and science copy (04abe10d):**
+  - Spare (A∴A∴, not the Golden Dawn), "Does not matter—need not be", burning as optional (Carroll), "lust of result" credited to Crowley.
+  - Carroll reduction (vowels kept) is the default, with "no vowels" as the modern option.
+  - Agrippa's planetary virtues; attributed system names.
+  - Breath and EEG claims removed; dizziness caution and symbolic-practice disclaimer added.
+- **Phase 3, engines (39b37f74):**
+  - Golden Dawn / *777* transliteration with digraphs.
+  - Kamea and Rose trace every letter, so the repeat loop now fires.
+  - The rose follows the lamen's order and direction.
+  - Hebrew lettering fades before the flame.
+- **Phase 4, design (1f16d5c7, ca690c79, c7cdf5da, 89042fa1):**
+  - WCAG tokens (`inkTertiary`, `seal`), enforced by a contrast test for all 8 skins.
+  - A skin-derived `ThemeData`; the dialogs follow the skin.
+  - App bar, 44 pt targets, type floor, compact Gnosis sheet with haptics, semantics.
+  - Paper-true burn ramps, readable Kamea and Rose lettering, travel-based pen lifts.
+  - "Wiccan" is shown as "Greenwood".
+- **Phase 5, performance (ba4881d8):**
+  - Bit-identical fused trig; memoised chaos seed; cached attractor Picture.
+  - Breath holds cost no frames.
+  - Typed burn heap, lazy path metrics, reused buffers, font-change cache refresh.
+- **Android (f68f3881):** `allowBackup=false`.
+- **Payments, backend and portal batch (uncommitted, awaiting review):**
+  - Skin preview before purchase with an explicit Unlock button; inline store notices; price spinner; "remaining skins".
+  - The pay dialog becomes "Skins & support", with no hard-coded prices.
+  - `IapService.resetForTest`, plus positive restore and preview tests.
+  - Backend: rate limit, JSON-only errors, CORS allowlist, bounded and validated Pyre input, minimal root endpoint, Joule claim removed, Dockerfile runs as `USER node` with a healthcheck, `.dockerignore`.
+  - Portal: no seeded stats or fake wallet, `VITE_BACKEND_URL`, unused wallet-adapter, web3 and spl-token removed (107 → 2 dev-only advisories).
+  - Mint script: keypair written 0600, secret never printed, no freeze authority.
+
+**Contradictions or refinements to earlier findings:**
+- Ellie's table listed Surrealist `inkSecondary` as a pass at 4.50:1. It was actually 4.497:1 (fixed).
+- The Rose middle ring's Kaph/Tav order differs between secondary sources. King-scale spectral order was used; check against the *Equinox* I:3 plate.
+- Tracing every letter of a full sentence (Golden Dawn practice was for names) makes busy Kamea and Rose sigils. Consider a "trace reduced kernel" option.
 
 ### 6.4 Still open (beyond the checkboxes)
 - Bundle ID decision (iOS `com.ignosis.ignosisSigilGenerator`, Android `com.ignosis.ignosis_sigil_generator`, backend `com.ignosis.sigilgenerator`).
