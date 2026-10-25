@@ -22,7 +22,7 @@ class ChladniScene extends SigilScene {
       _ys = Float64List.fromList(prev._ys);
     } else {
       _from = null;
-      final rnd = SeededRandom(sigil.mode.hashCode);
+      final rnd = SeededRandom(sigil.mode.stableSeed);
       _xs = Float64List(particleCount);
       _ys = Float64List(particleCount);
       for (var i = 0; i < particleCount; i++) {
@@ -30,7 +30,7 @@ class ChladniScene extends SigilScene {
         _ys[i] = rnd.range(-1, 1);
       }
     }
-    _rnd = SeededRandom(sigil.mode.hashCode ^ 0x5A5A5A5A);
+    _rnd = SeededRandom(sigil.mode.stableSeed ^ 0x5A5A5A5A);
     _simTime = 0;
   }
 

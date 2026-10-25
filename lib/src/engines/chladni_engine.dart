@@ -56,6 +56,9 @@ class ChladniMode {
   @override
   int get hashCode => Object.hash(n, m, sign);
 
+  /// A seed that is identical on every run (unlike [hashCode]).
+  int get stableSeed => 7919 * n + 104729 * m + (sign > 0 ? 1 : 2);
+
   @override
   String toString() => '($n, $m, ${sign > 0 ? '+' : '−'})';
 }

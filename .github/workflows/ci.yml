@@ -17,7 +17,8 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter analyze
-      - run: flutter test
+      # Golden PNGs are generated on macOS; skip them on Linux runners.
+      - run: flutter test --exclude-tags golden
 
   backend:
     runs-on: ubuntu-latest
