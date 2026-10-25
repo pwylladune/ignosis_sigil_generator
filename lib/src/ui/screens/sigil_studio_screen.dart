@@ -5,11 +5,11 @@ import '../../models/intent_kernel.dart';
 import '../../models/sigil_state.dart';
 import '../../services/sigil_print_service.dart';
 import '../../services/universal_export_service.dart';
+import '../canvas/sigil_canvas.dart';
+import '../canvas/sigil_spec.dart';
 import '../theme/sigil_skins.dart';
-import '../widgets/ember_particle_painter.dart';
 import '../widgets/pay_schema_modal.dart';
 import '../widgets/pen_ink_ritual_burn_dialog.dart';
-import '../widgets/pen_ink_sigil_painter.dart';
 import '../widgets/ritual_exegesis_modal.dart';
 import '../widgets/skin_selector_modal.dart';
 import '../widgets/wallet_consecration_modal.dart';
@@ -22,70 +22,38 @@ class SigilStudioScreen extends StatefulWidget {
   State<SigilStudioScreen> createState() => _SigilStudioScreenState();
 }
 
-class _SigilStudioScreenState extends State<SigilStudioScreen>
-    with TickerProviderStateMixin {
+class _SigilStudioScreenState extends State<SigilStudioScreen> {
   late final TextEditingController _textController;
-  late final AnimationController _phaseController;
-  late final AnimationController _burnController;
+  final SigilBurnController _burn = SigilBurnController();
+  final ValueNotifier<double?> _breath = ValueNotifier(null);
+  bool _isBurning = false;
 
   final GlobalKey _canvasKey = GlobalKey();
 
   SigilSkinId _currentSkinId = SigilSkinId.vellumDraft;
   SigilSkinTheme get _skinTheme => SigilSkinTheme.getSkin(_currentSkinId);
 
-  SigilState _state = const SigilState(
-    primaryColor: Color(0xFF141416),
-    strokeWidth: 2.0,
-  );
+  SigilState _state = const SigilState();
   IntentKernel _kernel = IntentKernel.fromText('I COMMAND RADIANT CLARITY');
 
   @override
   void initState() {
     super.initState();
     _textController = TextEditingController(text: _state.rawIntent);
-
-    _phaseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 8),
-    )..repeat();
-
-    _burnController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 3500),
-    );
-
-    _burnController.addListener(() {
-      setState(() {
-        _state = _state.copyWith(burnProgress: _burnController.value);
-        if (_burnController.isCompleted) {
-          _state = _state.copyWith(
-            isIncinerated: true,
-            rawIntent: '',
-          );
-          _textController.clear();
-          _kernel = IntentKernel.fromText('');
-        }
-      });
-    });
   }
 
   @override
   void dispose() {
     _textController.dispose();
-    _phaseController.dispose();
-    _burnController.dispose();
+    _burn.dispose();
+    _breath.dispose();
     super.dispose();
   }
 
   void _onIntentChanged(String value) {
     setState(() {
-      _state = _state.copyWith(
-        rawIntent: value,
-        isIncinerated: false,
-        burnProgress: 0.0,
-      );
+      _state = _state.copyWith(rawIntent: value, isIncinerated: false);
       _kernel = IntentKernel.fromText(value);
-      _burnController.reset();
     });
   }
 
@@ -116,8 +84,28 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
     }
   }
 
+  SigilSpec get _spec => SigilSpec(
+        kernel: _kernel,
+        system: _state.system,
+        kameaType: _state.kameaType,
+        symmetryFolds: _state.symmetryFolds,
+        symmetryGroup: _state.symmetryGroup,
+      );
+
   void _triggerLocalBurn() {
-    _burnController.forward(from: 0.0);
+    if (_isBurning) return;
+    setState(() => _isBurning = true);
+    _burn.ignite();
+  }
+
+  void _onIncinerated() {
+    if (!mounted) return;
+    setState(() {
+      _isBurning = false;
+      _state = _state.copyWith(isIncinerated: true, rawIntent: '');
+      _textController.clear();
+      _kernel = IntentKernel.fromText('');
+    });
   }
 
   void _showExegesisModal() {
@@ -136,9 +124,6 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
         onSkinSelected: (newSkin) {
           setState(() {
             _currentSkinId = newSkin;
-            _state = _state.copyWith(
-              primaryColor: SigilSkinTheme.getSkin(newSkin).inkPrimary,
-            );
           });
         },
       ),
@@ -183,8 +168,10 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
+      barrierColor: Colors.black.withValues(alpha: 0.12),
       builder: (context) => PenInkRitualBurnDialog(
         onBurnComplete: _triggerLocalBurn,
+        breath: _breath,
         onBurnOnChainRequested: kEnableChain ? _showWalletBankModal : null,
       ),
     );
@@ -361,62 +348,15 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
                     ),
                     child: RepaintBoundary(
                       key: _canvasKey,
-                      child: AnimatedBuilder(
-                        animation: Listenable.merge([_phaseController, _burnController]),
-                        builder: (context, child) {
-                          if (_state.isIncinerated) {
-                            return Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'SEAL DISSOLVED INTO THE VOID',
-                                    style: TextStyle(
-                                      color: theme.inkSecondary,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 2.0,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    '"Does not matter, need not be."\nReleased to subconscious execution.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: theme.inkMuted,
-                                      fontSize: 12,
-                                      fontStyle: FontStyle.italic,
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }
-
-                          return Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              // The Clean Pen & Ink Sigil Geometry
-                              CustomPaint(
-                                painter: PenInkSigilPainter(
-                                  state: _state,
-                                  kernel: _kernel,
-                                  animationPhase: _phaseController.value,
-                                ),
-                              ),
-                              // Delicate Rising Cinders / Spark Layer
-                              CustomPaint(
-                                painter: EmberParticlePainter(
-                                  progress: _state.burnProgress,
-                                  time: _phaseController.value * 10,
-                                  emberColor: theme.burn,
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
+                      child: _state.isIncinerated
+                          ? _IncineratedPlate(theme: theme)
+                          : SigilCanvas(
+                              spec: _spec,
+                              skin: theme,
+                              burn: _burn,
+                              onIncinerated: _onIncinerated,
+                              breath: _breath,
+                            ),
                     ),
                   ),
                 ),
@@ -504,7 +444,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
                       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
-                    onPressed: _state.isIncinerated ? null : _showBurnModal,
+                    onPressed: _state.isIncinerated || _isBurning || _kernel.isEmpty ? null : _showBurnModal,
                     icon: Icon(Icons.whatshot, size: 16, color: theme.accent),
                     label: const Text(
                       'RITUAL COMBUSTION',
@@ -521,3 +461,61 @@ class _SigilStudioScreenState extends State<SigilStudioScreen>
   }
 }
 
+/// The empty plate after combustion: silence, then the banishing line.
+class _IncineratedPlate extends StatefulWidget {
+  const _IncineratedPlate({required this.theme});
+
+  final SigilSkinTheme theme;
+
+  @override
+  State<_IncineratedPlate> createState() => _IncineratedPlateState();
+}
+
+class _IncineratedPlateState extends State<_IncineratedPlate> {
+  bool _visible = false;
+  bool _laughed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Hold the empty plate for about two seconds before speaking.
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _visible = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = widget.theme;
+    return AnimatedOpacity(
+      opacity: _visible ? 1 : 0,
+      duration: const Duration(milliseconds: 1200),
+      curve: Curves.easeInOut,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'SEAL DISSOLVED INTO THE VOID',
+              style: TextStyle(color: theme.inkSecondary, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2.0),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '"Does not matter, need not be."\nReleased to subconscious execution.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: theme.inkMuted, fontSize: 12, fontStyle: FontStyle.italic, height: 1.5),
+            ),
+            const SizedBox(height: 14),
+            TextButton(
+              onPressed: _laughed ? null : () => setState(() => _laughed = true),
+              child: Text(
+                _laughed ? 'Ha.' : 'BANISH WITH LAUGHTER',
+                style: TextStyle(color: theme.accent, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.4),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
