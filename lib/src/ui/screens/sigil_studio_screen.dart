@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import '../../config/feature_flags.dart';
 import '../../engines/kamea_engine.dart';
 import '../../models/intent_kernel.dart';
 import '../../models/sigil_state.dart';
@@ -14,7 +13,6 @@ import '../widgets/pay_schema_modal.dart';
 import '../widgets/pen_ink_ritual_burn_dialog.dart';
 import '../widgets/ritual_exegesis_modal.dart';
 import '../widgets/skin_selector_modal.dart';
-import '../widgets/wallet_consecration_modal.dart';
 import 'chaos_wiki_screen.dart';
 
 class SigilStudioScreen extends StatefulWidget {
@@ -147,25 +145,6 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
     );
   }
 
-  void _showWalletBankModal() {
-    showDialog(
-      context: context,
-      builder: (context) => WalletConsecrationModal(
-        rawIntent: _state.rawIntent,
-        theme: _skinTheme,
-        onBurnSuccess: (txSig, amount) {
-          _triggerLocalBurn();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: _skinTheme.inkPrimary,
-              content: Text('Sacrifice Recorded on Solana: ${txSig.substring(0, 16)}... (Burned $amount \$IGNOSIS)'),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   void _showBurnModal() {
     showDialog(
       context: context,
@@ -174,7 +153,6 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
       builder: (context) => PenInkRitualBurnDialog(
         onBurnComplete: _triggerLocalBurn,
         breath: _breath,
-        onBurnOnChainRequested: kEnableChain ? _showWalletBankModal : null,
       ),
     );
   }
@@ -310,12 +288,6 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
             tooltip: 'Pay Schema & Memberships',
             onPressed: _showPayModal,
           ),
-          if (kEnableChain)
-            IconButton(
-              icon: Icon(Icons.account_balance_wallet_outlined, color: theme.inkSecondary, size: 20),
-              tooltip: '\$IGNOSIS Solana Bank & Burn',
-              onPressed: _showWalletBankModal,
-            ),
           IconButton(
             icon: Icon(Icons.ios_share, color: theme.inkSecondary, size: 20),
             tooltip: 'Export Vector / Seal',
