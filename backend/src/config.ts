@@ -10,14 +10,16 @@ export const config = {
   solanaCluster: (process.env.SOLANA_CLUSTER || 'devnet') as 'devnet' | 'mainnet-beta',
 
   // $IGNOSIS Token Details
-  ignosisMintAddress: process.env.IGNOSIS_MINT_ADDRESS || '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
+  // No default: the previous default (7xKXtg…sgAsU) is Samoyed Coin (SAMO), a
+  // third-party mainnet token. There is no $IGNOSIS mint yet (TASK.md C7).
+  ignosisMintAddress: process.env.IGNOSIS_MINT_ADDRESS || '',
   ignosisDecimals: parseInt(process.env.IGNOSIS_DECIMALS || '9', 10),
 
-  // Program ID for Anchor Consecration Incinerator
-  programId: process.env.IGNOSIS_PROGRAM_ID || 'Ignos1s111111111111111111111111111111111111',
+  // Program ID for the Anchor program (none deployed; the placeholder was not valid base58).
+  programId: process.env.IGNOSIS_PROGRAM_ID || '',
 
-  // Treasury Private Key (JSON array string or base58 string).
-  // If not provided in development, a simulated test keypair is generated.
+  // Treasury private key as a JSON byte array. If absent or invalid the
+  // treasury is disabled; no keypair is ever generated in its place.
   treasuryPrivateKey: process.env.TREASURY_PRIVATE_KEY || '',
 
   // In-App Purchase Verification Credentials

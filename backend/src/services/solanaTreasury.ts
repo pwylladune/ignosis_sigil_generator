@@ -28,33 +28,40 @@ export interface DispenseResult {
 export class SolanaTreasuryService {
   private connection: Connection;
   private treasuryKeypair: Keypair | null = null;
-  private mintPubkey: PublicKey;
+  private mintPubkey: PublicKey | null = null;
 
   constructor() {
     this.connection = new Connection(config.solanaRpcUrl, 'confirmed');
-    this.mintPubkey = new PublicKey(config.ignosisMintAddress);
-
+    if (config.ignosisMintAddress) {
+      try {
+        this.mintPubkey = new PublicKey(config.ignosisMintAddress);
+      } catch {
+        console.error('[Treasury] IGNOSIS_MINT_ADDRESS is not a valid public key: treasury disabled.');
+      }
+    }
     this.initTreasuryKeypair();
   }
 
+  /**
+   * Loads the treasury key from TREASURY_PRIVATE_KEY (JSON byte array only).
+   * Never substitutes a generated keypair: a missing or unparseable key leaves
+   * the treasury disabled, and every dispense fails.
+   */
   private initTreasuryKeypair() {
-    if (config.treasuryPrivateKey) {
-      try {
-        if (config.treasuryPrivateKey.startsWith('[')) {
-          const secret = Uint8Array.from(JSON.parse(config.treasuryPrivateKey));
-          this.treasuryKeypair = Keypair.fromSecretKey(secret);
-        } else {
-          // If base58 or hex, could decode; for now generate or log
-          this.treasuryKeypair = Keypair.generate();
-        }
-        console.log(`[Treasury] Initialized with public key: ${this.treasuryKeypair.publicKey.toBase58()}`);
-      } catch (err) {
-        console.warn('[Treasury] Failed to parse TREASURY_PRIVATE_KEY, generating fallback test keypair', err);
-        this.treasuryKeypair = Keypair.generate();
+    if (!config.treasuryPrivateKey) {
+      console.warn('[Treasury] No TREASURY_PRIVATE_KEY: treasury disabled.');
+      return;
+    }
+    try {
+      if (!config.treasuryPrivateKey.trim().startsWith('[')) {
+        throw new Error('expected a JSON byte array');
       }
-    } else {
-      this.treasuryKeypair = Keypair.generate();
-      console.log(`[Treasury] No TREASURY_PRIVATE_KEY provided. Generated ephemeral test keypair: ${this.treasuryKeypair.publicKey.toBase58()}`);
+      const secret = Uint8Array.from(JSON.parse(config.treasuryPrivateKey));
+      this.treasuryKeypair = Keypair.fromSecretKey(secret);
+      console.log(`[Treasury] Initialized with public key: ${this.treasuryKeypair.publicKey.toBase58()}`);
+    } catch (err: any) {
+      console.error(`[Treasury] Invalid TREASURY_PRIVATE_KEY (${err.message}): treasury disabled.`);
+      this.treasuryKeypair = null;
     }
   }
 
@@ -79,11 +86,15 @@ export class SolanaTreasuryService {
     if (!this.treasuryKeypair) {
       throw new Error('Treasury keypair is uninitialized');
     }
+    if (!this.mintPubkey) {
+      throw new Error('IGNOSIS_MINT_ADDRESS is not configured');
+    }
+    const mint = this.mintPubkey;
 
     try {
       // Check if we are on a real active cluster with funded treasury
-      const treasuryAta = getAssociatedTokenAddressSync(this.mintPubkey, this.treasuryKeypair.publicKey);
-      const destinationAta = getAssociatedTokenAddressSync(this.mintPubkey, destPubkey);
+      const treasuryAta = getAssociatedTokenAddressSync(mint, this.treasuryKeypair.publicKey);
+      const destinationAta = getAssociatedTokenAddressSync(mint, destPubkey);
 
       const transaction = new Transaction();
 
@@ -106,7 +117,7 @@ export class SolanaTreasuryService {
             this.treasuryKeypair.publicKey, // payer
             destinationAta,                 // ata to create
             destPubkey,                     // owner
-            this.mintPubkey                 // mint
+            mint                            // mint
           )
         );
       }
@@ -135,20 +146,16 @@ export class SolanaTreasuryService {
         message: `Successfully transferred ${amount} $IGNOSIS on-chain.`,
       };
     } catch (err: any) {
-      console.warn(`[Treasury] Live on-chain transfer fallback: ${err.message}. Emitting cryptographic signed proof receipt.`);
-      
-      // Sandbox fallback: Return a deterministic verifiable receipt for development / sandbox verification
-      const timestamp = Date.now();
-      const simulatedSig = `tx_ignosis_dispense_${destPubkey.toBase58().substring(0, 8)}_${timestamp}_verified`;
-
+      // Report the failure. Never fabricate a signature or claim success.
+      console.error(`[Treasury] On-chain transfer failed: ${err.message}`);
       return {
-        success: true,
-        txSignature: simulatedSig,
-        tokensDispatched: amount,
+        success: false,
+        txSignature: '',
+        tokensDispatched: 0,
         destinationAddress: destinationWallet,
-        cluster: `${config.solanaCluster}-sandbox`,
-        isSimulated: true,
-        message: `Simulated dispense: Deposited ${amount} $IGNOSIS into recipient vault (${err.message})`,
+        cluster: config.solanaCluster,
+        isSimulated: false,
+        message: 'Transfer failed.',
       };
     }
   }

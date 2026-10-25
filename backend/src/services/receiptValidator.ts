@@ -1,5 +1,3 @@
-import { config } from '../config.js';
-
 export interface PurchaseVerificationResult {
   isValid: boolean;
   productId: string;
@@ -19,86 +17,22 @@ export class ReceiptValidatorService {
     productId: string;
     transactionId?: string;
   }): Promise<PurchaseVerificationResult> {
-    const { platform, receiptData, productId, transactionId } = params;
+    const { platform, productId, transactionId } = params;
 
-    // 1. Mock / Sandbox Development Bypass
-    if (platform === 'mock' || config.nodeEnv === 'development' || receiptData.startsWith('mock_') || receiptData.startsWith('sandbox_')) {
+    // Fail closed. There is no development bypass and no "accept any
+    // non-empty receipt" path: real verification needs the App Store Server
+    // API (JWS chain) or the Google Play Developer API, plus an idempotent
+    // ledger keyed on transactionId / orderId. Until those exist, nothing is
+    // fulfilled. See TASK.md §2.2 C5 and §2.4 option C.
+    if (platform === 'ios' || platform === 'android') {
       return {
-        isValid: true,
+        isValid: false,
         productId,
-        transactionId: transactionId || `txn_mock_${Date.now()}`,
+        transactionId: transactionId || '',
         purchaseTime: Date.now(),
-        environment: 'mock',
+        environment: 'production',
+        errorMessage: `Receipt verification for ${platform} is not implemented; refusing to fulfil.`,
       };
-    }
-
-    // 2. iOS StoreKit Verification
-    if (platform === 'ios') {
-      try {
-        // In full production, this verifies the JWS signed transaction with Apple's root certificates
-        // or queries Apple App Store Server API: GET /inApps/v1/transactions/{transactionId}
-        if (!receiptData || receiptData.length < 10) {
-          return {
-            isValid: false,
-            productId,
-            transactionId: transactionId || '',
-            purchaseTime: Date.now(),
-            environment: 'sandbox',
-            errorMessage: 'Malformed Apple receipt payload',
-          };
-        }
-
-        return {
-          isValid: true,
-          productId,
-          transactionId: transactionId || `apple_txn_${Date.now()}`,
-          purchaseTime: Date.now(),
-          environment: 'production',
-        };
-      } catch (err: any) {
-        return {
-          isValid: false,
-          productId,
-          transactionId: transactionId || '',
-          purchaseTime: Date.now(),
-          environment: 'production',
-          errorMessage: err.message,
-        };
-      }
-    }
-
-    // 3. Android Google Play Verification
-    if (platform === 'android') {
-      try {
-        // In full production, queries androidpublisher.purchases.products.get
-        if (!receiptData) {
-          return {
-            isValid: false,
-            productId,
-            transactionId: transactionId || '',
-            purchaseTime: Date.now(),
-            environment: 'sandbox',
-            errorMessage: 'Missing Android purchase token',
-          };
-        }
-
-        return {
-          isValid: true,
-          productId,
-          transactionId: transactionId || `google_order_${Date.now()}`,
-          purchaseTime: Date.now(),
-          environment: 'production',
-        };
-      } catch (err: any) {
-        return {
-          isValid: false,
-          productId,
-          transactionId: transactionId || '',
-          purchaseTime: Date.now(),
-          environment: 'production',
-          errorMessage: err.message,
-        };
-      }
     }
 
     return {

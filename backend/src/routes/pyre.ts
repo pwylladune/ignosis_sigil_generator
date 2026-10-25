@@ -1,6 +1,28 @@
+import { timingSafeEqual } from 'crypto';
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { PyreIndexerService } from '../services/pyreIndexer.js';
+
+/**
+ * Writes require the shared secret in `x-pyre-secret` (PYRE_WRITE_SECRET).
+ * Without it configured, write endpoints are disabled, so nobody can inflate
+ * the stats anonymously (TASK.md C9).
+ */
+function requireWriteSecret(req: Request, res: Response): boolean {
+  const secret = process.env.PYRE_WRITE_SECRET;
+  if (!secret) {
+    res.status(503).json({ success: false, error: 'Pyre writes are disabled' });
+    return false;
+  }
+  const given = Buffer.from(req.header('x-pyre-secret') ?? '', 'utf8');
+  const expected = Buffer.from(secret, 'utf8');
+  // Constant-time comparison (lengths must match for timingSafeEqual).
+  if (given.length !== expected.length || !timingSafeEqual(given, expected)) {
+    res.status(401).json({ success: false, error: 'Unauthorized' });
+    return false;
+  }
+  return true;
+}
 
 export function createPyreRouter(indexer: PyreIndexerService): Router {
   const router = Router();
@@ -28,6 +50,7 @@ export function createPyreRouter(indexer: PyreIndexerService): Router {
   });
 
   router.post('/record-burn', (req: Request, res: Response) => {
+    if (!requireWriteSecret(req, res)) return;
     const parsed = burnRecordSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ success: false, error: parsed.error.format() });
@@ -47,26 +70,36 @@ export function createPyreRouter(indexer: PyreIndexerService): Router {
     return res.json({ success: true, stats, message: 'Burn consecrated and recorded in Global Pyre.' });
   });
 
-  // POST /api/v1/pyre/webhook (Helius / QuickNode webhook listener)
+  // POST /api/v1/pyre/webhook (indexer webhook)
+  // Records only events that carry a real amount and intent commitment; it
+  // never invents values. Parsing provider payloads (e.g. Helius enhanced
+  // transactions, SPL Memo) belongs to the v1.1 indexer (TASK.md §2.4 B).
+  const webhookEventSchema = z.object({
+    signature: z.string().min(10),
+    feePayer: z.string().min(30),
+    amount: z.number().positive(),
+    intentHashHex: z.string().regex(/^[0-9a-f]{64}$/i),
+  });
+
   router.post('/webhook', (req: Request, res: Response) => {
-    try {
-      const events = Array.isArray(req.body) ? req.body : [req.body];
-      for (const event of events) {
-        if (event && event.signature) {
-          indexer.recordBurn({
-            signature: event.signature,
-            practitioner: event.feePayer ? `${event.feePayer.substring(0, 6)}...` : 'Unknown',
-            amount: 93,
-            intentHashHex: '0000000000000000000000000000000000000000000000000000000000000000',
-            timestamp: Date.now(),
-            source: 'on_chain_solana',
-          });
-        }
-      }
-      return res.json({ success: true, processed: events.length });
-    } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+    if (!requireWriteSecret(req, res)) return;
+    const events = Array.isArray(req.body) ? req.body : [req.body];
+    let recorded = 0;
+    for (const raw of events) {
+      const parsed = webhookEventSchema.safeParse(raw);
+      if (!parsed.success) continue;
+      const e = parsed.data;
+      indexer.recordBurn({
+        signature: e.signature,
+        practitioner: `${e.feePayer.substring(0, 6)}...`,
+        amount: e.amount,
+        intentHashHex: e.intentHashHex.toLowerCase(),
+        timestamp: Date.now(),
+        source: 'on_chain_solana',
+      });
+      recorded++;
     }
+    return res.json({ success: true, received: events.length, recorded });
   });
 
   return router;

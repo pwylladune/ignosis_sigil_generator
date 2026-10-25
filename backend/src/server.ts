@@ -34,7 +34,7 @@ export function createApp() {
         health: '/health',
         pyreStats: '/api/v1/pyre/stats',
         pyreRecent: '/api/v1/pyre/recent',
-        fulfillStarterPack: 'POST /api/v1/iap/fulfill-starter-pack',
+        fulfillStarterPack: 'POST /api/v1/iap/fulfill-starter-pack (410 Gone: discontinued)',
       },
     });
   });

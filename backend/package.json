@@ -7,7 +7,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "ts-node src/server.ts",
-    "test": "echo \"No test specified\" && exit 0"
+    "test": "tsc && node dist/test-server.js"
   },
   "dependencies": {
     "@solana/spl-token": "^0.4.8",

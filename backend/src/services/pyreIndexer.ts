@@ -16,46 +16,11 @@ export interface PyreGlobalStats {
 }
 
 export class PyreIndexerService {
-  private totalBurned: number = 14782093; // Baseline genesis burns
-  private totalBurnEvents: number = 1589;
-  private lastBurnTimestamp: number = Date.now() - 42000;
+  // Starts empty: stats come only from recorded events, never seeded numbers.
+  private totalBurned: number = 0;
+  private totalBurnEvents: number = 0;
+  private lastBurnTimestamp: number = 0;
   private recentBurns: BurnEvent[] = [];
-
-  constructor() {
-    this.seedRecentBurns();
-  }
-
-  private seedRecentBurns() {
-    const genesisEntries: Omit<BurnEvent, 'timestamp'>[] = [
-      {
-        signature: '5xIgnosis31415BurnA7B8C9D017e29Z',
-        practitioner: '7xKy82...42AA',
-        amount: 93,
-        intentHashHex: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-        source: 'mobile_app',
-      },
-      {
-        signature: '4mPyreSol8921Bcf731998A1904Kl9',
-        practitioner: '9bKz11...99XF',
-        amount: 279,
-        intentHashHex: 'ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb',
-        source: 'web_portal',
-      },
-      {
-        signature: '2qCosmicSacrifice7781002Aa8391',
-        practitioner: '3tLp44...12WQ',
-        amount: 93,
-        intentHashHex: '4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a',
-        source: 'on_chain_solana',
-      },
-    ];
-
-    let t = Date.now() - 120000;
-    for (const e of genesisEntries) {
-      this.recentBurns.push({ ...e, timestamp: t });
-      t += 35000;
-    }
-  }
 
   public recordBurn(event: BurnEvent): PyreGlobalStats {
     this.totalBurned += event.amount;
@@ -73,15 +38,18 @@ export class PyreIndexerService {
   public getStats(): PyreGlobalStats {
     // Alchemical thermodynamic equivalence: 9.3 x 10^4 Joules per $IGNOSIS
     const joules = this.totalBurned * 93000;
-    const exponent = Math.floor(Math.log10(joules));
-    const mantissa = (joules / Math.pow(10, exponent)).toFixed(2);
+    const exponent = joules > 0 ? Math.floor(Math.log10(joules)) : 0;
+    const mantissa = joules > 0 ? (joules / Math.pow(10, exponent)).toFixed(2) : '0.00';
+    const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+    const active = new Set(this.recentBurns.filter((b) => b.timestamp >= dayAgo).map((b) => b.practitioner));
 
     return {
       totalBurned: this.totalBurned,
       totalBurnEvents: this.totalBurnEvents,
       lastBurnTimestamp: this.lastBurnTimestamp,
       heatJoulesReleased: `${mantissa} × 10^${exponent} J`,
-      activePractitioners24h: 312,
+      // Lower bound: counted from the in-memory recent window only.
+      activePractitioners24h: active.size,
     };
   }
 
