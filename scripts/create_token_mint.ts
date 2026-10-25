@@ -27,7 +27,8 @@ async function main() {
     console.log(`Loaded existing deployer keypair: ${payer.publicKey.toBase58()}`);
   } else {
     payer = Keypair.generate();
-    fs.writeFileSync(keypairPath, JSON.stringify(Array.from(payer.secretKey)), 'utf8');
+    // Owner-only permissions: this file is a private key.
+    fs.writeFileSync(keypairPath, JSON.stringify(Array.from(payer.secretKey)), { encoding: 'utf8', mode: 0o600 });
     console.log(`Generated fresh deployer keypair: ${payer.publicKey.toBase58()}`);
   }
 
@@ -53,7 +54,7 @@ async function main() {
     connection,
     payer,
     payer.publicKey, // mint authority
-    payer.publicKey, // freeze authority
+    null, // no freeze authority: holders' accounts can never be frozen
     9               // 9 decimals (same as SOL / standard SPL)
   );
   console.log(`🔥 $IGNOSIS MINT CREATED: ${mint.toBase58()}`);
@@ -85,7 +86,9 @@ async function main() {
   console.log('\n=============================================');
   console.log('SUCCESS! Add these to your backend/.env:');
   console.log(`IGNOSIS_MINT_ADDRESS=${mint.toBase58()}`);
-  console.log(`TREASURY_PRIVATE_KEY=${JSON.stringify(Array.from(payer.secretKey))}`);
+  // The secret key is never printed (scrollback and CI logs keep it); copy it
+  // from the 0600 keypair file into your secret store instead.
+  console.log(`TREASURY_PRIVATE_KEY=<contents of ${keypairPath}>`);
   console.log('=============================================\n');
 }
 
