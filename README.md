@@ -1,17 +1,77 @@
-# ignosis_sigil_generator
+# IGNOSIS — Chaos Magic Sigil Studio
 
-A new Flutter project.
+IGNOSIS turns a statement of intent into a sigil and lets you charge and release it. It is a Flutter app
+for iOS, Android and the web, drawn in a minimal Pen & Ink style with a vermilion accent.
 
-## Getting Started
+**Same intent, same sigil.** Every engine is a deterministic function of the reduced intent and its
+options. **Nothing moves unless the math moves it.** Every animation is the time evolution of the
+function that made the symbol.
 
-This project is a starting point for a Flutter application.
+## The five systems
 
-A few resources to get you started if this is your first Flutter project:
+| System | Mathematics | Motion |
+|---|---|---|
+| **Austin Osman Spare** | Letters → radicals on one shared armature, coincident strokes merged; the domain is replicated by the cyclic group Cₙ or the dihedral group Dₙ | The domain is written, then each copy turns (and in Dₙ flips) into place |
+| **Planetary Kamea** | Latin → Hebrew gematria → Aiq Bekar reduction into the planetary square (Saturn 3×3 … Luna 9×9) | The pen traverses cell to cell; numbers glow; every row, column and diagonal lights to the magic constant M |
+| **Rose Cross** | Golden Dawn rose: 3 mothers, 7 doubles, 12 simples; all 26 Latin letters map through a published table | Rings counter-rotate in ratio 3 : 7 : 12 and lock as the last stroke lands |
+| **Cymatic (Chladni)** | Free square plate mode `cos(nπx)cos(mπy) ± cos(mπx)cos(nπy)`; nodal set by marching squares | 3,600 grains descend `f²` onto the nodal lines; a new intent morphs the mode and the sand flows |
+| **Cyber Chaos** | SHA-256 → Clifford attractor parameters, rejected unless chaotic (Lyapunov > 0) and well filled | The orbit accretes like ink soaking into paper |
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+**Ritual Combustion** burns the seal in reverse ductus. A baked ignition-distance field drives a
+level-set shader, the ink acts as the fuse, and embers ride curl noise. Before the release, a Gnosis
+breath guide (resonance 5.5/min, box, or 4-7-8) sets the rhythm for both the dialog and the canvas.
+Reduce-motion settings are honoured everywhere.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Getting started
+
+Requirements: Flutter stable (3.44+, Dart 3.12). Building for iOS needs Xcode 27 and CocoaPods;
+Android needs the Android SDK 36 and JDK 17.
+
+```bash
+flutter pub get
+flutter run -d chrome        # or an iOS simulator / Android emulator
+flutter analyze
+flutter test                 # unit, property and widget tests
+flutter test --tags golden   # pixel goldens (generated on macOS)
+```
+
+To render preview frames of each engine through its motion, run:
+
+```bash
+VISUAL_OUT=build/visual flutter test --tags visual --run-skipped test/visual
+```
+
+Optional variables: `VISUAL_SYSTEMS=spare,kamea`, `VISUAL_TIMES=0.5,2,6`, `VISUAL_BURN=6`,
+`VISUAL_FOLDS`, `VISUAL_GROUP`, `VISUAL_PLANET`, `VISUAL_SKIN`, `VISUAL_INTENT`.
+
+## Architecture
+
+```
+lib/
+  main.dart                     App entry; store init runs in the background
+  src/config/feature_flags.dart kEnableChain (false for v1.0: no token, no wallet UI)
+  src/models/                   IntentKernel (Spare reduction), Hebrew letters + Aiq Bekar, state
+  src/engines/                  Pure math: one engine per system → geometry (ordered strokes)
+  src/geometry/                 SigilGeometry, GeometryCache, BurnField (ignition distance)
+  src/motion/                   MotionClock (single ticker), minimum-jerk easing, ductus, breath, noise
+  src/ui/canvas/                SigilCanvas + one scene per engine + Combustion
+  src/ui/screens|widgets|theme  Studio, Gnosis dialog, wiki, 8 skins
+assets/shaders/combustion.frag  Level-set burn front
+```
+
+Engines know nothing about time. Scenes turn geometry into motion as pure functions of the clock.
+The canvas runs its ticker only while something is moving, so an idle studio uses no frames.
+
+## Monetisation (v1.0)
+
+The core studio is free: all five systems, the burn, PNG share and the printable PDF burn sheet.
+The seven premium skins are one-time in-app purchases, sold individually or as a bundle, and
+Restore Purchases is available. v1.0 has **no cryptocurrency features**. The `backend/`,
+`contracts/`, `portal/` and `scripts/` folders are prototypes of a deferred on-chain design. Read
+[`TASK.md`](TASK.md) before touching them. They are not safe to deploy, and
+[`docs/deployment_guide.md`](docs/deployment_guide.md) marks the sections that describe simulated
+behaviour.
+
+## Status
+
+[`TASK.md`](TASK.md) is the source of truth for state, findings and priorities.

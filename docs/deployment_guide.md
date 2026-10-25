@@ -4,6 +4,13 @@ This guide details every component built and provides the exact commands to tran
 
 ---
 
+> [!WARNING]
+> **Status as of 2026-10-25: much of this guide describes simulated features.** v1.0 ships with
+> **no token** (`kEnableChain = false`). The backend relay, treasury dispenser, `$IGNOSIS` mint,
+> Anchor program and portal described below are not production-ready, and several of them report
+> success without doing anything. See [`TASK.md`](../TASK.md) §2 for the findings and the v1.1
+> non-custodial direction. Sections marked **⚠ Simulated** must not be followed for a release.
+
 ## 1. System Architecture Overview
 
 ```
@@ -38,6 +45,8 @@ This guide details every component built and provides the exact commands to tran
 
 ## 2. Running the Backend Relay Locally
 
+> **⚠ Simulated.** The relay's receipt validation, treasury transfer and Pyre stats are mocks (TASK.md C5, C6, C9). Not used by v1.0.
+
 The backend relay is located in `backend/`:
 
 ```bash
@@ -57,6 +66,8 @@ npm start
 ---
 
 ## 3. Minting the `$IGNOSIS` Token on Solana
+
+> **⚠ Deferred.** No token until there is a legal opinion (TASK.md §2.4, option C). The mint hard-coded elsewhere in the repo, `7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU`, is **Samoyed Coin (SAMO)**, a third-party token (verified on mainnet 2026-10-25). Do not wire it to anything.
 
 ### Devnet (Free Testing):
 ```bash
@@ -78,6 +89,8 @@ To mint on Solana Mainnet:
 
 ## 4. Deploying the Anchor Consecration Contract
 
+> **⚠ Does not build.** `declare_id!` is not valid base58 (confirmed with `cargo check`: "failed to decode base58 string"), there is no `initialize`, and it pins Anchor 0.29. v1.1 needs no custom program (SPL Memo).
+
 The smart contract program lives in `contracts/programs/ignosis/src/lib.rs`.
 
 1. **Build the Anchor Program**:
@@ -94,6 +107,8 @@ The smart contract program lives in `contracts/programs/ignosis/src/lib.rs`.
 ---
 
 ## 5. In-App Purchase (IAP) Configuration
+
+> **Partly current.** Skin products are real. The Ignition Starter Pack (IAP that dispenses a crypto token) is removed from v1.0: it is high-risk under App Store / Play policy (TASK.md §2.3).
 
 Configure these identical Product IDs in **App Store Connect** and **Google Play Console**:
 
@@ -112,6 +127,8 @@ Configure these identical Product IDs in **App Store Connect** and **Google Play
 ---
 
 ## 6. Web Portal & Jupiter DEX Integration
+
+> **⚠ Simulated.** The portal's wallet connect is a boolean toggle, stats are seeded, and the Jupiter link points at the third-party SAMO mint.
 
 The React portal is located in `portal/`:
 
