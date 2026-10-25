@@ -1,19 +1,19 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
-import 'package:flutter/rendering.dart';
 import 'package:share_plus/share_plus.dart';
 
 /// Platform-safe exporter supporting Web, iOS, and Android
 class UniversalExportService {
-  /// Captures RepaintBoundary as high-DPI PNG bytes
-  static Future<Uint8List?> capturePng(RenderRepaintBoundary boundary, {double pixelRatio = 3.0}) async {
+  /// Encodes an image as PNG bytes.
+  static Future<Uint8List?> encodePng(ui.Image image) async {
     try {
-      final image = await boundary.toImage(pixelRatio: pixelRatio);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       return byteData?.buffer.asUint8List();
     } catch (_) {
       return null;
+    } finally {
+      image.dispose();
     }
   }
 
@@ -40,18 +40,5 @@ class UniversalExportService {
     } catch (_) {
       return false;
     }
-  }
-
-  /// Converts a Path into SVG string for vector export
-  static String exportSvg(Path path, Size size, Color color, double strokeWidth) {
-    // Generate basic clean SVG wrapper
-    final hexColor = '#${color.toARGB32().toRadixString(16).substring(2)}';
-    final buffer = StringBuffer();
-    buffer.writeln('<?xml version="1.0" encoding="UTF-8"?>');
-    buffer.writeln('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size.width} ${size.height}" width="${size.width}" height="${size.height}">');
-    buffer.writeln('  <rect width="100%" height="100%" fill="#070709"/>');
-    buffer.writeln('  <path d="" stroke="$hexColor" stroke-width="$strokeWidth" fill="none" stroke-linecap="round" stroke-linejoin="round"/>');
-    buffer.writeln('</svg>');
-    return buffer.toString();
   }
 }

@@ -13,8 +13,6 @@ import '../theme/ignosis_theme.dart';
 class PenInkRitualBurnDialog extends StatefulWidget {
   final VoidCallback onBurnComplete;
 
-  /// Null hides the on-chain option (see kEnableChain).
-  final VoidCallback? onBurnOnChainRequested;
 
   /// Shared breath volume, null when not breathing.
   final BreathSignal? breath;
@@ -24,7 +22,6 @@ class PenInkRitualBurnDialog extends StatefulWidget {
   const PenInkRitualBurnDialog({
     super.key,
     required this.onBurnComplete,
-    this.onBurnOnChainRequested,
     this.breath,
     this.targetCycles = 7,
   });
@@ -233,29 +230,6 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
                             ),
                           ),
                   ),
-                  if (widget.onBurnOnChainRequested != null) ...[
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: IgnosisTheme.sumiInk,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          widget.onBurnOnChainRequested!();
-                        },
-                        icon: const Icon(Icons.bolt, size: 16, color: IgnosisTheme.vermilion),
-                        label: const Text(
-                          'BURN WITH \$IGNOSIS',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 1.0),
-                        ),
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ],

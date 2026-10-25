@@ -1,5 +1,5 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../engines/kamea_engine.dart';
 import '../../models/intent_kernel.dart';
@@ -30,7 +30,6 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
   final BreathSignal _breath = BreathSignal();
   bool _isBurning = false;
 
-  final GlobalKey _canvasKey = GlobalKey();
 
   SigilSkinId _currentSkinId = SigilSkinId.vellumDraft;
   SigilSkinTheme get _skinTheme => SigilSkinTheme.getSkin(_currentSkinId);
@@ -97,27 +96,25 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
     });
   }
 
-  Future<void> _exportSigil() async {
-    final boundary =
-        _canvasKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-    if (boundary == null) return;
+  /// The settled seal for the current spec, rendered offscreen: never a
+  /// half-written or half-burnt frame, and always on the skin's paper.
+  Future<Uint8List?> _settledSealPng() async =>
+      UniversalExportService.encodePng(await renderSettledSeal(_spec, _skinTheme));
 
-    final bytes = await UniversalExportService.capturePng(boundary);
+  bool get _canExport => !_state.isIncinerated && !_isBurning && !_kernel.isEmpty;
+
+  Future<void> _exportSigil() async {
+    final bytes = await _settledSealPng();
     if (bytes != null) {
       await UniversalExportService.shareSigilPng(bytes, 'ignosis_sigil');
     }
   }
 
   Future<void> _printPhysicalSheet() async {
-    final boundary =
-        _canvasKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-    if (boundary == null) return;
-
-    final bytes = await UniversalExportService.capturePng(boundary);
+    final bytes = await _settledSealPng();
     if (bytes != null) {
       await SigilPrintService.printPhysicalBurnSheet(
         pngBytes: bytes,
-        rawIntent: _state.rawIntent,
         reducedKernel: _kernel.reducedConsonants,
         systemTitle: _state.system.title,
       );
@@ -312,7 +309,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
           IconButton(
             icon: Icon(Icons.print_outlined, color: theme.inkSecondary, size: 20),
             tooltip: 'Print Archival Burn Sheet',
-            onPressed: _state.isIncinerated ? null : _printPhysicalSheet,
+            onPressed: _canExport ? _printPhysicalSheet : null,
           ),
           IconButton(
             icon: Icon(Icons.auto_stories_outlined, color: theme.inkSecondary, size: 20),
@@ -326,8 +323,8 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
           ),
           IconButton(
             icon: Icon(Icons.ios_share, color: theme.inkSecondary, size: 20),
-            tooltip: 'Export Vector / Seal',
-            onPressed: _state.isIncinerated ? null : _exportSigil,
+            tooltip: 'Share seal (PNG)',
+            onPressed: _canExport ? _exportSigil : null,
           ),
           const SizedBox(width: 6),
         ],
@@ -345,6 +342,13 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                     controller: _textController,
                     // A released seal burns to the end; the intent is fixed meanwhile.
                     enabled: !_isBurning,
+                    // The intent is private: keep it out of the keyboard's
+                    // learned (and possibly cloud-synced) dictionary.
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    enableIMEPersonalizedLearning: false,
+                    smartDashesType: SmartDashesType.disabled,
+                    smartQuotesType: SmartQuotesType.disabled,
                     onChanged: _onIntentChanged,
                     style: TextStyle(
                       color: theme.inkPrimary,
@@ -436,7 +440,6 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                       ],
                     ),
                     child: RepaintBoundary(
-                      key: _canvasKey,
                       child: _state.isIncinerated
                           ? _IncineratedPlate(theme: theme)
                           : SigilCanvas(

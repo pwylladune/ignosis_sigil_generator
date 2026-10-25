@@ -20,4 +20,13 @@ void main() {
     expect(find.text('VELLUM & INK (DEFAULT)'), findsOneWidget);
     expect(find.text('CHAOS (LIBER NULL)'), findsNothing);
   });
+
+  testWidgets('the intent never enters the keyboard dictionary', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(const IgnosisApp());
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.autocorrect, isFalse);
+    expect(field.enableSuggestions, isFalse);
+    expect(field.enableIMEPersonalizedLearning, isFalse);
+  });
 }
