@@ -139,7 +139,15 @@ class KameaScene extends SigilScene {
   static final _textCache = <(String, double, int, double), TextPainter>{};
   static const _textCacheLimit = 600;
 
+  static void _clearTextCache() {
+    for (final tp in _textCache.values) {
+      tp.dispose();
+    }
+    _textCache.clear();
+  }
+
   static TextPainter _painter(String text, double size, Color color, double letterSpacing) {
+    if (_textCache.isEmpty) onSystemFontsChanged(_clearTextCache);
     final key = (text, size, color.toARGB32(), letterSpacing);
     final hit = _textCache[key];
     if (hit != null) return hit;

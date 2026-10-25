@@ -87,6 +87,9 @@ class Combustion {
   static const _maxEmbers = 1400;
   final _embers = Float64List(_maxEmbers * 6);
   int _emberCount = 0;
+
+  /// Reused per frame for drawRawPoints (no per-frame list allocation).
+  final _emberPoints = Float32List(_maxEmbers * 2);
   double _emberTime = 0;
   static const _dt = 1 / 60;
   static const _emberLife = 2.2;
@@ -225,21 +228,21 @@ class Combustion {
     if (_emberCount == 0) return;
     // Two passes: bright young sparks and dimmer, cooling ones.
     for (final young in [true, false]) {
-      final pts = <double>[];
+      var n = 0;
       for (var i = 0; i < _emberCount; i++) {
         final o = i * 6;
         final life = _embers[o + 4] / _embers[o + 5];
         if ((life < 0.4) != young) continue;
-        pts
-          ..add(_embers[o])
-          ..add(_embers[o + 1]);
+        _emberPoints[2 * n] = _embers[o];
+        _emberPoints[2 * n + 1] = _embers[o + 1];
+        n++;
       }
-      if (pts.isEmpty) continue;
+      if (n == 0) continue;
       final paint = Paint()
         ..color = style.burn.withValues(alpha: young ? 0.85 : 0.4)
         ..strokeWidth = style.px(young ? 2.2 : 1.6)
         ..strokeCap = StrokeCap.round;
-      canvas.drawRawPoints(ui.PointMode.points, Float32List.fromList(pts), paint);
+      canvas.drawRawPoints(ui.PointMode.points, Float32List.sublistView(_emberPoints, 0, 2 * n), paint);
     }
   }
 }

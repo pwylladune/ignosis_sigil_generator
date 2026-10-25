@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'dart:ui' show PointMode;
+import 'dart:ui' as ui show Picture, PictureRecorder, PointMode;
 import 'package:flutter/material.dart';
 import '../../engines/cyber_chaos_engine.dart';
 import '../../geometry/sigil_geometry.dart';
@@ -15,6 +15,11 @@ class ChaosScene extends SigilScene {
   final ChaosSigil sigil;
   static const _accretion = 4.0;
 
+  /// The settled attractor, recorded once per ink/weight: 60k points are
+  /// otherwise re-encoded into every frame while the plate is on screen.
+  ui.Picture? _settled;
+  (int, double)? _settledKey;
+
   @override
   SigilGeometry get geometry => sigil.geometry;
 
@@ -28,16 +33,31 @@ class ChaosScene extends SigilScene {
     if (count <= 0) return;
     final paint = Paint()
       ..color = style.ink.withValues(alpha: 0.11 * opacity)
-      ..strokeWidth = style.weight * 0.55
+      // Not breath-modulated: the settled attractor is a cached picture.
+      ..strokeWidth = style.px(style.strokeWidth) * 0.55
       ..strokeCap = StrokeCap.round;
     final pts = count >= sigil.count ? sigil.points : Float32List.sublistView(sigil.points, 0, count * 2);
-    canvas.drawRawPoints(PointMode.points, pts, paint);
+    canvas.drawRawPoints(ui.PointMode.points, pts, paint);
   }
 
   @override
   void paint(Canvas canvas, Size size, double now, SceneStyle style) {
     final t = now - startTime;
-    _paintPoints(canvas, style, (sigil.count * minimumJerk(t / _accretion)).round());
+    if (t < _accretion || sigil.count == 0) {
+      _paintPoints(canvas, style, (sigil.count * minimumJerk(t / _accretion)).round());
+      return;
+    }
+    final key = (style.ink.toARGB32(), style.px(1));
+    if (_settled == null || _settledKey != key) {
+      _settled?.dispose();
+      final recorder = ui.PictureRecorder();
+      // The settled attractor does not breathe (the plate's ring does), so
+      // the picture survives the whole Gnosis rite.
+      _paintPoints(Canvas(recorder), style, sigil.count);
+      _settled = recorder.endRecording();
+      _settledKey = key;
+    }
+    canvas.drawPicture(_settled!);
   }
 
   @override

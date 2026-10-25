@@ -122,6 +122,23 @@ class SceneStyle {
   }
 }
 
+final _fontListeners = <VoidCallback>{};
+bool _fontHooked = false;
+
+/// Registers [clear] to run when system or fallback fonts change, so cached
+/// text layouts (laid out before a web fallback font for Hebrew or 🜂 arrived)
+/// are rebuilt instead of keeping missing-glyph boxes.
+void onSystemFontsChanged(VoidCallback clear) {
+  _fontListeners.add(clear);
+  if (_fontHooked) return;
+  _fontHooked = true;
+  PaintingBinding.instance.systemFonts.addListener(() {
+    for (final l in _fontListeners) {
+      l();
+    }
+  });
+}
+
 /// A sigil system's motion: a pure function of time since [startTime].
 abstract class SigilScene {
   SigilScene({required this.startTime});

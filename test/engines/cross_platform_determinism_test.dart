@@ -20,6 +20,15 @@ void main() {
     }
   });
 
+  test('detSinCos returns exactly detSin and detCos', () {
+    for (var i = -3000; i <= 3000; i++) {
+      final x = i * 0.0731;
+      final (s, c) = detSinCos(x);
+      expect(s, detSin(x));
+      expect(c, detCos(x));
+    }
+  });
+
   test('Cyber Chaos is bit-identical to the recorded VM output', () {
     const cases = [
       ('I COMMAND RADIANT CLARITY', 12, -1.5450980392156863, 1.3229877164873733, -1.0345311665522239, 0.9004348821240558,

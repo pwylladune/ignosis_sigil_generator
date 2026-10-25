@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ignosis_sigil_generator/src/engines/kamea_engine.dart';
@@ -15,7 +16,9 @@ SigilSpec spec(String intent, SigilSystem system) => SigilSpec(
       symmetryGroup: SymmetryGroup.cyclic,
     );
 
-Widget host(SigilSpec s, SigilBurnController burn, VoidCallback onDone, {bool reduceMotion = false, double side = 320}) => MaterialApp(
+Widget host(SigilSpec s, SigilBurnController burn, VoidCallback onDone,
+        {bool reduceMotion = false, double side = 320, ValueListenable<double?>? breath}) =>
+    MaterialApp(
       home: MediaQuery(
         data: MediaQueryData(size: const Size(400, 800), disableAnimations: reduceMotion),
         child: Center(
@@ -26,6 +29,7 @@ Widget host(SigilSpec s, SigilBurnController burn, VoidCallback onDone, {bool re
               skin: SigilSkinTheme.getSkin(SigilSkinId.vellumDraft),
               burn: burn,
               onIncinerated: onDone,
+              breath: breath,
             ),
           ),
         ),
@@ -116,5 +120,17 @@ void main() {
     const i = (32 * 64 + 4) * 4;
     expect(bytes!.getUint8(i + 3), 255);
     image!.dispose();
+  });
+
+  testWidgets('a held breath (constant value) costs no frames', (tester) async {
+    final breath = ValueNotifier<double?>(0.5);
+    final burn = SigilBurnController();
+    await tester.pumpWidget(host(spec('CHAOS', SigilSystem.cyberChaos), burn, () {}, breath: breath));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100), EnginePhase.sendSemanticsUpdate, const Duration(seconds: 30));
+    expect(tester.binding.hasScheduledFrame, isFalse);
+    breath.value = 0.6; // a change repaints once, without restarting the ticker
+    expect(tester.binding.hasScheduledFrame, isTrue);
+    await tester.pump();
+    expect(tester.hasRunningAnimations, isFalse);
   });
 }

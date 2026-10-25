@@ -87,15 +87,26 @@ class BurnField {
     dist[start] = 0;
     heap.push(0, start);
     const kappa = paperResistance;
+    // The 16 neighbour offsets and step lengths are constant per field.
+    final nCount = _neighbours.length;
+    final ndi = Int32List(nCount), ndj = Int32List(nCount);
+    final nlen = Float64List(nCount);
+    for (var k = 0; k < nCount; k++) {
+      final (di, dj) = _neighbours[k];
+      ndi[k] = di;
+      ndj[k] = dj;
+      nlen[k] = math.sqrt((di * cw) * (di * cw) + (dj * ch) * (dj * ch));
+    }
     while (heap.isNotEmpty) {
-      final (d, idx) = heap.pop();
+      final d = heap.topPriority;
+      final idx = heap.pop();
       if (d > dist[idx]) continue;
       final i = idx % r, j = idx ~/ r;
-      for (final (di, dj) in _neighbours) {
-        final ni = i + di, nj = j + dj;
+      for (var k = 0; k < nCount; k++) {
+        final ni = i + ndi[k], nj = j + ndj[k];
         if (ni < 0 || nj < 0 || ni >= r || nj >= r) continue;
         final n = nj * r + ni;
-        final len = math.sqrt((di * cw) * (di * cw) + (dj * ch) * (dj * ch));
+        final len = nlen[k];
         final inkA = ink[idx] == 1, inkB = ink[n] == 1;
         final cost = inkA && inkB ? 1.0 : (inkA || inkB ? (1 + kappa) / 2 : kappa);
         final nd = d + len * cost;
@@ -155,17 +166,25 @@ class BurnField {
   static double decode(double r, double g) => r * (65280.0 / 65535.0) + g * (255.0 / 65535.0);
 }
 
-/// Binary min-heap of (priority, index) with lazy deletion.
+/// Binary min-heap of (priority, index) with lazy deletion, on typed arrays
+/// (no boxing of priorities).
 class _MinHeap {
-  final _p = <double>[];
-  final _v = <int>[];
+  var _p = Float64List(1024);
+  var _v = Int32List(1024);
+  var _n = 0;
 
-  bool get isNotEmpty => _p.isNotEmpty;
+  bool get isNotEmpty => _n > 0;
+
+  double get topPriority => _p[0];
 
   void push(double p, int v) {
-    _p.add(p);
-    _v.add(v);
-    var i = _p.length - 1;
+    if (_n == _p.length) {
+      _p = Float64List(_n * 2)..setRange(0, _n, _p);
+      _v = Int32List(_n * 2)..setRange(0, _n, _v);
+    }
+    _p[_n] = p;
+    _v[_n] = v;
+    var i = _n++;
     while (i > 0) {
       final parent = (i - 1) >> 1;
       if (_p[parent] <= _p[i]) break;
@@ -174,18 +193,19 @@ class _MinHeap {
     }
   }
 
-  (double, int) pop() {
-    final top = (_p[0], _v[0]);
-    final lastP = _p.removeLast(), lastV = _v.removeLast();
-    if (_p.isNotEmpty) {
-      _p[0] = lastP;
-      _v[0] = lastV;
+  /// Removes the minimum and returns its index (read [topPriority] first).
+  int pop() {
+    final top = _v[0];
+    _n--;
+    if (_n > 0) {
+      _p[0] = _p[_n];
+      _v[0] = _v[_n];
       var i = 0;
       while (true) {
         final l = 2 * i + 1, rr = l + 1;
         var m = i;
-        if (l < _p.length && _p[l] < _p[m]) m = l;
-        if (rr < _p.length && _p[rr] < _p[m]) m = rr;
+        if (l < _n && _p[l] < _p[m]) m = l;
+        if (rr < _n && _p[rr] < _p[m]) m = rr;
         if (m == i) break;
         _swap(i, m);
         i = m;

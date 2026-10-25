@@ -17,19 +17,15 @@ enum StrokeRole {
 
 /// One pen-down movement, kept in the order it is written.
 class SigilStroke {
-  SigilStroke(this.path, {this.role = StrokeRole.ink}) {
-    _metrics = path.computeMetrics().toList(growable: false);
-    var total = 0.0;
-    for (final m in _metrics) {
-      total += m.length;
-    }
-    length = total;
-  }
+  SigilStroke(this.path, {this.role = StrokeRole.ink});
 
   final Path path;
   final StrokeRole role;
-  late final List<PathMetric> _metrics;
-  late final double length;
+
+  /// Measured on first use: assembled copies (e.g. every Spare group copy)
+  /// that are only ever drawn whole never allocate native metrics.
+  late final List<PathMetric> _metrics = path.computeMetrics().toList(growable: false);
+  late final double length = _metrics.fold(0.0, (sum, m) => sum + m.length);
 
   /// The first [fraction] of this stroke by arc length.
   Path partial(double fraction) {

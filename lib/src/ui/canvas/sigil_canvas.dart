@@ -72,7 +72,6 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
     _shownSpec = widget.spec;
     _burnGeneration = widget.burn.generation;
     widget.burn.addListener(_onBurnRequested);
-    widget.breath?.addListener(_onBreath);
     WidgetsBinding.instance.addObserver(this);
     // Warm the burn shader so the first burn never falls back.
     CombustionShader.load();
@@ -91,10 +90,6 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
     if (old.burn != widget.burn) {
       old.burn.removeListener(_onBurnRequested);
       widget.burn.addListener(_onBurnRequested);
-    }
-    if (old.breath != widget.breath) {
-      old.breath?.removeListener(_onBreath);
-      widget.breath?.addListener(_onBreath);
     }
     // A burn, once released, is not interrupted: changes apply afterwards.
     if (_combustion != null) return;
@@ -172,8 +167,6 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
     _clock.wake();
   }
 
-  void _onBreath() => _clock.wake();
-
   /// Seed that is the same on every run for the same sigil (unlike hashCode).
   static int _stableSeed(SigilSpec spec) {
     var h = spec.system.index + 1;
@@ -196,7 +189,8 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
       }
       return true;
     }
-    if (widget.breath?.value != null) return true;
+    // Breath does not keep the ticker alive: the painter repaints from the
+    // breath notifier itself, so held breaths cost no frames.
     final s = _scene;
     return s != null && !s.isSettled(now);
   }
@@ -216,7 +210,6 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
   void dispose() {
     _debounce?.cancel();
     widget.burn.removeListener(_onBurnRequested);
-    widget.breath?.removeListener(_onBreath);
     WidgetsBinding.instance.removeObserver(this);
     _combustion?.dispose();
     _clock.dispose();
@@ -250,7 +243,7 @@ class _SigilPlatePainter extends CustomPainter {
     required this.combustion,
     required this.skin,
     required this.breath,
-  }) : super(repaint: clock);
+  }) : super(repaint: breath == null ? clock : Listenable.merge([clock, breath]));
 
   final MotionClock clock;
 

@@ -17,7 +17,7 @@ import 'sigil_spec.dart';
 final _kameaCache = GeometryCache<KameaSigil>();
 final _chladniCache = GeometryCache<ChladniSigil>();
 final _roseCache = GeometryCache<RoseSigil>();
-final _spareCache = GeometryCache<SpareSigil>();
+final _spareCache = GeometryCache<SpareSigil>(capacity: 12);
 final _chaosCache = GeometryCache<ChaosSigil>(capacity: 8);
 
 /// Builds the scene for [spec] at canvas [size], starting at [startTime].

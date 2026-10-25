@@ -50,7 +50,9 @@ class ChladniScene extends SigilScene {
   late Float64List _ys;
   late SeededRandom _rnd;
   late double _simTime;
-  Float32List? _points;
+  /// Canvas-space sand, refilled in place when the simulation advances.
+  final Float32List _pointBuffer = Float32List(particleCount * 2);
+  bool _pointsValid = false;
 
   @override
   SigilGeometry get geometry => sigil.geometry;
@@ -108,13 +110,13 @@ class ChladniScene extends SigilScene {
         _ys[i] = (y + dy + eps * _rnd.nextGaussian()).clamp(-1.0, 1.0);
       }
     }
-    _points = null;
+    _pointsValid = false;
   }
 
   void _snapToNodalLines() {
     final segs = sigil.segments;
     _simTime = _settleSim;
-    _points = null;
+    _pointsValid = false;
     if (segs.isEmpty) return;
     final rnd = SeededRandom(sigil.mode.stableSeed ^ 0x13579BDF);
     for (var i = 0; i < particleCount; i++) {
@@ -139,15 +141,15 @@ class ChladniScene extends SigilScene {
   }
 
   Float32List _canvasPoints() {
-    final cached = _points;
-    if (cached != null) return cached;
-    final p = Float32List(particleCount * 2);
+    if (_pointsValid) return _pointBuffer;
+    final p = _pointBuffer;
     final c = sigil.plate.center, hw = sigil.plate.width / 2;
     for (var i = 0; i < particleCount; i++) {
       p[2 * i] = c.dx + _xs[i] * hw;
       p[2 * i + 1] = c.dy + _ys[i] * hw;
     }
-    return _points = p;
+    _pointsValid = true;
+    return p;
   }
 
   void _paintSand(Canvas canvas, SceneStyle style, double opacity) {

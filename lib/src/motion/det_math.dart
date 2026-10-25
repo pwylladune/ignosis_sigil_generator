@@ -76,6 +76,23 @@ double detCos(double x) {
   }
 }
 
+/// sin and cos of the same argument with one reduction. Returns exactly the
+/// same bits as [detSin] and [detCos] (same operations, shared work).
+(double, double) detSinCos(double x) {
+  final (r, q) = _reduce(x);
+  final s = _kSin(r), c = _kCos(r);
+  switch (q) {
+    case 0:
+      return (s, c);
+    case 1:
+      return (c, -s);
+    case 2:
+      return (-s, -c);
+    default:
+      return (-c, s);
+  }
+}
+
 const double _ln2Hi = 6.93147180369123816490e-01;
 const double _ln2Lo = 1.90821492927058770002e-10;
 const double _sqrt2 = 1.41421356237309514547;
