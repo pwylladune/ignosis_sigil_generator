@@ -133,12 +133,27 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
       widget.onIncinerated();
       return;
     }
-    _combustion = Combustion(scene: scene, startTime: _clock.now, reduceMotion: _reduceMotion);
+    _combustion = Combustion(
+      scene: scene,
+      size: _size ?? Size.zero,
+      startTime: _clock.now,
+      reduceMotion: _reduceMotion,
+      seed: _stableSeed(widget.spec),
+    );
     _version++;
     _clock.wake();
   }
 
   void _onBreath() => _clock.wake();
+
+  /// Seed that is the same on every run for the same sigil (unlike hashCode).
+  static int _stableSeed(SigilSpec spec) {
+    var h = spec.system.index + 1;
+    for (final c in spec.kernel.normalized.codeUnits) {
+      h = (h * 31 + c) & 0x7FFFFFFF;
+    }
+    return h;
+  }
 
   bool _keepAlive(double now) {
     final c = _combustion;
