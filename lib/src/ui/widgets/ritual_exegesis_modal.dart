@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../config/feature_flags.dart';
 import '../theme/sigil_skins.dart';
+import 'ignosis_mark.dart';
 
 /// Modal dialog explaining the complete philosophy, science, and step-by-step
 /// ritual mechanics of Chaos Sigil crafting and combustion.
@@ -27,21 +28,7 @@ class RitualExegesisModal extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(28, 28, 20, 16),
               child: Row(
                 children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: theme.canvasBackground,
-                      border: Border.all(color: theme.hairline),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '🜂',
-                        style: TextStyle(fontSize: 16, color: theme.seal),
-                      ),
-                    ),
-                  ),
+                  IgnosisMark(skin: theme, size: 34),
                   const SizedBox(width: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

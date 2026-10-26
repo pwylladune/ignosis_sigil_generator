@@ -19,6 +19,7 @@ import '../canvas/sigil_canvas.dart';
 import '../canvas/sigil_spec.dart';
 import '../theme/sigil_skins.dart';
 import '../widgets/pay_schema_modal.dart';
+import '../widgets/ignosis_mark.dart';
 import '../widgets/pen_ink_ritual_burn_dialog.dart';
 import '../widgets/rite_witness.dart';
 import '../widgets/ritual_exegesis_modal.dart';
@@ -415,14 +416,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: theme.inkPrimary, width: 1.2),
-              ),
-              child: Text('🜂', style: TextStyle(fontSize: 12, color: theme.accent)),
-            ),
+            IgnosisMark(skin: theme, size: 34),
             const SizedBox(width: 8),
             Text(
               'IGNOSIS',

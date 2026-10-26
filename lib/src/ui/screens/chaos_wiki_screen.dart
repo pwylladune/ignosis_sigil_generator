@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/chaos_magic_wiki_articles.dart';
 import '../../models/chaos_magic_wiki_data.dart';
 import '../theme/sigil_skins.dart';
+import '../widgets/ignosis_mark.dart';
 
 /// Screen presenting the comprehensive Chaos Magic Wiki & Philosophical Interview Framework
 class ChaosWikiScreen extends StatefulWidget {
@@ -106,18 +107,7 @@ class _ChaosWikiScreenState extends State<ChaosWikiScreen> {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: theme.background,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: theme.hairline),
-                        ),
-                        child: Center(
-                          child: Text('🜂', style: TextStyle(fontSize: 12, color: theme.accent)),
-                        ),
-                      ),
+                      IgnosisMark(skin: theme, size: 28),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(

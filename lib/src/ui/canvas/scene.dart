@@ -135,7 +135,7 @@ final _fontListeners = <VoidCallback>{};
 bool _fontHooked = false;
 
 /// Registers [clear] to run when system or fallback fonts change, so cached
-/// text layouts (laid out before a web fallback font for Hebrew or 🜂 arrived)
+/// text layouts (laid out before a web fallback font for Hebrew arrived)
 /// are rebuilt instead of keeping missing-glyph boxes.
 void onSystemFontsChanged(VoidCallback clear) {
   _fontListeners.add(clear);
