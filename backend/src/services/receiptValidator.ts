@@ -12,7 +12,7 @@ export class ReceiptValidatorService {
    * Validates in-app purchase receipts from Apple StoreKit 2 or Google Play
    */
   public async verifyReceipt(params: {
-    platform: 'ios' | 'android' | 'mock';
+    platform: 'ios' | 'android' | 'web' | 'mock';
     receiptData: string;
     productId: string;
     transactionId?: string;
@@ -22,9 +22,10 @@ export class ReceiptValidatorService {
     // Fail closed. There is no development bypass and no "accept any
     // non-empty receipt" path: real verification needs the App Store Server
     // API (JWS chain) or the Google Play Developer API, plus an idempotent
-    // ledger keyed on transactionId / orderId. Until those exist, nothing is
-    // fulfilled. See TASK.md §2.2 C5 and §2.4 option C.
-    if (platform === 'ios' || platform === 'android') {
+    // ledger keyed on transactionId / orderId (the rite ledger provides that).
+    // Web purchases need a card processor's verified webhook. Until those
+    // exist, nothing is fulfilled. See TASK.md §2.2 C5.
+    if (platform === 'ios' || platform === 'android' || platform === 'web') {
       return {
         isValid: false,
         productId,
