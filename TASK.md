@@ -417,6 +417,25 @@ Six reviewers took part: esoteric-researcher, research, ellie, code-reviewer, se
   - In a browser against a local backend: the witness row and its failure notice, and the return page in both variants.
 - **Not verified yet.** A real Stripe test payment, which needs the owner's Stripe test keys.
 
+### 6.10 Android rite through Google Play (2026-10-26, uncommitted, awaiting review)
+- **Backend (`services/playRite.ts`).**
+  - For `platform: 'android'`, the Play purchase token is checked with the Play Developer API. The gateway uses the service-account JWT flow with no client library.
+  - The purchase must be completed (`purchaseState` 0) for a rite product. Off mainnet only test purchases are accepted, and on mainnet only real ones.
+  - A consumed purchase is valid only to look up its own earlier burn.
+  - The backend acknowledges each purchase so Play does not auto-refund it after 3 days.
+  - `PlayVoidedSync` polls voided purchases every 15 minutes and revokes unused credits.
+  - Settings: `GOOGLE_PLAY_SERVICE_ACCOUNT` (and `GOOGLE_PACKAGE_NAME`).
+- **Flutter.**
+  - The rite is the consumable `net.ignosis.studio.rite`, bought with `autoConsume: false`. An unconsumed purchase is the credit.
+  - It is consumed only after the burn is confirmed, or when the backend reports it was already spent. A refused purchase is left untouched.
+  - Spent tokens are remembered, so a consume lost to a closed app happens on the next launch.
+  - `kEnableRite` now also covers Android builds with `IGNOSIS_RITE_API`. The witness row shows the Play price.
+- **Verified.**
+  - Backend `npm test`: all 5 suites pass. The Play suite runs the real gateway against a stubbed Google, checking that the JWT verifies with the account key and that the token is reused. Two broken variants are each caught.
+  - `flutter analyze --fatal-infos` is clean, and `flutter test` passes 135 (2 skipped).
+  - The release APK with the rite enabled builds, and so does the web build.
+- **Not verified yet.** A real Play purchase on a device. It needs the Play Console product, a service account, license testers and an internal-testing build signed with the upload key.
+
 ### 6.4 Still open (beyond the checkboxes)
 - ~~Bundle ID decision~~ Done: `net.ignosis.studio` (8321ef6a).
 - Skin entitlements are cached client-side in `SharedPreferences`. That is acceptable for cosmetic non-consumables, but it can be edited on a rooted device.
