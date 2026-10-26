@@ -436,6 +436,22 @@ Six reviewers took part: esoteric-researcher, research, ellie, code-reviewer, se
   - The release APK with the rite enabled builds, and so does the web build.
 - **Not verified yet.** A real Play purchase on a device. It needs the Play Console product, a service account, license testers and an internal-testing build signed with the upload key.
 
+### 6.11 The Infinite (2026-10-26, uncommitted)
+- **A seventh system, `SigilSystem.infinite`: the Julia set of z ↦ z² + c.**
+  - c comes from the SHA-256 of the intent, re-hashed until it lies on the edge of the Mandelbrot set: bounded, with a neighbour 0.004 away that escapes, and at least |μ| ≥ 1.05 outside the main cardioid. That gives a connected but intricate set.
+- **Forward.** Equipotentials of the Green's function at G₀/√2ᵏ: 12 rings, starting 2 levels in. Every second ring is the exact preimage of the ring two outside it. They are extracted by marching squares on a 320² grid, chained by edge ID, and written from the outside in with a fine pen.
+- **Inverted (Invert · √).** The inverse map ±√(z − c) from the repelling fixed point, 16 levels deep: 65,535 points, revealed depth by depth.
+- **Zoom.** Pinch, scroll or double-tap. A lens transform is shown during the gesture; on release a new `InfiniteView` is committed and the rings are recomputed for the window, continuing the same level family.
+  - The deepest half-width is 1e-11. Zooming out past the whole set returns home.
+  - A view-only change appears at once, without rewriting. "Reset view" goes back to the whole set.
+  - The readout shows "MAP: z² + c, c = … · ×N".
+- **Determinism.** Only +, −, ×, ÷, √ and `detLog`/`detSinCos` are used. The values are recorded in `cross_platform_determinism_test` and pass on the VM and in Chrome.
+  - **Bug found and fixed:** `math.pow(2, n)` with an int base wraps to 0 past n = 63 on native, though not on the web. The fix is a double base, with a regression test.
+- **Verified.**
+  - `flutter analyze --fatal-infos` is clean.
+  - `flutter test`: 153 passed. That includes the engine tests, zoom gesture tests (double-tap ×2 keeps the tapped point fixed, scroll, no zoom on other systems) and new goldens `infinite` and `infinite_inverted`. Existing goldens are unchanged.
+  - In the browser: zoom by double-click and scroll, Reset view, and Invert.
+
 ### 6.4 Still open (beyond the checkboxes)
 - ~~Bundle ID decision~~ Done: `net.ignosis.studio` (8321ef6a).
 - Skin entitlements are cached client-side in `SharedPreferences`. That is acceptable for cosmetic non-consumables, but it can be edited on a rooted device.

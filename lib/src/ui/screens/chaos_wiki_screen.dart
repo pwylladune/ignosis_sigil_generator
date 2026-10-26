@@ -134,7 +134,7 @@ class _ChaosWikiScreenState extends State<ChaosWikiScreen> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'The codex comes first: how each of the six systems works, where it comes from, and why the '
+                    'The codex comes first: how each of the seven systems works, where it comes from, and why the '
                     'studio was built the way it was. '
                     'This section establishes the definitive body of knowledge for IGNOSIS. '
                     'After it comes the structured questionnaire, designed to distill your personal understanding '

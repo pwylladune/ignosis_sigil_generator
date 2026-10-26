@@ -27,11 +27,11 @@ class WikiArticle {
 
 class ChaosMagicWikiArticles {
   // Unnumbered: the interview's sections keep their roman numerals I–V.
-  static const systems = 'The Codex: The Six Systems';
+  static const systems = 'The Codex: The Seven Systems';
   static const making = 'The Codex: The Making of IGNOSIS';
 
   static const List<WikiArticle> articles = [
-    // ── VI. The six systems ────────────────────────────────────────────────
+    // ── VI. The seven systems ────────────────────────────────────────────────
     WikiArticle(
       category: systems,
       title: 'Circumlocution',
@@ -170,6 +170,42 @@ class ChaosMagicWikiArticles {
       sources: [
         'Consensus: the attractor is named after Clifford A. Pickover.',
         'IGNOSIS’s own: the system as a whole.',
+      ],
+    ),
+
+    WikiArticle(
+      category: systems,
+      title: 'The Infinite',
+      summary: 'A Julia set chosen by the intent, approached without end, or unfolded through its roots.',
+      body: [
+        'Method. The intent is hashed with SHA-256, and the hash names a point c in the complex plane. Points are drawn '
+            'and redrawn from the hash until one falls on the edge of the Mandelbrot set, away from its smooth central '
+            'body: inside the set, so that the Julia set of z ↦ z² + c is connected, one unbroken figure; but with a '
+            'neighbour, four thousandths away, outside it, so that the figure is intricate, all spirals, branches and '
+            'pinched arms. The same intent always finds the same c.',
+        'The plate then shows the set in one of two ways. Forward, it draws the level curves of the set’s Green’s '
+            'function, G(z) = lim log|zₙ|/2ⁿ, at the levels G₀/√2ᵏ. The map doubles G, so every second curve is exactly '
+            'the preimage of the curve two outside it: each ring is the one before it, pulled back through the same '
+            'arithmetic. Inverted (the “Invert · √” control), it draws the set itself. Begin at the repelling fixed '
+            'point, which lies on the set, and replace every point by both its square roots, ±√(z − c), sixteen times '
+            'over: sixty-five thousand points, and every one of them on the boundary.',
+        'Why. Every other system on the plate is finite. A phrase has so many letters, a square so many cells, a rose '
+            'twenty-two petals. Here the figure has no last detail. Zoom into any stretch of the boundary and it '
+            'resolves into more boundary, coastline within coastline, the same few operations repeated at every scale, '
+            'and the pen that writes the rings can only ever approach it. It is a fair picture of what an intent is '
+            'before it is spoken: bounded, never exhausted, the same rule turning over and over in a smaller and darker '
+            'room. One may descend into it for a long time. One does not reach the bottom. One comes back up, and lets '
+            'it go.',
+        'Motion. Forward, the rings are written from the outside in, each a little finer than the last, at whatever '
+            'pace brings the pen to the innermost ring in a few seconds; inverted, the roots appear depth by depth, the '
+            'tree doubling as it unfolds. Pinch, scroll or double-tap to zoom; the rings are recomputed for each new '
+            'window, so the descent continues until the arithmetic of the machine itself gives out, some hundred '
+            'billion times deeper. Same intent and same window, same figure, on every device.',
+      ],
+      sources: [
+        'Attested: Gaston Julia, “Mémoire sur l’itération des fonctions rationnelles” (1918); Pierre Fatou (1919–20); '
+            'Adrien Douady and John Hubbard on the Mandelbrot set and Green’s function (1982–85).',
+        'IGNOSIS’s own: the Julia set as a sigil system, and choosing c from the intent.',
       ],
     ),
 

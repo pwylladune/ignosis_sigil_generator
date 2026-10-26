@@ -7,7 +7,7 @@ for iOS, Android and the web, drawn in a minimal Pen & Ink style with a vermilio
 options. **Nothing moves unless the math moves it.** Every animation is the time evolution of the
 function that made the symbol.
 
-## The six systems
+## The seven systems
 
 | System | Mathematics | Motion |
 |---|---|---|
@@ -17,6 +17,7 @@ function that made the symbol.
 | **Golden Dawn Rose** | The 22-petal rose of the Rose Cross lamen (3 mothers, 7 doubles, 12 simples) in the lamen's order and direction | Rings counter-rotate in ratio 3 : 7 : 12 and lock as the last stroke lands |
 | **Cymatic (Chladni)** | Free square plate mode `cos(nπx)cos(mπy) ± cos(mπx)cos(nπy)`; nodal set by marching squares | 3,600 grains descend `f²` onto the nodal lines; a new intent morphs the mode and the sand flows |
 | **Cyber Chaos** | SHA-256 → Clifford attractor parameters, rejected unless chaotic (Lyapunov > 0) and well filled | The orbit accretes like ink soaking into paper |
+| **The Infinite** | SHA-256 → c on the edge of the Mandelbrot set, outside its main cardioid; the Julia set of z² + c drawn as equipotentials of its Green's function at G₀/√2ᵏ, or (**Invert √**) by the inverse map z ↦ ±√(z − c) | Rings written from the outside in, or the roots unfolding depth by depth. Pinch, scroll or double-tap to zoom without end |
 
 **Ritual Combustion** burns the seal in reverse ductus from the last glyph stroke. A baked
 ignition-distance field drives a level-set shader (char-dominant on light paper, blackbody on dark),
