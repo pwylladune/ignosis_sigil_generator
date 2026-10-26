@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'brush.dart';
 import '../../geometry/sigil_geometry.dart';
 import '../../motion/ductus.dart';
 import '../theme/sigil_skins.dart';
@@ -115,6 +116,14 @@ class SceneStyle {
     ..style = PaintingStyle.stroke
     ..strokeWidth = px(width);
 
+  /// Nominal sumi-e brush width (scene units): thicker than the pen line,
+  /// breathing with it during Gnosis.
+  double get brushWidth => weight * 4.2;
+
+  /// Paints strokes with the sumi-e brush, each revealed to its fraction.
+  void drawStrokes(Canvas canvas, List<SigilStroke> strokes, List<double> fractions, {double opacity = 1}) =>
+      paintBrushStrokes(canvas, this, strokes, fractions, opacity: opacity);
+
   /// Draws a path as ink on rag paper: a soft wash under a crisp line.
   void drawInk(Canvas canvas, Path path, {double opacity = 1}) {
     canvas.drawPath(path, washPaint(opacity: opacity));
@@ -183,7 +192,6 @@ class DuctusScene extends SigilScene {
   @override
   void paint(Canvas canvas, Size size, double now, SceneStyle style) {
     final t = now - startTime;
-    final path = t >= timeline.duration ? geometry.path : geometry.reveal(timeline.fractionsAt(t));
-    style.drawInk(canvas, path);
+    style.drawStrokes(canvas, geometry.strokes, timeline.fractionsAt(t));
   }
 }

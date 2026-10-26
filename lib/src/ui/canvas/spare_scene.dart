@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../engines/spare_monogram_engine.dart';
 import '../../geometry/sigil_geometry.dart';
@@ -38,31 +39,33 @@ class SpareScene extends SigilScene {
   @override
   void paint(Canvas canvas, Size size, double now, SceneStyle style) {
     if (sigil.geometry.isEmpty) return;
-    final t = now - startTime;
-    if (t >= settleTime) {
-      style.drawInk(canvas, sigil.geometry.path);
-      return;
+    final t = math.min(now - startTime, settleTime);
+    final domain = sigil.domain.strokes;
+    final all = List.filled(domain.length, 1.0);
+
+    // Every copy carries the same brushwork, painted under its group element,
+    // so the symmetry is exact down to the dry-brush streaks.
+    void paintCopy(int k, List<double> fractions, {double progress = 1}) {
+      canvas.save();
+      canvas.transform(SpareMonogramEngine.copyMatrix(sigil.copies[k], sigil.center, progress: progress));
+      style.drawStrokes(canvas, domain, fractions);
+      canvas.restore();
     }
 
     // 1. Write the fundamental domain.
-    final written = t >= domainTimeline.duration ? sigil.domain.path : sigil.domain.reveal(domainTimeline.fractionsAt(t));
-    final ink = Path()..addPath(written, Offset.zero, matrix4: SpareMonogramEngine.copyMatrix(sigil.copies.first, sigil.center));
+    paintCopy(0, t >= domainTimeline.duration ? all : domainTimeline.fractionsAt(t));
 
     // 2. The group acts: copies turn (and flip) out of the identity.
     if (t >= _assemblyStart) {
       for (var k = 1; k < sigil.copies.length; k++) {
-        final s = minimumJerkBetween(t, _assemblyStart + (k - 1) * _stagger, _turn);
-        ink.addPath(sigil.domain.path, Offset.zero,
-            matrix4: SpareMonogramEngine.copyMatrix(sigil.copies[k], sigil.center, progress: s));
+        paintCopy(k, all, progress: minimumJerkBetween(t, _assemblyStart + (k - 1) * _stagger, _turn));
       }
     }
-    style.drawInk(canvas, ink);
 
     // 3. Bind.
     final tb = t - _assemblyEnd - 0.1;
     if (tb > 0 && sigil.binding != null) {
-      final f = bindingTimeline.fractionsAt(tb);
-      style.drawInk(canvas, sigil.binding!.partial(f.first));
+      style.drawStrokes(canvas, [sigil.binding!], bindingTimeline.fractionsAt(tb));
     }
   }
 }

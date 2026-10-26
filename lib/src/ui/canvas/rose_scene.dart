@@ -70,8 +70,7 @@ class RoseScene extends SigilScene {
 
     // Ink: rebuilt between the moving petals while writing, static once locked.
     final current = settled ? sigil : RoseCrossEngine().build(kernel, size, ringRotation: rotation);
-    final path = settled ? current.geometry.path : current.geometry.reveal(timeline.fractionsAt(t));
-    style.drawInk(canvas, path);
+    style.drawStrokes(canvas, current.geometry.strokes, timeline.fractionsAt(t));
   }
 
   static final _glyphs = <(String, double, int), TextPainter>{};

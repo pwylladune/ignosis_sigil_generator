@@ -89,8 +89,7 @@ class KameaScene extends SigilScene {
     });
 
     // Ink: the traversal, written by the ductus.
-    final path = t >= timeline.duration ? geometry.path : geometry.reveal(timeline.fractionsAt(t));
-    style.drawInk(canvas, path);
+    style.drawStrokes(canvas, geometry.strokes, timeline.fractionsAt(t));
 
     // Consecration: every row, column and diagonal lights to M in turn.
     final m = KameaEngine.magicConstant(n);
