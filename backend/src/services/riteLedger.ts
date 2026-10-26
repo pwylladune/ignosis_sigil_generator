@@ -2,6 +2,17 @@ import { DatabaseSync } from 'node:sqlite';
 
 export type RiteState = 'pending' | 'done' | 'failed';
 
+/** A paid web purchase (Stripe Checkout session) that buys one rite. */
+export interface RiteCredit {
+  sessionId: string;
+  paymentIntent: string;
+  amountTotal: number;
+  currency: string;
+  /** Revoked by a refund or dispute before it was used. */
+  state: 'paid' | 'revoked';
+  createdAt: number;
+}
+
 export interface RiteRecord {
   /** Store transaction / order ID: each is fulfilled at most once. */
   purchaseId: string;
@@ -36,7 +47,16 @@ export class RiteLedger {
         last_valid_block_height INTEGER NOT NULL,
         raw_tx TEXT NOT NULL,
         updated_at INTEGER NOT NULL
-      )`);
+      );
+      CREATE TABLE IF NOT EXISTS credits (
+        session_id TEXT PRIMARY KEY,
+        payment_intent TEXT NOT NULL,
+        amount_total INTEGER NOT NULL,
+        currency TEXT NOT NULL,
+        state TEXT NOT NULL CHECK (state IN ('paid', 'revoked')),
+        created_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS credits_payment_intent ON credits (payment_intent);`);
   }
 
   get(purchaseId: string): RiteRecord | undefined {
@@ -87,6 +107,57 @@ export class RiteLedger {
     this.db
       .prepare(`UPDATE rites SET state = ?, updated_at = ? WHERE purchase_id = ? AND signature = ? AND state != 'done'`)
       .run(state, Date.now(), purchaseId, signature);
+  }
+
+  /** Rites not yet confirmed whose last attempt is older than [olderThanMs]. */
+  unfinished(olderThanMs: number, limit = 50): Pick<RiteRecord, 'purchaseId' | 'commitment'>[] {
+    const rows = this.db
+      .prepare(`SELECT purchase_id, commitment FROM rites WHERE state != 'done' AND updated_at <= ? ORDER BY updated_at LIMIT ?`)
+      .all(Date.now() - olderThanMs, limit) as any[];
+    return rows.map((r) => ({ purchaseId: r.purchase_id, commitment: r.commitment }));
+  }
+
+  /** Records a paid web purchase; a repeated webhook changes nothing. */
+  recordCredit(c: Omit<RiteCredit, 'state' | 'createdAt'>): void {
+    this.db
+      .prepare(
+        `INSERT OR IGNORE INTO credits (session_id, payment_intent, amount_total, currency, state, created_at)
+         VALUES (?, ?, ?, ?, 'paid', ?)`
+      )
+      .run(c.sessionId, c.paymentIntent, c.amountTotal, c.currency, Date.now());
+  }
+
+  getCredit(sessionId: string): RiteCredit | undefined {
+    const row = this.db.prepare('SELECT * FROM credits WHERE session_id = ?').get(sessionId) as any;
+    if (!row) return undefined;
+    return {
+      sessionId: row.session_id,
+      paymentIntent: row.payment_intent,
+      amountTotal: Number(row.amount_total),
+      currency: row.currency,
+      state: row.state,
+      createdAt: Number(row.created_at),
+    };
+  }
+
+  /**
+   * Revokes the unused credits paid by [paymentIntent] (a refund or dispute).
+   * A credit already spent on a burn stays: the burn cannot be undone.
+   * Returns the number revoked.
+   */
+  revokeCredits(paymentIntent: string, purchaseIdOf: (sessionId: string) => string): number {
+    const rows = this.db
+      .prepare(`SELECT session_id FROM credits WHERE payment_intent = ? AND state = 'paid'`)
+      .all(paymentIntent) as any[];
+    let revoked = 0;
+    for (const { session_id } of rows) {
+      if (this.get(purchaseIdOf(session_id))) continue;
+      revoked += Number(
+        this.db.prepare(`UPDATE credits SET state = 'revoked' WHERE session_id = ? AND state = 'paid'`).run(session_id)
+          .changes
+      );
+    }
+    return revoked;
   }
 
   close(): void {
