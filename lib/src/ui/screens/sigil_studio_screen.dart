@@ -24,7 +24,7 @@ import '../widgets/pen_ink_ritual_burn_dialog.dart';
 import '../widgets/rite_witness.dart';
 import '../widgets/ritual_exegesis_modal.dart';
 import '../widgets/skin_selector_modal.dart';
-import 'chaos_wiki_screen.dart';
+import 'compendium_screen.dart';
 
 class SigilStudioScreen extends StatefulWidget {
   const SigilStudioScreen({super.key});
@@ -253,10 +253,10 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
     );
   }
 
-  void _openWikiScreen() {
+  void _openCompendium() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => _skinned(ChaosWikiScreen(theme: _skinTheme)),
+        builder: (context) => _skinned(CompendiumScreen(theme: _skinTheme)),
       ),
     );
   }
@@ -436,8 +436,8 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
         actions: [
           IconButton(
             icon: Icon(Icons.auto_stories_outlined, color: theme.inkSecondary, size: 22),
-            tooltip: 'Chaos magic wiki',
-            onPressed: _openWikiScreen,
+            tooltip: 'The Compendium',
+            onPressed: _openCompendium,
           ),
           IconButton(
             icon: Icon(Icons.ios_share, color: theme.inkSecondary, size: 22),
