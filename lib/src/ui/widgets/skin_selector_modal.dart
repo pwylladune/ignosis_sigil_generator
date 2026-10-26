@@ -129,7 +129,7 @@ class _SkinSelectorModalState extends State<SkinSelectorModal> {
                               fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.5, color: theme.inkPrimary),
                         ),
                         Text(
-                          'Tap a locked skin to preview it',
+                          store.sellSkins ? 'Tap a locked skin to preview it' : 'All skins are free for now',
                           style: TextStyle(fontSize: 12, color: theme.inkTertiary),
                         ),
                       ],
@@ -274,6 +274,8 @@ class _SkinSelectorModalState extends State<SkinSelectorModal> {
                 ),
               ],
               const SizedBox(height: 4),
+              // Nothing to restore or buy while skins are free.
+              if (store.sellSkins)
               Row(
                 children: [
                   TextButton(

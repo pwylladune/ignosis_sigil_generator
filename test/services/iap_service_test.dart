@@ -31,6 +31,8 @@ void main() {
   // The service is a singleton: start every test from a clean state.
   setUp(() {
     IapService.instance.resetForTest();
+    // These tests cover the paid path, which ships once the store sells skins.
+    IapService.instance.sellSkins = true;
     SharedPreferences.setMockInitialValues({});
   });
 

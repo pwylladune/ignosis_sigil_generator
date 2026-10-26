@@ -26,7 +26,24 @@ void main() {
     expect(find.text('PHRASE: '), findsOneWidget);
   });
 
+  testWidgets('every skin is free while none are sold', (tester) async {
+    IapService.instance.resetForTest();
+    SharedPreferences.setMockInitialValues({'ignosis_selected_skin': 'chaos'});
+    expect(IapService.instance.sellSkins, isFalse);
+    expect(SigilSkinId.values.every((s) => IapService.instance.isSkinUnlocked(s.key)), isTrue);
+    await tester.pumpWidget(const IgnosisApp());
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.text('CHAOS'), findsOneWidget, reason: 'a saved premium skin is restored without a purchase');
+    await tester.tap(find.byIcon(Icons.palette_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('All skins are free for now'), findsOneWidget);
+    expect(find.text('RESTORE PURCHASES'), findsNothing);
+    expect(find.textContaining('UNLOCK'), findsNothing);
+  });
+
   testWidgets('a saved premium skin is not applied without an entitlement', (tester) async {
+    IapService.instance.resetForTest();
+    IapService.instance.sellSkins = true;
     SharedPreferences.setMockInitialValues({'ignosis_selected_skin': 'chaos'});
     await tester.pumpWidget(const IgnosisApp());
     await tester.pump(const Duration(milliseconds: 50));
@@ -36,6 +53,7 @@ void main() {
 
   testWidgets('an entitled saved skin is restored on launch', (tester) async {
     IapService.instance.resetForTest();
+    IapService.instance.sellSkins = true;
     SharedPreferences.setMockInitialValues({
       'ignosis_selected_skin': 'chaos',
       'ignosis_unlocked_skins': [RevenueSchemaConfig.skinChaosId],
@@ -49,6 +67,7 @@ void main() {
 
   testWidgets('tapping a locked skin previews it and buys nothing', (tester) async {
     IapService.instance.resetForTest();
+    IapService.instance.sellSkins = true;
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const IgnosisApp());
     await tester.pump(const Duration(milliseconds: 50));

@@ -7,6 +7,11 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 /// them is [kEnableRite] (ADR 2026-10-25-ignosis-joule-token).
 const bool kEnableChain = false;
 
+/// Premium skins are sold through the stores only in builds made with
+/// `--dart-define=IGNOSIS_SELL_SKINS=true`. Until the store products exist,
+/// every skin is free, so nobody meets a lock they cannot open.
+const bool kSellSkins = bool.fromEnvironment('IGNOSIS_SELL_SKINS');
+
 /// Base URL of the rite backend, e.g. `https://api.ignosis.net`, set at
 /// build time: `flutter build web --dart-define=IGNOSIS_RITE_API=...`.
 const String kRiteApiBase = String.fromEnvironment('IGNOSIS_RITE_API');

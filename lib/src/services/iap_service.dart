@@ -5,6 +5,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_android/billing_client_wrappers.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/feature_flags.dart';
 import '../models/revenue_schema.dart';
 
 /// Outcome of asking the store to start a purchase.
@@ -78,8 +79,13 @@ class IapService extends ChangeNotifier {
   /// Localised store product, if the store returned it.
   ProductDetails? product(String id) => _products[id];
 
+  /// Whether premium skins are sold (and so locked until bought). Off until
+  /// the store products exist; see [kSellSkins]. Tests of the paid path turn it on.
+  bool sellSkins = kSellSkins;
+
   /// Whether the skin with [skinKey] (`SigilSkinId.key`) may be used.
   bool isSkinUnlocked(String skinKey) {
+    if (!sellSkins) return true; // Every skin is free while none are sold.
     final productId = RevenueSchemaConfig.skinProductIds[skinKey];
     if (productId == null) return true; // free skin
     return _unlocked.contains(productId) || _unlocked.contains(RevenueSchemaConfig.allSkinsBundleId);
@@ -251,6 +257,7 @@ class IapService extends ChangeNotifier {
   /// singleton).
   @visibleForTesting
   void resetForTest() {
+    sellSkins = kSellSkins;
     _subscription?.cancel();
     _subscription = null;
     _lifecycle?.dispose();
