@@ -35,6 +35,14 @@ export const config = {
   // Without it, rites are disabled: idempotency needs persistence.
   riteLedgerPath: process.env.RITE_LEDGER_PATH || '',
 
+  // Web payments (Stripe Checkout). All four are needed, or web payment is off.
+  // A live key (sk_live_) is refused unless the cluster is mainnet-beta, and a
+  // test key unless it is not: real money never buys a devnet burn.
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY || '',
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+  stripeRitePriceId: process.env.STRIPE_RITE_PRICE_ID || '',
+  webOrigin: (process.env.WEB_ORIGIN || '').replace(/\/+$/, ''),
+
   // In-App Purchase Verification Credentials
   appleBundleId: process.env.APPLE_BUNDLE_ID || 'net.ignosis.studio',
   googlePackageName: process.env.GOOGLE_PACKAGE_NAME || 'net.ignosis.studio',

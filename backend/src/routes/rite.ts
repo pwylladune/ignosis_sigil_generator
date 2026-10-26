@@ -5,6 +5,8 @@ import { PurchaseVerificationResult } from '../services/receiptValidator.js';
 import { RiteBurnService } from '../services/riteBurn.js';
 import { RiteCheck, explorerUrl } from '../services/riteVerifier.js';
 import { PyreIndexerService } from '../services/pyreIndexer.js';
+import { RiteLedger } from '../services/riteLedger.js';
+import { CHECKOUT_SESSION_ID, StripeGateway, webPurchaseId } from '../services/stripeRite.js';
 
 export interface PurchaseVerifier {
   verifyReceipt(params: {
@@ -22,6 +24,20 @@ export interface RiteRouterDeps {
   check: ((signature: string) => Promise<RiteCheck>) | null;
   pyre: PyreIndexerService;
   cluster: string;
+  /** Web payments through Stripe Checkout; null when Stripe is not configured. */
+  stripe?: { gateway: StripeGateway; ledger: RiteLedger } | null;
+}
+
+/** Adds a first-time confirmed burn to the Global Pyre. */
+export function recordInPyre(pyre: PyreIndexerService, signature: string, joules: number, commitment: string) {
+  pyre.recordBurn({
+    signature,
+    practitioner: 'treasury',
+    amount: joules,
+    intentHashHex: commitment,
+    timestamp: Date.now(),
+    source: 'on_chain_solana',
+  });
 }
 
 const consecrateSchema = z.object({
@@ -63,14 +79,7 @@ export function createRiteRouter(deps: RiteRouterDeps): Router {
     switch (outcome.status) {
       case 'confirmed':
         // Count each burn once, not again when a client asks a second time.
-        if (outcome.firstConfirmation) deps.pyre.recordBurn({
-          signature: outcome.signature,
-          practitioner: 'treasury',
-          amount: outcome.joules,
-          intentHashHex: commitment,
-          timestamp: Date.now(),
-          source: 'on_chain_solana',
-        });
+        if (outcome.firstConfirmation) recordInPyre(deps.pyre, outcome.signature, outcome.joules, commitment);
         return res.json({
           success: true,
           signature: outcome.signature,
@@ -85,6 +94,45 @@ export function createRiteRouter(deps: RiteRouterDeps): Router {
         console.error(`[rite] Burn failed: ${outcome.reason}`);
         return res.status(502).json({ success: false, error: 'The burn did not go through; try again' });
     }
+  });
+
+  // POST /api/v1/rite/checkout: a Stripe Checkout session for one rite. The
+  // session ID is the payer's credit; it is spent at /consecrate on release.
+  router.post('/checkout', async (_req: Request, res: Response) => {
+    if (!deps.burns || !deps.stripe) return res.status(503).json({ success: false, error: 'Web payment is not available' });
+    try {
+      const { id, url } = await deps.stripe.gateway.createCheckout();
+      return res.json({ success: true, sessionId: id, url });
+    } catch (e: any) {
+      console.error(`[rite] Checkout failed: ${e.message}`);
+      return res.status(502).json({ success: false, error: 'Could not start checkout' });
+    }
+  });
+
+  // GET /api/v1/rite/credit/:sessionId: is this payment ready to spend, or spent?
+  router.get('/credit/:sessionId', async (req: Request, res: Response) => {
+    const stripe = deps.stripe;
+    if (!stripe) return res.status(503).json({ success: false, error: 'Web payment is not available' });
+    const sessionId = req.params.sessionId;
+    if (!CHECKOUT_SESSION_ID.test(sessionId)) return res.status(400).json({ success: false, error: 'Invalid session' });
+    let credit = stripe.ledger.getCredit(sessionId);
+    if (!credit) {
+      // The webhook may not have arrived yet: ask Stripe.
+      const paid = await stripe.gateway.retrievePaid(sessionId).catch(() => null);
+      if (paid) {
+        stripe.ledger.recordCredit(paid);
+        credit = stripe.ledger.getCredit(sessionId);
+      }
+    }
+    const rite = stripe.ledger.get(webPurchaseId(sessionId));
+    return res.json({
+      success: true,
+      paid: credit?.state === 'paid',
+      revoked: credit?.state === 'revoked',
+      spent: !!rite,
+      burnt: rite?.state === 'done',
+      signature: rite?.signature ?? null,
+    });
   });
 
   // GET /api/v1/rite/:signature: the on-chain check, for anyone.
