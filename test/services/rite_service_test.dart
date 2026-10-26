@@ -45,6 +45,36 @@ http.Response json(int status, Object body) => http.Response(jsonEncode(body), s
 Map<String, Object?> credit({bool paid = true, bool spent = false}) =>
     {'success': true, 'paid': paid, 'revoked': false, 'spent': spent, 'burnt': spent, 'signature': null};
 
+/// Google Play as the rite sees it: unconsumed rite purchases by token.
+class FakeStore extends ChangeNotifier implements RiteStore {
+  final List<String> tokens = [];
+  final List<String> consumed = [];
+
+  /// Consume calls are lost (as when the app closes before one lands).
+  bool loseConsumes = false;
+
+  @override
+  List<String> get unconsumedRites => List.of(tokens);
+
+  @override
+  String? get ritePrice => r'$2.99';
+
+  @override
+  Future<bool> buyRite() async {
+    tokens.add('play-token-${tokens.length + 1}');
+    notifyListeners();
+    return true;
+  }
+
+  @override
+  Future<void> consumeRite(String purchaseToken) async {
+    if (loseConsumes) return;
+    consumed.add(purchaseToken);
+    tokens.remove(purchaseToken);
+    notifyListeners();
+  }
+}
+
 RiteService serviceFor(FakeBackend b) =>
     RiteService(client: b.client, apiBase: 'https://api.test/', pollInterval: const Duration(milliseconds: 1));
 
@@ -180,6 +210,64 @@ void main() {
     await s.load();
     expect(s.awaitingPayment, isFalse);
     s.dispose();
+  });
+
+  group('Android (Google Play)', () {
+    test('a Play purchase is spent on the release, then consumed', () async {
+      final b = FakeBackend()
+        ..on('POST /consecrate', [json(200, {'success': true, 'signature': signature, 'joules': 1618, 'explorerUrl': 'x'})]);
+      final store = FakeStore();
+      final s = serviceFor(b)..attachStore(store);
+      expect((s.usesStore, s.credits, s.storePrice), (true, 0, r'$2.99'));
+      await s.buyInStore();
+      expect(s.credits, 1);
+      await s.releaseWith(intent);
+      final body = b.bodies('/consecrate').single;
+      expect((body['platform'], body['receiptData']), ('android', 'play-token-1'));
+      expect(riteCommitment(intent, hexDecode(s.receipts.single.saltHex)), body['commitment']);
+      expect((s.state, s.credits), (RiteWitnessState.witnessed, 0));
+      expect(store.consumed, ['play-token-1']);
+      s.dispose();
+    });
+
+    test('a refused Play purchase is not consumed; a spent one is', () async {
+      final b = FakeBackend()..on('POST /consecrate', [json(402, {'success': false})]);
+      final store = FakeStore();
+      final s = serviceFor(b)..attachStore(store);
+      await s.buyInStore();
+      await s.releaseWith(intent);
+      expect((s.state, s.credits), (RiteWitnessState.failed, 1));
+      expect(store.consumed, isEmpty);
+
+      b.on('POST /consecrate', [json(409, {'success': false})]);
+      await s.releaseWith(intent);
+      expect(store.consumed, ['play-token-1'], reason: 'already used for another release');
+      s.dispose();
+    });
+
+    test('a confirmed purchase the store hands back after a restart is consumed then', () async {
+      final b = FakeBackend()
+        ..on('POST /consecrate', [json(200, {'success': true, 'signature': signature, 'joules': 1618, 'explorerUrl': 'x'})]);
+      final store = FakeStore()..loseConsumes = true;
+      final s = serviceFor(b)..attachStore(store);
+      await s.buyInStore();
+      await s.releaseWith(intent);
+      expect((s.state, store.tokens.length, s.credits), (RiteWitnessState.witnessed, 1, 0));
+      s.dispose();
+
+      final restarted = serviceFor(FakeBackend());
+      await restarted.load();
+      final again = FakeStore()..tokens.add('play-token-1');
+      restarted.attachStore(again);
+      expect(again.consumed, ['play-token-1']);
+      expect(restarted.credits, 0, reason: 'a spent purchase is never offered again');
+      restarted.dispose();
+    });
+
+    test('a spend saved before the Android support reads as a web spend', () {
+      final spend = RiteSpend.fromJson({'sessionId': session, 'salt': '00', 'commitment': 'c'})!;
+      expect((spend.platform, spend.receipt), ('web', session));
+    });
   });
 
   testWidgets('the witness row offers a purchase, then a choice once paid', (tester) async {

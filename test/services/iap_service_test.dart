@@ -88,4 +88,20 @@ void main() {
     expect(RevenueSchemaConfig.allProductIds.length, 8);
     expect(RevenueSchemaConfig.skinProductIds.containsKey('vellumDraft'), isFalse);
   });
+
+  test('a paid rite purchase is held as an unconsumed rite; a pending one is not', () async {
+    final iap = IapService.instance;
+    await iap.initialize();
+    await iap.handlePurchaseUpdates(
+        [playPurchase(RevenueSchemaConfig.riteProductId, PurchaseStateWrapper.pending, PurchaseStatus.pending)]);
+    expect(iap.unconsumedRites, isEmpty);
+    await iap.handlePurchaseUpdates(
+        [playPurchase(RevenueSchemaConfig.riteProductId, PurchaseStateWrapper.purchased, PurchaseStatus.purchased)]);
+    expect(iap.unconsumedRites, ['token']);
+    // A rite is not a skin, and unlocks nothing.
+    iap.sellSkins = true;
+    expect(iap.isSkinUnlocked('cosmic'), isFalse);
+    // With no store in tests, buying a rite cannot start.
+    expect(await iap.buyRite(), isFalse);
+  });
 }

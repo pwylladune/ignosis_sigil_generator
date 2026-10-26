@@ -7,7 +7,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "ts-node src/server.ts",
-    "test": "tsc && node dist/test-server.js && node dist/test-rite.js && node dist/test-stripe.js",
+    "test": "tsc && node dist/test-server.js && node dist/test-rite.js && node dist/test-stripe.js && node dist/test-play.js",
     "mint:devnet": "tsc && node dist/tools/createJouleMint.js",
     "test:devnet": "tsc && node dist/tools/devnetRite.js"
   },
