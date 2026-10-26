@@ -96,6 +96,15 @@ class IapService extends ChangeNotifier {
     _unlocked.addAll(prefs.getStringList(_prefsKey) ?? const []);
     notifyListeners();
 
+    // No app store on the web. in_app_purchase would pick the StoreKit
+    // implementation from the browser's platform (e.g. macOS) and fail on its
+    // platform channel, so the plugin is never touched there.
+    if (kIsWeb) {
+      _isAvailable = false;
+      notifyListeners();
+      return;
+    }
+
     try {
       final iap = InAppPurchase.instance;
       _isAvailable = await iap.isAvailable();
