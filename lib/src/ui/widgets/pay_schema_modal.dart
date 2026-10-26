@@ -76,7 +76,8 @@ class PaySchemaModal extends StatelessWidget {
                       badge: 'FREE · INCLUDED',
                       children: [
                         for (final b in const [
-                          'All five systems: Monogram (after Spare), Planetary Kamea, Golden Dawn Rose, Chladni plate and Cyber Chaos.',
+                          'All seven systems: Circumlocution, Monogram (after Spare), Planetary Kamea, Golden Dawn Rose, Cymatic Resonance, '
+                              'Cyber Chaos and The Infinite.',
                           'The default Vellum & Ink skin.',
                           'Gnosis breathing and the ritual burn.',
                           'Share the seal, or print a burn sheet (A4 or US Letter).',

@@ -67,7 +67,7 @@ The canvas runs its ticker only while something is moving, so an idle studio use
 
 ## Monetisation (v1.0)
 
-The core studio is free: all five systems, the burn, PNG share and the printable PDF burn sheet.
+The core studio is free: all seven systems, the burn, PNG share and the printable PDF burn sheet.
 The seven premium skins are one-time in-app purchases, sold individually or as a bundle, and
 Restore Purchases is available. v1.0 has **no cryptocurrency features**. The `backend/`,
 `contracts/`, `portal/` and `scripts/` folders are prototypes of a deferred on-chain design. Read
