@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ignosis_sigil_generator/src/engines/cyber_chaos_engine.dart';
+import 'package:ignosis_sigil_generator/src/engines/infinite_engine.dart';
 import 'package:ignosis_sigil_generator/src/models/intent_kernel.dart';
 import 'package:ignosis_sigil_generator/src/motion/det_math.dart';
 import 'package:ignosis_sigil_generator/src/motion/noise.dart';
@@ -45,6 +46,28 @@ void main() {
       final g = CyberChaosEngine().build(kernel, const Size(400, 400), symmetryFolds: 3);
       // The last point is ~60,000 chaotic iterations in: any ulp drift shows here.
       expect([g.points[0], g.points[1], g.points[119998], g.points[119999]], [x0, y0, xn, yn], reason: intent);
+    }
+  });
+
+  test('The Infinite is bit-identical to the recorded VM output', () {
+    const cases = [
+      ('I COMMAND RADIANT CLARITY', -0.03974151611328125, -0.7957489013671875, 1.8318421541154386, 0.0450502544106376, 65535,
+          320.4681701660156, 149.2913360595703, 192.51512145996094, 109.43579864501953),
+      ('FOCUS', -1.26910400390625, -0.04042968750000009, 2.0517774085700515, 0.11866740031298703, 65535,
+          348.6236267089844, 198.59323120117188, 136.93992614746094, 200.97671508789062),
+      ('PROTECTION AND FORCE', -1.2464065551757812, -0.030918884277343794, 2.0439234821498395, 0.11643008814808115, 65535,
+          348.3951110839844, 198.91183471679688, 137.43942260742188, 200.58934020996094),
+    ];
+    for (final (intent, cx, cy, home, g, count, x0, y0, xn, yn) in cases) {
+      final kernel = IntentKernel.fromText(intent);
+      final c = JuliaParams.fromKernel(kernel);
+      expect((c.cx, c.cy, c.homeHalfWidth), (cx, cy, home), reason: intent);
+      expect(InfiniteEngine.green(0.9, 0.4, c, 40), g, reason: intent);
+      // 2¹⁶ square roots deep: any ulp drift in the inverse map shows here.
+      final inv = InfiniteEngine().build(kernel, const Size(400, 400), inverted: true);
+      final n = inv.points.length;
+      expect((inv.pointCount, inv.points[0], inv.points[1], inv.points[n - 2], inv.points[n - 1]),
+          (count, x0, y0, xn, yn), reason: intent);
     }
   });
 
