@@ -199,7 +199,10 @@ class _ChaosWikiScreenState extends State<ChaosWikiScreen> {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: theme.hairline),
       ),
-      child: Theme(
+      // Its own transparent Material, so the tile's ripple shows above the card.
+      child: Material(
+        type: MaterialType.transparency,
+        child: Theme(
         // The card is the boundary: no extra divider lines when expanded.
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
@@ -254,7 +257,7 @@ class _ChaosWikiScreenState extends State<ChaosWikiScreen> {
               ),
           ],
         ),
-      ),
+      )),
     );
   }
 

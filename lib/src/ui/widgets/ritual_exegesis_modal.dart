@@ -30,7 +30,9 @@ class RitualExegesisModal extends StatelessWidget {
                 children: [
                   IgnosisMark(skin: theme, size: 34),
                   const SizedBox(width: 12),
-                  Column(
+                  // Expanded: wraps on narrow screens rather than pushing past the close button.
+                  Expanded(
+                    child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -47,8 +49,7 @@ class RitualExegesisModal extends StatelessWidget {
                         style: TextStyle(fontSize: 12, color: theme.inkTertiary),
                       ),
                     ],
-                  ),
-                  const Spacer(),
+                  )),
                   IconButton(
                     icon: Icon(Icons.close, size: 20, color: theme.inkTertiary),
                     tooltip: 'Close',

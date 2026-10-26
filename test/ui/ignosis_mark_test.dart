@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ignosis_sigil_generator/main.dart';
+import 'package:ignosis_sigil_generator/src/ui/screens/chaos_wiki_screen.dart';
+import 'package:ignosis_sigil_generator/src/ui/theme/sigil_skins.dart';
+import 'package:ignosis_sigil_generator/src/ui/widgets/ritual_exegesis_modal.dart';
 import 'package:ignosis_sigil_generator/src/ui/widgets/ignosis_mark.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,5 +19,14 @@ void main() {
     // Decorative beside the word: the title is read once, not twice.
     expect(find.bySemanticsLabel('IGNOSIS'), findsOneWidget);
     semantics.dispose();
+  });
+
+  testWidgets('the Exegesis dialog and the wiki carry the mark, and no glyph', (tester) async {
+    final theme = SigilSkinTheme.getSkin(SigilSkinId.vellumDraft);
+    for (final page in <Widget>[RitualExegesisModal(theme: theme), ChaosWikiScreen(theme: theme)]) {
+      await tester.pumpWidget(MaterialApp(home: Scaffold(body: page)));
+      expect(find.byType(IgnosisMark), findsOneWidget, reason: page.runtimeType.toString());
+      expect(find.text('🜂'), findsNothing, reason: page.runtimeType.toString());
+    }
   });
 }
