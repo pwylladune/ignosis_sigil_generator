@@ -1,0 +1,49 @@
+# Fly.io: the rite backend (ADR 2026-10-25-ignosis-joule-token).
+#
+# Exactly one machine. The fulfilment ledger is a SQLite file on the volume,
+# and two machines would mean two ledgers, which could burn twice for one
+# purchase. Deploy with `fly deploy --ha=false`; never scale above 1.
+# The machine never stops: the sweeper and the Play refund check run in it.
+#
+# Secrets (fly secrets set / import): TREASURY_PRIVATE_KEY, and when ready
+# STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_RITE_PRICE_ID,
+# GOOGLE_PLAY_SERVICE_ACCOUNT, and a paid SOLANA_RPC_URL.
+
+app = "ignosis-api"
+primary_region = "sjc"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "8080"
+  SOLANA_CLUSTER = "devnet"
+  SOLANA_RPC_URL = "https://api.devnet.solana.com"
+  JOULE_MINT_ADDRESS = "2Aj4PVH2RoxdQScMHkvjzPR4whMZiGUWwvZoZyHMjwNA"
+  RITE_LEDGER_PATH = "/data/rite-ledger.sqlite"
+  # The staging web build (a fixed Netlify alias) and local testing.
+  CORS_ORIGINS = "https://rite-staging--ignosis-studio.netlify.app,http://localhost:8642"
+  WEB_ORIGIN = "https://rite-staging--ignosis-studio.netlify.app"
+
+[[mounts]]
+  source = "rite_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
