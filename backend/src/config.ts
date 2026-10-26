@@ -20,9 +20,9 @@ export const config = {
   // ever generated in its place.
   treasuryPrivateKey: process.env.TREASURY_PRIVATE_KEY || '',
 
-  // Joules burnt per rite: 1618, after phi (1.618...). About the energy of a
-  // 1" x 1" square of heavy card (~155 gsm at ~16 MJ/kg), or two squares of
-  // 80 gsm paper (~830 J each); one Solana transaction costs ~3,290 J.
+  // Joules burnt per rite: 1618, after phi (1.618...). The physical basis is
+  // a 2" x 2" square of 80 gsm paper (25.8 cm2, ~0.21 g at ~16 MJ/kg), which
+  // burns to ~3,300 J: the energy of one Solana transaction (~3,290 J).
   riteJoules: 1618,
 
   // Store products that buy one rite (comma-separated RITE_PRODUCT_IDS).

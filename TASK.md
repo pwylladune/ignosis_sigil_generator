@@ -371,7 +371,7 @@ Six reviewers took part: esoteric-researcher, research, ellie, code-reviewer, se
 ### 6.8 The Joule token (2026-10-25, uncommitted, awaiting review)
 - **Direction changed.** The user directs that the on-chain burn be the point of the app. This supersedes §2's recommendation (option B, no token) and the vault ADR `2026-10-25-ignosis-v1-no-token`. The new ADR is `2026-10-25-ignosis-joule-token`.
 - **Token.** IGNOSIS Joule is a Token-2022 mint with the NonTransferable extension, 0 decimals and 10¹² supply. Mint authority is revoked and there is no freeze authority. The whole supply sits in the treasury's account; nobody else can hold it, and the chain refuses transfers (error 0x25).
-- **Rite.** Each verified purchase burns **1618 J**, after φ (1.618…). That is about a 1″ square of heavy card (about 155 gsm), or two 1″ squares of 80 gsm paper at about 830 J each. The burn carries the memo `IGNOSIS:v1:<SHA-256("IGNOSIS:v1" ‖ salt ‖ intent)>`. One Solana transaction itself costs about 3,290 J (Solana Foundation, September 2022).
+- **Rite.** Each verified purchase burns **1618 J**, after φ (1.618…). The physical basis is a 2″ × 2″ square of 80 gsm paper (25.8 cm², about 0.21 g), which burns to about 3,300 J, matching one transaction. The burn carries the memo `IGNOSIS:v1:<SHA-256("IGNOSIS:v1" ‖ salt ‖ intent)>`. One Solana transaction itself costs about 3,290 J (Solana Foundation, September 2022).
 - **Backend.**
   - `routes/rite.ts`: `POST /api/v1/rite/consecrate` and `GET /api/v1/rite/:signature`.
   - `services/riteBurn.ts`: a sign-and-record-before-send fulfilment with an at-most-once burn per purchase.
