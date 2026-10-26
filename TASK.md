@@ -394,6 +394,29 @@ Six reviewers took part: esoteric-researcher, research, ellie, code-reviewer, se
   - `RITE_LEDGER_PATH` must point at a writable volume in Docker.
   - Mainnet needs a KMS-held treasury key.
 
+### 6.9 Web payment and the rite flow (2026-10-25, uncommitted, awaiting review)
+- **Payment (Stripe Checkout).**
+  - `POST /api/v1/rite/checkout` opens a session for one rite. The signed webhook `POST /api/v1/stripe/webhook` records it as a credit.
+  - Refunds and disputes revoke unused credits. A refund after the burn cannot undo it.
+  - `GET /api/v1/rite/credit/:id` asks Stripe directly if the webhook is late.
+  - Live Stripe keys are refused off mainnet, and test keys on it.
+- **When the burn happens.** The burn happens when the seal is released, not at payment. The credit is spent at `/consecrate`, so the on-chain act is the release itself.
+- **Sweeper.** `RiteSweeper` re-drives unconfirmed rites every 30 s, after they are 60 s old, so a paid burn finishes even if the payer leaves. Each burn is counted once in the Global Pyre.
+- **Flutter.**
+  - **Flag:** `kEnableRite` is on only for web builds that set `--dart-define=IGNOSIS_RITE_API=<backend>`.
+  - **Gnosis dialog:** gains a "Witness on-chain · 1618 J" row with three states: add, waiting for payment, or a switch.
+  - **Checkout:** opens in a new tab, opened blank in the tap itself so browsers don't block it.
+  - **Release:** the salted commitment is computed on the device; the intent is never sent or stored.
+  - **Result:** the dissolved-seal screen shows "1618 J burnt on-chain · verified" and a link to the record.
+  - **Recovery:** receipts (signature, salt, commitment) are kept on the device, and an interrupted burn resumes with the same commitment.
+  - `web/rite-paid.html` is the page Stripe returns the payer to.
+- **Verified.**
+  - Backend `npm test`: all four suites pass. Two broken variants (a refund check and a paid check) are each caught.
+  - `flutter analyze --fatal-infos` is clean, and `flutter test` passes 129 (2 skipped).
+  - The web build with the rite enabled compiles.
+  - In a browser against a local backend: the witness row and its failure notice, and the return page in both variants.
+- **Not verified yet.** A real Stripe test payment, which needs the owner's Stripe test keys.
+
 ### 6.4 Still open (beyond the checkboxes)
 - ~~Bundle ID decision~~ Done: `net.ignosis.studio` (8321ef6a).
 - Skin entitlements are cached client-side in `SharedPreferences`. That is acceptable for cosmetic non-consumables, but it can be edited on a rooted device.
