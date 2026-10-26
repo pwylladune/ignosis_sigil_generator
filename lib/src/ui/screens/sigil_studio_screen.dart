@@ -33,6 +33,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
   bool _isBurning = false;
 
   SigilSkinId _currentSkinId = SigilSkinId.vellumDraft;
+
   /// A locked skin shown behind the skin dialog while the user considers it.
   SigilSkinId? _previewSkinId;
 
@@ -490,19 +491,21 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                             letterSpacing: 1.8,
                           ),
                         ),
-                        TextButton(
-                          // TextButton keeps a 48 pt hit area around the small link.
-                          onPressed: _showExegesisModal,
-                          style: TextButton.styleFrom(
-                            foregroundColor: theme.inkTertiary,
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            minimumSize: const Size(44, 44),
+                        // The Ring Cipher traces the whole phrase: nothing is reduced.
+                        if (_state.system != SigilSystem.ringCipher)
+                          TextButton(
+                            // TextButton keeps a 48 pt hit area around the small link.
+                            onPressed: _showExegesisModal,
+                            style: TextButton.styleFrom(
+                              foregroundColor: theme.inkTertiary,
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              minimumSize: const Size(44, 44),
+                            ),
+                            child: const Text(
+                              'Why reduce?',
+                              style: TextStyle(fontSize: 12, decoration: TextDecoration.underline),
+                            ),
                           ),
-                          child: const Text(
-                            'Why reduce?',
-                            style: TextStyle(fontSize: 12, decoration: TextDecoration.underline),
-                          ),
-                        ),
                       ],
                     ),
                 ],
