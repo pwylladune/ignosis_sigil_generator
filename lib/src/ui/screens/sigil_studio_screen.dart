@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/feature_flags.dart';
@@ -52,7 +53,11 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
     _textController = TextEditingController(text: _state.rawIntent);
     IapService.instance.addListener(_enforceSkinEntitlement);
     _restoreSkin();
-    if (kEnableRite) unawaited(RiteService.instance.load());
+    if (kEnableRite) {
+      // Off the web the rite is paid through the app store (Google Play).
+      if (!kIsWeb) RiteService.instance.attachStore(IapService.instance);
+      unawaited(RiteService.instance.load());
+    }
   }
 
   static const _skinPrefsKey = 'ignosis_selected_skin';

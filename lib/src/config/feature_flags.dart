@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform, kIsWeb;
 
 /// Compile-time feature flags.
 ///
@@ -17,5 +17,6 @@ const bool kSellSkins = bool.fromEnvironment('IGNOSIS_SELL_SKINS');
 const String kRiteApiBase = String.fromEnvironment('IGNOSIS_RITE_API');
 
 /// The on-chain rite: a paid release burns Joules with the intent's salted
-/// commitment. Web only for now (Stripe Checkout); store purchases come later.
-const bool kEnableRite = kRiteApiBase != '' && kIsWeb;
+/// commitment. On the web it is paid through Stripe Checkout, on Android
+/// through Google Play Billing; iOS comes later.
+bool get kEnableRite => kRiteApiBase != '' && (kIsWeb || defaultTargetPlatform == TargetPlatform.android);

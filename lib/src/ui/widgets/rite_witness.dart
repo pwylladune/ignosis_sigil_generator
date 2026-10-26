@@ -18,6 +18,7 @@ class RiteWitnessRow extends StatelessWidget {
   final RiteService service;
 
   Future<void> _buy() async {
+    if (service.usesStore) return service.buyInStore();
     // Opened in the tap itself: browsers block tabs opened after an await.
     final tab = CheckoutWindow.open();
     final url = await service.beginCheckout();
@@ -58,7 +59,10 @@ class RiteWitnessRow extends StatelessWidget {
           trailing = TextButton(
             style: TextButton.styleFrom(minimumSize: const Size(64, 44), foregroundColor: theme.seal),
             onPressed: _buy,
-            child: const Text('ADD', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+            child: Text(
+              service.storePrice == null ? 'ADD' : 'ADD · ${service.storePrice}',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+            ),
           );
         }
         return Tooltip(

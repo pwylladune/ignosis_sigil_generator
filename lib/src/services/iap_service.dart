@@ -7,6 +7,7 @@ import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/feature_flags.dart';
 import '../models/revenue_schema.dart';
+import 'rite/rite_service.dart';
 
 /// Outcome of asking the store to start a purchase.
 enum PurchaseStart {
@@ -36,7 +37,7 @@ enum PurchaseStart {
 /// non-consumables). On Android, owned purchases are re-queried at startup and
 /// on resume so purchases that completed while the app was closed are
 /// delivered and acknowledged before Play's 3-day auto-refund.
-class IapService extends ChangeNotifier {
+class IapService extends ChangeNotifier implements RiteStore {
   IapService._();
   static final IapService instance = IapService._();
 
@@ -50,6 +51,9 @@ class IapService extends ChangeNotifier {
   bool _isAvailable = false;
   Map<String, ProductDetails> _products = {};
   final Set<String> _unlocked = {};
+
+  /// Paid rite purchases not yet consumed, by purchase token.
+  final Map<String, PurchaseDetails> _rites = {};
   String? _notice;
   bool _noticeIsError = false;
   bool _restoring = false;
@@ -140,7 +144,8 @@ class IapService extends ChangeNotifier {
     _loadingProducts = true;
     notifyListeners();
     try {
-      final response = await iap.queryProductDetails(RevenueSchemaConfig.allProductIds);
+      final response =
+          await iap.queryProductDetails({...RevenueSchemaConfig.allProductIds, RevenueSchemaConfig.riteProductId});
       if (response.error != null) {
         debugPrint('[IAP] Product query failed: ${response.error!.message}');
       }
@@ -188,6 +193,47 @@ class IapService extends ChangeNotifier {
     }
   }
 
+  @override
+  List<String> get unconsumedRites => _rites.keys.toList();
+
+  @override
+  String? get ritePrice => _products[RevenueSchemaConfig.riteProductId]?.price;
+
+  /// Starts the purchase of one rite. It is not consumed automatically: the
+  /// rite service consumes it once its burn is confirmed.
+  @override
+  Future<bool> buyRite() async {
+    await initialize();
+    final iap = _iap;
+    if (!_isAvailable || iap == null) return false;
+    const id = RevenueSchemaConfig.riteProductId;
+    if (!_products.containsKey(id)) await _loadProducts();
+    final product = _products[id];
+    if (product == null) return false;
+    try {
+      return await iap.buyConsumable(purchaseParam: PurchaseParam(productDetails: product), autoConsume: false);
+    } catch (e) {
+      _fail(_describe(e));
+      return false;
+    }
+  }
+
+  @override
+  Future<void> consumeRite(String purchaseToken) async {
+    final p = _rites[purchaseToken];
+    final iap = _iap;
+    if (p == null || iap == null || !_isAndroid) return;
+    try {
+      final result = await iap.getPlatformAddition<InAppPurchaseAndroidPlatformAddition>().consumePurchase(p);
+      if (result.responseCode == BillingResponse.ok || result.responseCode == BillingResponse.itemNotOwned) {
+        _rites.remove(purchaseToken);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('[IAP] consume failed: $e');
+    }
+  }
+
   /// Asks the store to replay prior non-consumable purchases on this account.
   Future<PurchaseStart> restorePurchases() async {
     await initialize();
@@ -228,6 +274,11 @@ class IapService extends ChangeNotifier {
         _fail(p.error?.message ?? 'Purchase failed');
       }
       final paid = _isPaid(p);
+      // A rite stays owned (unconsumed) until its burn is confirmed; the
+      // acknowledgement below keeps Play from refunding it meanwhile.
+      if (paid && p.productID == RevenueSchemaConfig.riteProductId) {
+        _rites[p.verificationData.serverVerificationData] = p;
+      }
       if (paid && RevenueSchemaConfig.allProductIds.contains(p.productID)) {
         changed |= _unlocked.add(p.productID);
         _notice = null;
@@ -267,6 +318,7 @@ class IapService extends ChangeNotifier {
     _isAvailable = false;
     _products = {};
     _unlocked.clear();
+    _rites.clear();
     _notice = null;
     _noticeIsError = false;
     _restoring = false;

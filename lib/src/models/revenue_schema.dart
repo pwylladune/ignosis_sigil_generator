@@ -4,7 +4,8 @@
 ///    PNG share and the printable PDF burn sheet.
 /// 2. Seven premium skins are one-time, non-consumable unlocks, sold
 ///    individually or as a bundle. The default Vellum & Ink skin is free.
-/// 3. There are no cryptocurrency products (see kEnableChain and TASK.md §2).
+/// 3. The on-chain rite is a consumable that buys a witnessed release. The
+///    practitioner never receives crypto (ADR 2026-10-25-ignosis-joule-token).
 class RevenueSchemaConfig {
   // Prices are configured in App Store Connect / Play Console (USD 0.99 per
   // skin, 3.99 for the bundle) and always displayed from the store, localised.
@@ -18,6 +19,10 @@ class RevenueSchemaConfig {
   static const String skinWiccanId = 'net.ignosis.studio.skin.wiccan';
   static const String skinChaosId = 'net.ignosis.studio.skin.chaos';
   static const String allSkinsBundleId = 'net.ignosis.studio.skin.all_bundle';
+
+  /// The on-chain rite: a consumable, bought before the release and consumed
+  /// once its burn is confirmed (matches the backend's RITE_PRODUCT_IDS).
+  static const String riteProductId = 'net.ignosis.studio.rite';
 
   /// Product that unlocks each premium skin, keyed by `SigilSkinId.key`.
   /// Skins not listed here are free.

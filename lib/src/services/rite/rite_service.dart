@@ -4,29 +4,50 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/feature_flags.dart';
+import '../../models/revenue_schema.dart';
 import 'rite_commitment.dart';
 
-/// The store product a web rite is sold as (matches the backend's RITE_PRODUCT_IDS).
-const riteProductId = 'net.ignosis.studio.rite';
+/// The product a rite is sold as, on every platform.
+const riteProductId = RevenueSchemaConfig.riteProductId;
 
-/// A burn this device started: the paid session it spends and the
-/// commitment it burns. Saved before the request, so a retry burns the same
-/// commitment and never asks the backend for a second burn.
+/// What the rite needs from an app store (Google Play on Android); the
+/// purchase service provides it. A rite purchase stays unconsumed until its
+/// burn is confirmed: until then it is the practitioner's credit.
+abstract class RiteStore implements Listenable {
+  /// Purchase tokens of rite purchases, paid and not yet consumed.
+  List<String> get unconsumedRites;
+
+  /// The store's localised price, once known.
+  String? get ritePrice;
+
+  /// Opens the store's purchase sheet; false if the store or product is unavailable.
+  Future<bool> buyRite();
+
+  /// Consumes a rite whose burn is confirmed, so another can be bought.
+  Future<void> consumeRite(String purchaseToken);
+}
+
+/// A burn this device started: the payment it spends ([platform] and its
+/// [receipt]: a Checkout session on the web, a Play purchase token on
+/// Android) and the commitment it burns. Saved before the request, so a retry
+/// burns the same commitment and never asks the backend for a second burn.
 @immutable
 class RiteSpend {
-  const RiteSpend({required this.sessionId, required this.saltHex, required this.commitment});
+  const RiteSpend({required this.platform, required this.receipt, required this.saltHex, required this.commitment});
 
-  final String sessionId;
+  final String platform;
+  final String receipt;
   final String saltHex;
   final String commitment;
 
-  Map<String, Object> toJson() => {'sessionId': sessionId, 'salt': saltHex, 'commitment': commitment};
+  Map<String, Object> toJson() => {'platform': platform, 'receipt': receipt, 'salt': saltHex, 'commitment': commitment};
 
   static RiteSpend? fromJson(Object? json) {
     if (json is! Map) return null;
-    final s = json['sessionId'], salt = json['salt'], c = json['commitment'];
-    if (s is! String || salt is! String || c is! String) return null;
-    return RiteSpend(sessionId: s, saltHex: salt, commitment: c);
+    final platform = json['platform'] ?? 'web', r = json['receipt'] ?? json['sessionId'];
+    final salt = json['salt'], c = json['commitment'];
+    if (platform is! String || r is! String || salt is! String || c is! String) return null;
+    return RiteSpend(platform: platform, receipt: r, saltHex: salt, commitment: c);
   }
 }
 
@@ -93,11 +114,12 @@ class RiteReceipt {
 /// Where the current release's on-chain burn stands.
 enum RiteWitnessState { none, burning, witnessed, failed }
 
-/// The on-chain rite for the web (ADR 2026-10-25-ignosis-joule-token).
+/// The on-chain rite (ADR 2026-10-25-ignosis-joule-token).
 ///
-/// 1. Before or during the rite, the practitioner pays through Stripe
-///    Checkout. The session ID becomes a credit once the backend reports it
-///    paid.
+/// 1. Before or during the rite, the practitioner pays: on the web through
+///    Stripe Checkout (the session ID becomes a credit once the backend
+///    reports it paid), on Android through Google Play (an unconsumed rite
+///    purchase is the credit; see [attachStore]).
 /// 2. On release, [releaseWith] computes the salted commitment of the intent
 ///    on the device and spends one credit on a burn of the rite's Joules.
 /// 3. The confirmed burn is read back from the chain and kept as a receipt.
@@ -114,6 +136,7 @@ class RiteService extends ChangeNotifier {
   static const _kCredits = 'ignosis_rite_credits';
   static const _kSpend = 'ignosis_rite_spend';
   static const _kReceipts = 'ignosis_rite_receipts';
+  static const _kSpentTokens = 'ignosis_rite_spent_tokens';
 
   final http.Client _client;
   final String _api;
@@ -124,6 +147,13 @@ class RiteService extends ChangeNotifier {
   /// finished late, or after another checkout was opened, still becomes a credit.
   final List<String> _pending = [];
   final List<String> _credits = [];
+
+  /// The app store, on platforms that pay through one (Android).
+  RiteStore? _store;
+
+  /// Store purchases whose burn is confirmed: never spent again, and consumed
+  /// as soon as the store hands them back.
+  final Set<String> _spentTokens = {};
   RiteSpend? _spend;
   final List<RiteReceipt> _receipts = [];
   RiteWitnessState _state = RiteWitnessState.none;
@@ -138,14 +168,26 @@ class RiteService extends ChangeNotifier {
   /// A checkout was opened and is not paid yet.
   bool get awaitingPayment => _pending.isNotEmpty;
 
+  /// Pays through an app store instead of Stripe Checkout.
+  bool get usesStore => _store != null;
+
+  /// The store's price for a rite, once known.
+  String? get storePrice => _store?.ritePrice;
+
+  /// Store purchases ready to spend.
+  List<String> get _storeCredits => [
+        for (final t in _store?.unconsumedRites ?? const <String>[])
+          if (!_spentTokens.contains(t) && t != _spend?.receipt) t
+      ];
+
   /// Paid rites ready to spend.
-  int get credits => _credits.length;
+  int get credits => usesStore ? _storeCredits.length : _credits.length;
 
   /// Whether the next release is burnt on-chain (the practitioner's choice).
   bool get witness => _witness;
 
   /// The next release will be witnessed.
-  bool get willWitness => _witness && _credits.isNotEmpty;
+  bool get willWitness => _witness && credits > 0;
 
   RiteWitnessState get state => _state;
 
@@ -164,6 +206,34 @@ class RiteService extends ChangeNotifier {
 
   Uri _url(String path) => Uri.parse('$_api/api/v1/rite$path');
 
+  /// Pays through [store] from now on (Android). Its rite purchases are the
+  /// credits; confirmed ones are consumed whenever the store reports them.
+  void attachStore(RiteStore store) {
+    if (identical(_store, store)) return;
+    _store?.removeListener(_onStoreChanged);
+    _store = store..addListener(_onStoreChanged);
+    _onStoreChanged();
+  }
+
+  void _onStoreChanged() {
+    final store = _store;
+    if (store == null) return;
+    for (final t in store.unconsumedRites) {
+      if (_spentTokens.contains(t)) unawaited(store.consumeRite(t));
+    }
+    notifyListeners();
+  }
+
+  /// Opens the store's purchase sheet for one rite, or sets a [notice].
+  Future<void> buyInStore() async {
+    final store = _store;
+    _notice = null;
+    if (store == null || !await store.buyRite()) {
+      _notice = 'The store is not available right now. Please try again.';
+    }
+    notifyListeners();
+  }
+
   /// Restores credits and any unfinished payment or burn from the device.
   Future<void> load() => _load ??= _restore();
 
@@ -176,6 +246,9 @@ class RiteService extends ChangeNotifier {
     _credits
       ..clear()
       ..addAll(prefs.getStringList(_kCredits) ?? const []);
+    _spentTokens
+      ..clear()
+      ..addAll(prefs.getStringList(_kSpentTokens) ?? const []);
     _spend = RiteSpend.fromJson(_decode(prefs.getString(_kSpend)));
     final saved = _decode(prefs.getString(_kReceipts));
     _receipts
@@ -201,6 +274,8 @@ class RiteService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_kPending, _pending);
     await prefs.setStringList(_kCredits, _credits);
+    // Kept short: a consumed token never comes back from the store.
+    await prefs.setStringList(_kSpentTokens, _spentTokens.toList().reversed.take(100).toList());
     final spend = _spend;
     spend == null ? await prefs.remove(_kSpend) : await prefs.setString(_kSpend, jsonEncode(spend.toJson()));
     await prefs.setString(_kReceipts, jsonEncode([for (final r in _receipts.take(50)) r.toJson()]));
@@ -285,7 +360,8 @@ class RiteService extends ChangeNotifier {
     }
     final salt = newRiteSalt();
     _spend = RiteSpend(
-      sessionId: _credits.removeAt(0),
+      platform: usesStore ? 'android' : 'web',
+      receipt: usesStore ? _storeCredits.first : _credits.removeAt(0),
       saltHex: hexEncode(salt),
       commitment: riteCommitment(intent, salt),
     );
@@ -325,9 +401,9 @@ class RiteService extends ChangeNotifier {
         _url('/consecrate'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'platform': 'web',
+          'platform': spend.platform,
           'productId': riteProductId,
-          'receiptData': spend.sessionId,
+          'receiptData': spend.receipt,
           'commitment': spend.commitment,
         }),
       );
@@ -338,9 +414,11 @@ class RiteService extends ChangeNotifier {
           return _Outcome.burnt(body['signature'] as String, body['joules'] as int, body['explorerUrl'] as String);
         case 402:
         case 409:
-          return _Outcome.refused(res.statusCode == 402
-              ? 'This payment could not be used (it may have been refunded).'
-              : 'This payment was already used for another release.');
+          return _Outcome.refused(
+              res.statusCode == 402
+                  ? 'This payment could not be used (it may have been refunded).'
+                  : 'This payment was already used for another release.',
+              conflict: res.statusCode == 409);
         default:
           return null; // 202 pending, 5xx, rate limit: ask again.
       }
@@ -351,6 +429,13 @@ class RiteService extends ChangeNotifier {
 
   Future<void> _finish(RiteSpend spend, _Outcome outcome) async {
     _spend = null;
+    // A store purchase that burnt (or was already used) is spent: consume it.
+    // A refused one is left alone; the store still holds it.
+    final spentInStore = spend.platform != 'web' && (outcome.error == null || outcome.conflict);
+    if (spentInStore) {
+      _spentTokens.add(spend.receipt);
+      unawaited(_store?.consumeRite(spend.receipt));
+    }
     if (outcome.error != null) {
       _state = RiteWitnessState.failed;
       _notice = outcome.error;
@@ -401,8 +486,10 @@ class RiteService extends ChangeNotifier {
 }
 
 class _Outcome {
-  _Outcome.burnt(this.signature, this.joules, this.explorerUrl) : error = null;
-  _Outcome.refused(this.error)
+  _Outcome.burnt(this.signature, this.joules, this.explorerUrl)
+      : error = null,
+        conflict = false;
+  _Outcome.refused(this.error, {this.conflict = false})
       : signature = null,
         joules = null,
         explorerUrl = null;
@@ -411,4 +498,7 @@ class _Outcome {
   final int? joules;
   final String? explorerUrl;
   final String? error;
+
+  /// The payment had already been spent on another release.
+  final bool conflict;
 }
