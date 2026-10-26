@@ -121,8 +121,8 @@ class SceneStyle {
   double get brushWidth => weight * 4.2;
 
   /// Paints strokes with the sumi-e brush, each revealed to its fraction.
-  void drawStrokes(Canvas canvas, List<SigilStroke> strokes, List<double> fractions, {double opacity = 1}) =>
-      paintBrushStrokes(canvas, this, strokes, fractions, opacity: opacity);
+  void drawStrokes(Canvas canvas, List<SigilStroke> strokes, List<double> fractions, {double opacity = 1, int? seed}) =>
+      paintBrushStrokes(canvas, this, strokes, fractions, opacity: opacity, seed: seed);
 
   /// Draws a path as ink on rag paper: a soft wash under a crisp line.
   void drawInk(Canvas canvas, Path path, {double opacity = 1}) {

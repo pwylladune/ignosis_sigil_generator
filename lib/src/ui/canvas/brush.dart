@@ -25,7 +25,13 @@ class BrushStroke {
   BrushStroke._(this.stroke, this._contours, this.seed);
 
   /// Brush data for [stroke], computed once per stroke and cached.
-  factory BrushStroke.of(SigilStroke stroke) => _cache[stroke] ??= BrushStroke._build(stroke);
+  ///
+  /// [seed] fixes the brush's randomness (splatter, dry-brush pattern, belly
+  /// texture) to the stroke's identity. Pass it when a stroke's geometry moves
+  /// from frame to frame (the Rose's turning rings), otherwise the
+  /// position-derived seed would re-roll the brushwork every frame.
+  factory BrushStroke.of(SigilStroke stroke, {int? seed}) =>
+      _cache[stroke] ??= BrushStroke._build(stroke, seedOverride: seed);
 
   static final _cache = Expando<BrushStroke>('brush');
 
@@ -36,7 +42,7 @@ class BrushStroke {
   /// Sample spacing along the stroke, in scene units.
   static const _spacing = 1.6;
 
-  factory BrushStroke._build(SigilStroke stroke) {
+  factory BrushStroke._build(SigilStroke stroke, {int? seedOverride}) {
     final contours = <_Contour>[];
     var seed = 0x2545F491;
     for (final m in stroke.path.computeMetrics()) {
@@ -66,7 +72,7 @@ class BrushStroke {
       }
       contours.add(_segment(pts, normals, start, pts.length - 1, closed: start == 0 && m.isClosed));
     }
-    return BrushStroke._(stroke, contours, seed);
+    return BrushStroke._(stroke, contours, seedOverride ?? seed);
   }
 
   static _Contour _segment(List<Offset> pts, List<Offset> normals, int from, int to, {bool closed = false}) {
@@ -141,7 +147,7 @@ class BrushStroke {
     final upto = math.max(2, (f * (n - 1)).round() + 1);
     final key = (cSeed, upto, width);
     // Completed contours reuse their outline; the one being written is rebuilt.
-    final shape = c.cacheKey == key ? c.cached! : _outline(c, cSeed, upto, width, f);
+    final shape = c.cacheKey == key ? c.cached! : _outline(c, cSeed, upto, width, f, landing: ci == 0);
     if (upto == n) {
       c.cacheKey = key;
       c.cached = shape;
@@ -184,7 +190,7 @@ class BrushStroke {
     }
   }
 
-  _Shape _outline(_Contour c, int cSeed, int upto, double width, double f) {
+  _Shape _outline(_Contour c, int cSeed, int upto, double width, double f, {required bool landing}) {
     final pts = c.points, nrm = c.normals;
     final n = pts.length;
     final left = <Offset>[], right = <Offset>[];
@@ -244,7 +250,9 @@ class BrushStroke {
 
     // Splatter: 2–5 droplets thrown forward and aside where the brush lands.
     final droplets = <(Offset, double)>[];
-    if (stroke.role == StrokeRole.ink || stroke.role == StrokeRole.startMark) {
+    // Only where the brush first lands on the paper, not at each re-press of
+    // a corner (which made busy polylines spatter at every node).
+    if (landing && (stroke.role == StrokeRole.ink || stroke.role == StrokeRole.startMark)) {
       final rnd = SeededRandom(cSeed ^ 0x5bd1e995);
       final count = 2 + (rnd.nextDouble() * 4).floor();
       final dir = (pts[math.min(4, n - 1)] - pts.first);
@@ -280,11 +288,15 @@ class _Shape {
 }
 
 /// Paints strokes with the brush, each revealed to its fraction.
+///
+/// With [seed], stroke i's brushwork is seeded from `(seed, i)` rather than its
+/// position, so it stays put while the geometry moves.
 void paintBrushStrokes(Canvas canvas, SceneStyle style, List<SigilStroke> strokes, List<double> fractions,
-    {double opacity = 1}) {
+    {double opacity = 1, int? seed}) {
   final width = style.brushWidth;
   for (var i = 0; i < strokes.length && i < fractions.length; i++) {
     if (fractions[i] <= 0) continue;
-    BrushStroke.of(strokes[i]).paint(canvas, style, fractions[i], width, opacity: opacity);
+    final s = seed == null ? null : (seed * 31 + i * 7919 + 1) & 0x7FFFFFFF;
+    BrushStroke.of(strokes[i], seed: s).paint(canvas, style, fractions[i], width, opacity: opacity);
   }
 }

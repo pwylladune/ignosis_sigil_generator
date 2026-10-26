@@ -21,6 +21,9 @@ class RoseScene extends SigilScene {
   final RoseSigil sigil;
   final DuctusTimeline timeline;
 
+  /// Stable brush seed for this sigil (same intent, same brushwork).
+  late final int _brushSeed = kernel.normalized.codeUnits.fold(17, (h, c) => (h * 31 + c) & 0x7FFFFFFF);
+
   /// Base offset in radians; ring k starts `ratio_k · base` away from rest.
   static const _base = math.pi / 20;
   static const _directions = [1.0, -1.0, 1.0];
@@ -70,7 +73,9 @@ class RoseScene extends SigilScene {
 
     // Ink: rebuilt between the moving petals while writing, static once locked.
     final current = settled ? sigil : RoseCrossEngine().build(kernel, size, ringRotation: rotation);
-    style.drawStrokes(canvas, current.geometry.strokes, timeline.fractionsAt(t));
+    // The petals move while the sigil is written, so the brushwork is seeded
+    // from the intent, not from where the strokes happen to be this frame.
+    style.drawStrokes(canvas, current.geometry.strokes, timeline.fractionsAt(t), seed: _brushSeed);
   }
 
   static final _glyphs = <(String, double, int), TextPainter>{};

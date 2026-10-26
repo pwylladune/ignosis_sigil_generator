@@ -32,4 +32,17 @@ void main() {
       expect(a.pressureAt(u), b.pressureAt(u));
     }
   });
+
+  test('with a seed, brushwork stays put while the stroke moves (Rose rings)', () {
+    Path at(double dx) => Path()..moveTo(10 + dx, 20)..quadraticBezierTo(80 + dx, 0, 150 + dx, 60);
+    // Without a seed, the brush is seeded from position: a moved stroke re-rolls.
+    final moved = [for (final dx in [0.0, 3.0]) BrushStroke.of(SigilStroke(at(dx)))];
+    final rerolled = [0.1, 0.4, 0.7].any((u) => moved[0].pressureAt(u) != moved[1].pressureAt(u));
+    expect(rerolled, isTrue);
+    // With a seed, the same brushwork follows the stroke.
+    final seeded = [for (final dx in [0.0, 3.0]) BrushStroke.of(SigilStroke(at(dx)), seed: 4242)];
+    for (final u in [0.0, 0.1, 0.4, 0.7, 1.0]) {
+      expect(seeded[0].pressureAt(u), seeded[1].pressureAt(u));
+    }
+  });
 }
