@@ -3,8 +3,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { config } from './config.js';
-import { SolanaTreasuryService } from './services/solanaTreasury.js';
-import { ReceiptValidatorService } from './services/receiptValidator.js';
 import { PyreIndexerService } from './services/pyreIndexer.js';
 import { createIapRouter } from './routes/iap.js';
 import { createPyreRouter } from './routes/pyre.js';
@@ -22,8 +20,6 @@ export function createApp() {
   app.use('/api/', rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: 'draft-7', legacyHeaders: false }));
 
   // Initialize Core Services
-  const treasuryService = new SolanaTreasuryService();
-  const receiptValidator = new ReceiptValidatorService();
   const pyreIndexer = new PyreIndexerService();
 
   // Root info
@@ -42,7 +38,7 @@ export function createApp() {
   });
 
   // Mount Feature Routers
-  app.use('/api/v1/iap', createIapRouter(treasuryService, receiptValidator));
+  app.use('/api/v1/iap', createIapRouter());
   app.use('/api/v1/pyre', createPyreRouter(pyreIndexer));
 
   // JSON errors only: malformed bodies and unexpected failures never return
