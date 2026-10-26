@@ -452,6 +452,13 @@ Six reviewers took part: esoteric-researcher, research, ellie, code-reviewer, se
   - `flutter test`: 153 passed. That includes the engine tests, zoom gesture tests (double-tap ×2 keeps the tapped point fixed, scroll, no zoom on other systems) and new goldens `infinite` and `infinite_inverted`. Existing goldens are unchanged.
   - In the browser: zoom by double-click and scroll, Reset view, and Invert.
 
+### 6.12 The Compendium and the main-page purpose (2026-10-26)
+- **Purpose and ritual lines.** The main page states the purpose of the work above the intent field. Each system carries its ritual line (`SigilSystem.ritual`), shown under the chips. Both hide during the rite.
+- **The Compendium replaces the wiki.**
+  - Built from the chaos magic literature review in the vault by `tool/compendium/export.py`, into `assets/compendium/compendium.json`: 9 parts, 289 quotations from 187 works, 58 glossary terms, the study guide, a 165-entry bibliography and 47 authors' websites. It holds quotations, citations and links only.
+  - **Contradicts the review (§1.1, §1.2):** the review lists "Chaos-magic interview wiki" and the files `chaos_wiki_screen.dart` and `chaos_magic_wiki_data.dart`. These are removed, along with the codex articles. The Exegesis dialog stays.
+- **Verified.** `flutter analyze --fatal-infos` is clean. `flutter test`: 159 passed, 2 skipped. In the browser I opened the home, a part and the glossary.
+
 ### 6.4 Still open (beyond the checkboxes)
 - ~~Bundle ID decision~~ Done: `net.ignosis.studio` (8321ef6a).
 - Skin entitlements are cached client-side in `SharedPreferences`. That is acceptable for cosmetic non-consumables, but it can be edited on a rooted device.
