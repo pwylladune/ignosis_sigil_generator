@@ -2,7 +2,10 @@ import { DatabaseSync } from 'node:sqlite';
 
 export type RiteState = 'pending' | 'done' | 'failed';
 
-/** A paid web purchase (Stripe Checkout session) that buys one rite. */
+/**
+ * A paid purchase that buys one rite: a Stripe Checkout session (web), or a
+ * Play order (Android), whose ID is then both [sessionId] and [paymentIntent].
+ */
 export interface RiteCredit {
   sessionId: string;
   paymentIntent: string;

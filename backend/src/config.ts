@@ -43,6 +43,12 @@ export const config = {
   stripeRitePriceId: process.env.STRIPE_RITE_PRICE_ID || '',
   webOrigin: (process.env.WEB_ORIGIN || '').replace(/\/+$/, ''),
 
+  // Android rites (Google Play Billing): the service account JSON, from a Google
+  // Cloud project linked in Play Console with permission to view and manage
+  // orders. Without it, Android rites are refused. Off mainnet only Play test
+  // purchases are accepted; on mainnet only real ones.
+  googlePlayServiceAccount: process.env.GOOGLE_PLAY_SERVICE_ACCOUNT || '',
+
   // In-App Purchase Verification Credentials
   appleBundleId: process.env.APPLE_BUNDLE_ID || 'net.ignosis.studio',
   googlePackageName: process.env.GOOGLE_PACKAGE_NAME || 'net.ignosis.studio',

@@ -11,6 +11,7 @@ import { RiteLedger } from './services/riteLedger.js';
 import { RiteSweeper } from './services/riteSweeper.js';
 import { verifyRite } from './services/riteVerifier.js';
 import { StripeCreditVerifier, StripeGateway, StripeRiteGateway } from './services/stripeRite.js';
+import { GooglePlayGateway, PlayCreditVerifier, PlayGateway, PlayVoidedSync } from './services/playRite.js';
 import { createIapRouter } from './routes/iap.js';
 import { createPyreRouter } from './routes/pyre.js';
 import { PurchaseVerifier, RiteRouterDeps, createRiteRouter, recordInPyre } from './routes/rite.js';
@@ -35,6 +36,20 @@ function loadTreasury(): Keypair | null {
 /** The rite services an app is built from; any of them may be off. */
 export interface RiteDeps extends Pick<RiteRouterDeps, 'burns' | 'check' | 'stripe'> {
   sweeper?: RiteSweeper | null;
+  /** Android payments through Google Play; null when not configured. */
+  play?: { gateway: PlayGateway; ledger: RiteLedger } | null;
+  voidedSync?: PlayVoidedSync | null;
+}
+
+/** Google Play from configuration, or null (Android rites off). */
+export function playFromConfig(): PlayGateway | null {
+  if (!config.googlePlayServiceAccount) return null;
+  try {
+    return new GooglePlayGateway(config.googlePlayServiceAccount, config.googlePackageName);
+  } catch (e: any) {
+    console.error(`[play] Invalid GOOGLE_PLAY_SERVICE_ACCOUNT (${e.message}): Android rites off.`);
+    return null;
+  }
 }
 
 /** Stripe from configuration, or null (web payment off) if anything is missing or mismatched. */
@@ -69,11 +84,14 @@ export function riteFromConfig(): RiteDeps {
   const ledger = new RiteLedger(config.riteLedgerPath);
   const burns = new RiteBurnService(chain, ledger, { joules: config.riteJoules });
   const gateway = stripeFromConfig();
+  const play = playFromConfig();
   return {
     burns,
     check,
     stripe: gateway ? { gateway, ledger } : null,
     sweeper: new RiteSweeper(burns, ledger),
+    play: play ? { gateway: play, ledger } : null,
+    voidedSync: play ? new PlayVoidedSync(play, ledger) : null,
   };
 }
 
@@ -83,12 +101,22 @@ export interface AppDeps {
   rite?: RiteDeps;
 }
 
-/** Web purchases go to Stripe; store purchases to the store validator. */
-function routingVerifier(stripe: RiteDeps['stripe'], stores: PurchaseVerifier): PurchaseVerifier {
-  if (!stripe) return stores;
-  const web = new StripeCreditVerifier(stripe.gateway, stripe.ledger, config.riteProductIds[0]);
+/** Web purchases go to Stripe, Android to Google Play, the rest to the store validator. */
+export function routingVerifier(rite: RiteDeps, stores: PurchaseVerifier): PurchaseVerifier {
+  const web = rite.stripe && new StripeCreditVerifier(rite.stripe.gateway, rite.stripe.ledger, config.riteProductIds[0]);
+  const android =
+    rite.play &&
+    new PlayCreditVerifier(rite.play.gateway, rite.play.ledger, {
+      riteProductIds: config.riteProductIds,
+      testPurchasesOnly: config.solanaCluster !== 'mainnet-beta',
+    });
   return {
-    verifyReceipt: (p) => (p.platform === 'web' ? web.verify(p.receiptData) : stores.verifyReceipt(p)),
+    verifyReceipt: (p) =>
+      p.platform === 'web' && web
+        ? web.verify(p.receiptData)
+        : p.platform === 'android' && android
+          ? android.verify(p.receiptData, p.productId)
+          : stores.verifyReceipt(p),
   };
 }
 
@@ -133,7 +161,7 @@ export function createApp(deps: AppDeps = {}) {
   app.use(
     '/api/v1/rite',
     createRiteRouter({
-      verifier: deps.verifier ?? routingVerifier(rite.stripe, new ReceiptValidatorService()),
+      verifier: deps.verifier ?? routingVerifier(rite, new ReceiptValidatorService()),
       burns: rite.burns,
       check: rite.check,
       stripe: rite.stripe,
@@ -159,11 +187,14 @@ if (isMainModule && process.env.NODE_ENV !== 'test') {
   const rite = riteFromConfig();
   const app = createApp({ rite });
   rite.sweeper?.start();
+  rite.voidedSync?.start();
   app.listen(config.port, () => {
     console.log(`\n======================================================`);
     console.log(`🔥 IGNOSIS RELAY SERVER LISTENING ON PORT ${config.port}`);
     console.log(`🌐 Cluster: ${config.solanaCluster} | Joule mint: ${config.jouleMintAddress || 'none'}`);
-    console.log(`🕯  Rites: ${rite.burns ? 'on' : 'off'} | Web payment: ${rite.stripe ? 'on' : 'off'}`);
+    console.log(
+      `🕯  Rites: ${rite.burns ? 'on' : 'off'} | Web payment: ${rite.stripe ? 'on' : 'off'} | Android: ${rite.play ? 'on' : 'off'}`
+    );
     console.log(`======================================================\n`);
   });
 }
