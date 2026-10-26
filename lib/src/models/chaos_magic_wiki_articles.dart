@@ -182,12 +182,12 @@ class ChaosMagicWikiArticles {
         'IGNOSIS is drawn in Pen & Ink: paper for the plate, ink for the strokes, hairlines for everything else, and one '
             'vermilion accent. A sigil is a private instrument, and an instrument should not perform. So the studio is '
             'quiet by design, and almost nothing moves that the mathematics does not move.',
-        'The vermilion is a role, not merely a colour. Every skin, light or dark, must honour a seal colour, red on paper '
-            'and a brighter red in the dark, and the bind point, the kernel letters and the focus ring all wear it. A skin '
-            'may change everything else; it may not erase the seal.',
+        'The vermilion is a role, not merely a colour: red on paper and a brighter red in the dark, worn by the bind '
+            'point, the kernel letters and the focus ring. Everything else about the page may change; nothing may erase '
+            'the seal.',
         'The studio is built to WCAG 2.2: every text colour is measured against its background, small text has its own '
-            'tertiary ink, labels never fall below 12 points, touch targets are 44 points, and dialogs take the skin’s own '
-            'colours, so a meditative rite in a dark room is never interrupted by a white panel.',
+            'tertiary ink, labels never fall below 12 points, touch targets are 44 points, and dialogs follow the page’s '
+            'own colours, so a meditative rite in a dark room is never interrupted by a white panel.',
       ],
     ),
     WikiArticle(
@@ -255,7 +255,7 @@ class ChaosMagicWikiArticles {
         'The burn knows the sigil. Fire starts at the end of the last stroke and runs back along the ink as along a fuse, '
             'branching where strokes touch and creeping slowly across bare paper to reach ink that does not. The seal is '
             'unwritten in the reverse of its writing. A shader draws the char band and the glowing rim: a blackbody ramp on '
-            'dark skins, and on light paper a char-dominant edge, because nothing can glow brighter than white paper. '
+            'dark paper, and on light paper a char-dominant edge, because nothing can glow brighter than white paper. '
             'Embers rise on a curl-noise field so the smoke curls rather than slides.',
         'Then silence: the empty plate held for two seconds, Spare’s “Does not matter—need not be” (a line about '
             'non-resistance, not a rule about sigils), and an offer to banish with laughter, as both Spare and Carroll advise.',
@@ -284,8 +284,6 @@ class ChaosMagicWikiArticles {
             'leaves it, and without the salt nobody, the studio included, can connect the burn to the words.',
         'What the burn is not: an investment, a currency, a sacrifice of money. A token no one can own destroys no '
             'value. The chain is a public witness, permanent and indifferent, which is perhaps the most a ledger can be.',
-        'Skins are free while the studio has no store products. When they are sold, they will unlock only on a payment '
-            'the store has completed, never on a simulated or failed one.',
       ],
       sources: [
         'Energy: Solana Foundation, Energy Use Report (September 2022): 3,290 J per non-voting transaction. Paper: '
