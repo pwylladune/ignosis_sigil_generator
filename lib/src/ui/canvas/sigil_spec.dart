@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../../engines/kamea_engine.dart';
+import '../../engines/ring_cipher_engine.dart';
 import '../../models/intent_kernel.dart';
 import '../../models/sigil_state.dart';
 
@@ -24,10 +25,18 @@ class SigilSpec {
   bool sameSettings(SigilSpec o) =>
       system == o.system && kameaType == o.kameaType && symmetryFolds == o.symmetryFolds && symmetryGroup == o.symmetryGroup;
 
-  @override
-  bool operator ==(Object other) =>
-      other is SigilSpec && sameSettings(other) && other.kernel.normalized == kernel.normalized && other.kernel.reducedConsonants == kernel.reducedConsonants;
+  /// Extra text that changes the sigil: the Ring Cipher also traces ',' and '.'.
+  String get _extra => system == SigilSystem.ringCipher ? RingCipherEngine.cipherText(kernel.rawIntent) : '';
 
   @override
-  int get hashCode => Object.hash(kernel.normalized, kernel.reducedConsonants, system, kameaType, symmetryFolds, symmetryGroup);
+  bool operator ==(Object other) =>
+      other is SigilSpec &&
+      sameSettings(other) &&
+      other.kernel.normalized == kernel.normalized &&
+      other.kernel.reducedConsonants == kernel.reducedConsonants &&
+      other._extra == _extra;
+
+  @override
+  int get hashCode =>
+      Object.hash(kernel.normalized, kernel.reducedConsonants, system, kameaType, symmetryFolds, symmetryGroup, _extra);
 }

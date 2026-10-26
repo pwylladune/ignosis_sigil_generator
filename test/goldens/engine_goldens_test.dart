@@ -21,6 +21,7 @@ void main() {
     ('rose_cross', SigilSystem.roseCross, SymmetryGroup.cyclic, 4),
     ('chladni', SigilSystem.chladni, SymmetryGroup.cyclic, 4),
     ('cyber_chaos_c4', SigilSystem.cyberChaos, SymmetryGroup.cyclic, 4),
+    ('ring_cipher', SigilSystem.ringCipher, SymmetryGroup.cyclic, 4),
   ];
 
   for (final (name, system, group, folds) in cases) {

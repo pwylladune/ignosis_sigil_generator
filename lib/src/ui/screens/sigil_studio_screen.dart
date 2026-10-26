@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../engines/kamea_engine.dart';
+import '../../engines/ring_cipher_engine.dart';
 import '../../models/hebrew_letters.dart';
 import '../../models/intent_kernel.dart';
 import '../../models/sigil_state.dart';
@@ -464,7 +465,11 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                       runSpacing: 4,
                       children: [
                         Text(
-                          _tracesHebrew ? 'HEBREW: ' : 'KERNEL: ',
+                          _tracesHebrew
+                              ? 'HEBREW: '
+                              : _state.system == SigilSystem.ringCipher
+                                  ? 'PHRASE: '
+                                  : 'KERNEL: ',
                           style: TextStyle(
                             color: theme.inkTertiary,
                             fontSize: 11,
@@ -475,7 +480,9 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                         Text(
                           _tracesHebrew
                               ? transliterate(_kernel.normalized).map((l) => l.glyph).join()
-                              : _kernel.reducedConsonants.split('').join(' · '),
+                              : _state.system == SigilSystem.ringCipher
+                                  ? RingCipherEngine.cipherText(_kernel.rawIntent).split('').join(' · ')
+                                  : _kernel.reducedConsonants.split('').join(' · '),
                           style: TextStyle(
                             color: theme.seal,
                             fontSize: 11,

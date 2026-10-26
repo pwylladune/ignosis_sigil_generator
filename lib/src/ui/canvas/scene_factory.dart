@@ -3,12 +3,14 @@ import '../../engines/chladni_engine.dart';
 import '../../engines/cyber_chaos_engine.dart';
 import '../../engines/kamea_engine.dart';
 import '../../engines/rose_cross_engine.dart';
+import '../../engines/ring_cipher_engine.dart';
 import '../../engines/spare_monogram_engine.dart';
 import '../../geometry/geometry_cache.dart';
 import '../../models/sigil_state.dart';
 import 'chaos_scene.dart';
 import 'chladni_scene.dart';
 import 'kamea_scene.dart';
+import 'ring_cipher_scene.dart';
 import 'rose_scene.dart';
 import 'scene.dart';
 import 'spare_scene.dart';
@@ -19,6 +21,7 @@ final _chladniCache = GeometryCache<ChladniSigil>();
 final _roseCache = GeometryCache<RoseSigil>();
 final _spareCache = GeometryCache<SpareSigil>(capacity: 12);
 final _chaosCache = GeometryCache<ChaosSigil>(capacity: 8);
+final _ringCache = GeometryCache<RingCipherSigil>();
 
 /// Builds the scene for [spec] at canvas [size], starting at [startTime].
 ///
@@ -39,6 +42,9 @@ SigilScene buildScene(SigilSpec spec, Size size, double startTime, {SigilScene? 
     case SigilSystem.cyberChaos:
       final sigil = _chaosCache.putIfAbsent(key, () => CyberChaosEngine().build(spec.kernel, size, symmetryFolds: spec.symmetryFolds));
       return ChaosScene(sigil, startTime: startTime);
+    case SigilSystem.ringCipher:
+      final sigil = _ringCache.putIfAbsent(key, () => RingCipherEngine().build(spec.kernel, size));
+      return RingCipherScene(sigil, startTime: startTime);
     case SigilSystem.spare:
       final sigil = _spareCache.putIfAbsent(
           key, () => SpareMonogramEngine().build(spec.kernel, size, symmetry: spec.symmetryFolds, group: spec.symmetryGroup));
