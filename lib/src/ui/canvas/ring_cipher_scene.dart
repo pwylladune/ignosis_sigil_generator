@@ -5,7 +5,7 @@ import '../../geometry/sigil_geometry.dart';
 import '../../motion/ductus.dart';
 import 'scene.dart';
 
-/// Ring Cipher: the pen fills each band at constant speed from one letter's
+/// Circumlocution (the Ring Cipher): the pen fills each band at constant speed from one letter's
 /// spoke to the next, then steps out a ring and carries on, so the phrase is
 /// written outward from the hub. Then stillness.
 class RingCipherScene extends SigilScene {

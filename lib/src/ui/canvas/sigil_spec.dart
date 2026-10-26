@@ -25,7 +25,7 @@ class SigilSpec {
   bool sameSettings(SigilSpec o) =>
       system == o.system && kameaType == o.kameaType && symmetryFolds == o.symmetryFolds && symmetryGroup == o.symmetryGroup;
 
-  /// Extra text that changes the sigil: the Ring Cipher also traces ',' and '.'.
+  /// Extra text that changes the sigil: Circumlocution also traces ',' and '.'.
   String get _extra => system == SigilSystem.ringCipher ? RingCipherEngine.cipherText(kernel.rawIntent) : '';
 
   @override

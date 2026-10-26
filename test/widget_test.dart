@@ -17,6 +17,15 @@ void main() {
     expect(find.textContaining('\$IGNOSIS'), findsNothing);
   });
 
+  testWidgets('Circumlocution is the default system and comes first', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(const IgnosisApp());
+    final chips = tester.widgetList<ChoiceChip>(find.byType(ChoiceChip)).toList();
+    expect((chips.first.label as Text).data, 'Circumlocution');
+    expect(chips.first.selected, isTrue);
+    expect(find.text('PHRASE: '), findsOneWidget);
+  });
+
   testWidgets('a saved premium skin is not applied without an entitlement', (tester) async {
     SharedPreferences.setMockInitialValues({'ignosis_selected_skin': 'chaos'});
     await tester.pumpWidget(const IgnosisApp());

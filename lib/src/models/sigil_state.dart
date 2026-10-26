@@ -1,12 +1,13 @@
 import '../engines/kamea_engine.dart';
 
+/// Sigil systems, in the order the studio offers them (the first is the default).
 enum SigilSystem {
+  ringCipher('Circumlocution', 'The phrase traced outward ring by ring between letter spokes (IGNOSIS’s own)'),
   spare('Monogram (after Spare)', 'Letters merged into one glyph as in Spare (1913); the radial symmetry is IGNOSIS’s own'),
   kamea('Planetary Kamea', 'Agrippa’s planetary magic squares (Saturn to Luna), traced as the Golden Dawn did'),
   roseCross('Golden Dawn Rose', 'The 22-petal rose of the Golden Dawn Rose Cross lamen (3 · 7 · 12)'),
   chladni('Cymatic Resonance', '2D acoustic Chladni plate vibration nodal field'),
-  cyberChaos('Cyber Chaos', 'SHA-256 seeded Clifford strange attractor'),
-  ringCipher('Ring Cipher', 'The phrase traced outward ring by ring between letter spokes (IGNOSIS’s own)');
+  cyberChaos('Cyber Chaos', 'SHA-256 seeded Clifford strange attractor');
 
   final String title;
   final String description;
@@ -39,7 +40,7 @@ class SigilState {
 
   const SigilState({
     this.rawIntent = 'I COMMAND RADIANT CLARITY',
-    this.system = SigilSystem.spare,
+    this.system = SigilSystem.ringCipher,
     this.kameaType = PlanetaryKameaType.sol,
     this.symmetryFolds = 4,
     this.symmetryGroup = SymmetryGroup.cyclic,

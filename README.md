@@ -7,10 +7,11 @@ for iOS, Android and the web, drawn in a minimal Pen & Ink style with a vermilio
 options. **Nothing moves unless the math moves it.** Every animation is the time evolution of the
 function that made the symbol.
 
-## The five systems
+## The six systems
 
 | System | Mathematics | Motion |
 |---|---|---|
+| **Circumlocution** (default) | The whole phrase on a wheel of 28 spokes (A–Z, ',' and '.'): each arc fills its ring from one letter's spoke to the next, the short way round, then steps out a ring (IGNOSIS's own, from a hand-drawn wheel) | The pen fills each band at constant speed, writing the phrase outward from the hub |
 | **Monogram (after Spare)** | Repeated letters struck out (Carroll; optionally vowels too, a modern convention) → radicals on one shared armature, coincident strokes merged; the domain is replicated by Cₙ or Dₙ (the symmetry is IGNOSIS's own) | The domain is written, then each copy turns (and in Dₙ flips) into place |
 | **Planetary Kamea** | Every letter → Hebrew (Golden Dawn / *777* transliteration, digraphs first) → gematria → Aiq Bekar reduction into Agrippa's square (Saturn 3×3 … Luna 9×9); repeats loop | The pen traverses cell to cell at constant speed; numbers glow; every row, column and diagonal lights to the magic constant M |
 | **Golden Dawn Rose** | The 22-petal rose of the Rose Cross lamen (3 mothers, 7 doubles, 12 simples) in the lamen's order and direction | Rings counter-rotate in ratio 3 : 7 : 12 and lock as the last stroke lands |

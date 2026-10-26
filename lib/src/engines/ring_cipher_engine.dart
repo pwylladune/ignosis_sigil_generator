@@ -45,7 +45,7 @@ class RingCipherSigil {
   double ringRadius(int k) => innerRadius + (k + 0.5) * spacing;
 }
 
-/// The Ring Cipher: a wheel of 28 spokes (A–Z, ',' and '.') and concentric
+/// Circumlocution (code name: Ring Cipher): a wheel of 28 spokes (A–Z, ',' and '.') and concentric
 /// rings. The phrase is traced outward: starting on the innermost ring at the
 /// first letter's spoke, each arc fills its ring to the next letter's spoke,
 /// the short way round; then the pen steps out one ring and continues from

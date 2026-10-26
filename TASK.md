@@ -362,6 +362,12 @@ Six reviewers took part: esoteric-researcher, research, ellie, code-reviewer, se
 - The Rose middle ring's Kaph/Tav order differs between secondary sources. King-scale spectral order was used; check against the *Equinox* I:3 plate.
 - Tracing every letter of a full sentence (Golden Dawn practice was for names) makes busy Kamea and Rose sigils. Consider a "trace reduced kernel" option.
 
+### 6.7 Brush, Circumlocution and web publishing (2026-10-25)
+- **Sumi-e brush (a2dedca9, 725162e2):** Monogram, Kamea and Rose strokes are painted with a pressure-profiled sumi-e brush (Okami-style), driven by the stroke's minimum-jerk speed. It has kasure, bleed and splatter where the brush lands. Brushwork is seeded from stroke identity, so the Rose's moving strokes don't re-roll it each frame.
+- **Circumlocution (a3884408, 0fccdb01, plus this commit):** a new default system, from the user's hand-drawn wheel. The whole phrase is traced on 28 spokes, ring by ring outward, each arc taking the shorter way round. The code name is `ringCipher`.
+- **Netlify:** project `ignosis-studio`, linked through `netlify.toml` (static `build/web`, no build command). Drafts have been verified; production publishing and the custom domain wait on the user. Release builds log two "Uncaught Error" lines from Flutter's JS loader. They are harmless, their source isn't found, and Dart error hooks don't see them.
+- **Web IAP (0627b652):** the store plugin is never touched on the web.
+
 ### 6.4 Still open (beyond the checkboxes)
 - ~~Bundle ID decision~~ Done: `net.ignosis.studio` (8321ef6a).
 - Skin entitlements are cached client-side in `SharedPreferences`. That is acceptable for cosmetic non-consumables, but it can be edited on a rooted device.

@@ -491,7 +491,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                             letterSpacing: 1.8,
                           ),
                         ),
-                        // The Ring Cipher traces the whole phrase: nothing is reduced.
+                        // Circumlocution traces the whole phrase: nothing is reduced.
                         if (_state.system != SigilSystem.ringCipher)
                           TextButton(
                             // TextButton keeps a 48 pt hit area around the small link.
