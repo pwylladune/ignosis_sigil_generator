@@ -368,6 +368,32 @@ Six reviewers took part: esoteric-researcher, research, ellie, code-reviewer, se
 - **Netlify:** project `ignosis-studio`, linked through `netlify.toml` (static `build/web`, no build command). Drafts have been verified; production publishing and the custom domain wait on the user. Release builds log two "Uncaught Error" lines from Flutter's JS loader. They are harmless, their source isn't found, and Dart error hooks don't see them.
 - **Web IAP (0627b652):** the store plugin is never touched on the web.
 
+### 6.8 The Joule token (2026-10-25, uncommitted, awaiting review)
+- **Direction changed.** The user directs that the on-chain burn be the point of the app. This supersedes §2's recommendation (option B, no token) and the vault ADR `2026-10-25-ignosis-v1-no-token`. The new ADR is `2026-10-25-ignosis-joule-token`.
+- **Token.** IGNOSIS Joule is a Token-2022 mint with the NonTransferable extension, 0 decimals and 10¹² supply. Mint authority is revoked and there is no freeze authority. The whole supply sits in the treasury's account; nobody else can hold it, and the chain refuses transfers (error 0x25).
+- **Rite.** Each verified purchase burns **1618 J**, after φ (1.618…). That is about a 1″ square of heavy card (about 155 gsm), or two 1″ squares of 80 gsm paper at about 830 J each. The burn carries the memo `IGNOSIS:v1:<SHA-256("IGNOSIS:v1" ‖ salt ‖ intent)>`. One Solana transaction itself costs about 3,290 J (Solana Foundation, September 2022).
+- **Backend.**
+  - `routes/rite.ts`: `POST /api/v1/rite/consecrate` and `GET /api/v1/rite/:signature`.
+  - `services/riteBurn.ts`: a sign-and-record-before-send fulfilment with an at-most-once burn per purchase.
+  - `riteLedger.ts`: SQLite (`node:sqlite`).
+  - `riteVerifier.ts`: the on-chain check.
+  - `tools/createJouleMint.ts`: the mint script, which refuses mainnet.
+  - The Ignition Pack treasury *transfer* service is deleted.
+  - The Global Pyre stats count each burn once. A repeated request for the same purchase no longer adds it again; the stricter route test caught this.
+- **Verified.**
+  - `npm test`: the existing suite, plus 9 fulfilment scenarios (lost, rejected, hidden and concurrent sends, restart, random faults), plus the route tests.
+  - Three mutations of the retry logic are each caught.
+  - `tools/devnetRite.ts` passes end to end on a local validator: confirmed burn, on-chain check, supply −1618, retry idempotent, transfer refused.
+- **Still open.**
+  - ~~Devnet run~~ **Done.**
+    - Mint `2Aj4PVH2RoxdQScMHkvjzPR4whMZiGUWwvZoZyHMjwNA`; treasury `7UULBCHy16LmjjiGY3F4UvkUTuHDRqrP2MtEoKkbHioK` (key in the gitignored `backend/treasury.keypair.json`).
+    - First rite: `3z8AGqQ4erPPkr7V1YvjTbxxoE1pkWqjniZ6UcJZ1VqhNU3cwC6s55QGDqoN6qizior5WiMeep31hQBmjLuBDEVZ`.
+    - Supply fell by 1618, the retry was idempotent, and the transfer was refused.
+  - Store receipt verification (App Store Server API, Play Developer API) and a web card processor are not built; until they are, `/consecrate` refuses every purchase (402).
+  - The Flutter client is not built: device-side salt and commitment, calling `/consecrate`, showing and verifying the burn, and seeding the burn animation from the signature.
+  - `RITE_LEDGER_PATH` must point at a writable volume in Docker.
+  - Mainnet needs a KMS-held treasury key.
+
 ### 6.4 Still open (beyond the checkboxes)
 - ~~Bundle ID decision~~ Done: `net.ignosis.studio` (8321ef6a).
 - Skin entitlements are cached client-side in `SharedPreferences`. That is acceptable for cosmetic non-consumables, but it can be edited on a rooted device.
