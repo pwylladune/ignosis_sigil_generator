@@ -14,17 +14,19 @@ import 'package:ignosis_sigil_generator/src/ui/theme/sigil_skins.dart';
 ///   flutter test --tags golden --update-goldens
 void main() {
   const intent = 'I COMMAND RADIANT CLARITY';
-  final cases = <(String, SigilSystem, SymmetryGroup, int)>[
-    ('spare_c4', SigilSystem.spare, SymmetryGroup.cyclic, 4),
-    ('spare_d5', SigilSystem.spare, SymmetryGroup.dihedral, 5),
-    ('kamea_sol', SigilSystem.kamea, SymmetryGroup.cyclic, 4),
-    ('rose_cross', SigilSystem.roseCross, SymmetryGroup.cyclic, 4),
-    ('chladni', SigilSystem.chladni, SymmetryGroup.cyclic, 4),
-    ('cyber_chaos_c4', SigilSystem.cyberChaos, SymmetryGroup.cyclic, 4),
-    ('ring_cipher', SigilSystem.ringCipher, SymmetryGroup.cyclic, 4),
+  final cases = <(String, SigilSystem, SymmetryGroup, int, bool)>[
+    ('spare_c4', SigilSystem.spare, SymmetryGroup.cyclic, 4, false),
+    ('spare_d5', SigilSystem.spare, SymmetryGroup.dihedral, 5, false),
+    ('kamea_sol', SigilSystem.kamea, SymmetryGroup.cyclic, 4, false),
+    ('rose_cross', SigilSystem.roseCross, SymmetryGroup.cyclic, 4, false),
+    ('chladni', SigilSystem.chladni, SymmetryGroup.cyclic, 4, false),
+    ('cyber_chaos_c4', SigilSystem.cyberChaos, SymmetryGroup.cyclic, 4, false),
+    ('ring_cipher', SigilSystem.ringCipher, SymmetryGroup.cyclic, 4, false),
+    ('infinite', SigilSystem.infinite, SymmetryGroup.cyclic, 4, false),
+    ('infinite_inverted', SigilSystem.infinite, SymmetryGroup.cyclic, 4, true),
   ];
 
-  for (final (name, system, group, folds) in cases) {
+  for (final (name, system, group, folds, inverted) in cases) {
     testWidgets('golden: $name', (tester) async {
       tester.view.physicalSize = const Size(360, 360);
       tester.view.devicePixelRatio = 1;
@@ -42,6 +44,7 @@ void main() {
                 kameaType: PlanetaryKameaType.sol,
                 symmetryFolds: folds,
                 symmetryGroup: group,
+                inverted: inverted,
               ),
               skin: skin,
               burn: SigilBurnController(),

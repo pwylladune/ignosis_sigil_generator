@@ -7,7 +7,8 @@ enum SigilSystem {
   kamea('Planetary Kamea', 'Agrippa’s planetary magic squares (Saturn to Luna), traced as the Golden Dawn did'),
   roseCross('Golden Dawn Rose', 'The 22-petal rose of the Golden Dawn Rose Cross lamen (3 · 7 · 12)'),
   chladni('Cymatic Resonance', '2D acoustic Chladni plate vibration nodal field'),
-  cyberChaos('Cyber Chaos', 'SHA-256 seeded Clifford strange attractor');
+  cyberChaos('Cyber Chaos', 'SHA-256 seeded Clifford strange attractor'),
+  infinite('The Infinite', 'The Julia set of z² + c, with c chosen by the intent; zoom without end (IGNOSIS’s own)');
 
   final String title;
   final String description;
