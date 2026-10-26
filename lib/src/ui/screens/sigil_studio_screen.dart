@@ -46,6 +46,10 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
 
   SigilSkinTheme get _skinTheme => SigilSkinTheme.getSkin(_previewSkinId ?? _currentSkinId);
 
+  /// The purpose of the work, shown above the intent (the owner's words).
+  static const _purpose = 'IGNOSIS transforms intent into a sigil meant for consumption. Choose your ritual. '
+      'Charge the seal with your breath. Burn it. Forget.';
+
   SigilState _state = const SigilState();
 
   /// The Infinite: drawn by the inverse map, and the zoomed window (null = whole set).
@@ -462,6 +466,15 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Hidden during the rite, like the kernel: the seal is the only focus.
+                  if (!_charging && !_isBurning)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        _purpose,
+                        style: TextStyle(color: theme.inkTertiary, fontSize: 12.5, height: 1.4),
+                      ),
+                    ),
                   TextField(
                     controller: _textController,
                     // A released seal burns to the end; the intent is fixed meanwhile.
@@ -643,6 +656,20 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                 }).toList(),
               ),
             ),
+
+            // The selected system's ritual, in a line or two.
+            if (!_charging && !_isBurning)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                child: Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    _state.system.ritual,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: theme.inkSecondary, fontSize: 12.5, height: 1.4, fontStyle: FontStyle.italic),
+                  ),
+                ),
+              ),
 
             _buildSystemOptions(theme),
 

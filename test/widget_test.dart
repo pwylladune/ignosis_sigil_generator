@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ignosis_sigil_generator/main.dart';
 import 'package:ignosis_sigil_generator/src/models/revenue_schema.dart';
+import 'package:ignosis_sigil_generator/src/models/sigil_state.dart';
 import 'package:ignosis_sigil_generator/src/services/iap_service.dart';
 import 'package:ignosis_sigil_generator/src/ui/theme/sigil_skins.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,6 +25,22 @@ void main() {
     expect((chips.first.label as Text).data, 'Circumlocution');
     expect(chips.first.selected, isTrue);
     expect(find.text('PHRASE: '), findsOneWidget);
+  });
+
+  testWidgets('the main page states the purpose and the selected ritual', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(const IgnosisApp());
+    expect(find.textContaining('IGNOSIS transforms intent into a sigil meant for consumption.'), findsOneWidget);
+    expect(find.text(SigilSystem.ringCipher.ritual), findsOneWidget);
+    // Choosing another ritual changes the line under the chips.
+    final chip = find.widgetWithText(ChoiceChip, 'Cyber Chaos');
+    await tester.ensureVisible(chip);
+    await tester.tap(chip);
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.text(SigilSystem.cyberChaos.ritual), findsOneWidget);
+    expect(find.text(SigilSystem.ringCipher.ritual), findsNothing);
+    // Every system has its own line.
+    expect(SigilSystem.values.map((s) => s.ritual).toSet(), hasLength(SigilSystem.values.length));
   });
 
   testWidgets('every skin is free while none are sold', (tester) async {
