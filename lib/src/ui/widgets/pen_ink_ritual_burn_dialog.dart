@@ -24,12 +24,16 @@ class PenInkRitualBurnDialog extends StatefulWidget {
   /// Active skin, so the rite does not flash a white panel on a dark skin.
   final SigilSkinTheme theme;
 
+  /// Optional line above the release (the on-chain witness, when enabled).
+  final Widget? witness;
+
   const PenInkRitualBurnDialog({
     super.key,
     required this.theme,
     required this.onBurnComplete,
     this.breath,
     this.targetCycles = 7,
+    this.witness,
   });
 
   @override
@@ -216,6 +220,10 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
                   style: TextStyle(color: theme.inkTertiary, fontSize: 12, height: 1.4),
                 ),
               ),
+              if (widget.witness != null) ...[
+                const SizedBox(height: 10),
+                Padding(padding: const EdgeInsets.only(right: 12), child: widget.witness),
+              ],
               const SizedBox(height: 12),
               // Release: always available, emphasised once the breaths are done.
               Padding(

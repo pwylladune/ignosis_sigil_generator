@@ -1,12 +1,15 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../config/feature_flags.dart';
 import '../../engines/kamea_engine.dart';
 import '../../engines/ring_cipher_engine.dart';
 import '../../models/hebrew_letters.dart';
 import '../../models/intent_kernel.dart';
 import '../../models/sigil_state.dart';
 import '../../services/iap_service.dart';
+import '../../services/rite/rite_service.dart';
 import '../../services/sigil_print_service.dart';
 import '../../services/universal_export_service.dart';
 import '../../motion/breath.dart';
@@ -15,6 +18,7 @@ import '../canvas/sigil_spec.dart';
 import '../theme/sigil_skins.dart';
 import '../widgets/pay_schema_modal.dart';
 import '../widgets/pen_ink_ritual_burn_dialog.dart';
+import '../widgets/rite_witness.dart';
 import '../widgets/ritual_exegesis_modal.dart';
 import '../widgets/skin_selector_modal.dart';
 import 'chaos_wiki_screen.dart';
@@ -48,6 +52,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
     _textController = TextEditingController(text: _state.rawIntent);
     IapService.instance.addListener(_enforceSkinEntitlement);
     _restoreSkin();
+    if (kEnableRite) unawaited(RiteService.instance.load());
   }
 
   static const _skinPrefsKey = 'ignosis_selected_skin';
@@ -171,6 +176,9 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
 
   void _triggerLocalBurn() {
     if (_isBurning) return;
+    // The on-chain witness takes the intent's commitment now, before the
+    // intent is cleared; the paper burns locally either way.
+    if (kEnableRite) unawaited(RiteService.instance.releaseWith(_state.rawIntent));
     setState(() => _isBurning = true);
     _burn.ignite();
   }
@@ -235,6 +243,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
         theme: _skinTheme,
         onBurnComplete: _triggerLocalBurn,
         breath: _breath,
+        witness: kEnableRite ? RiteWitnessRow(theme: _skinTheme, service: RiteService.instance) : null,
       )),
     ).whenComplete(() {
       if (mounted) setState(() => _charging = false);
@@ -536,7 +545,10 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                     ),
                     child: RepaintBoundary(
                       child: _state.isIncinerated
-                          ? _IncineratedPlate(theme: theme)
+                          ? _IncineratedPlate(
+                              theme: theme,
+                              witness: kEnableRite ? RiteWitnessRecord(theme: theme, service: RiteService.instance) : null,
+                            )
                           : Semantics(
                               image: true,
                               label: _kernel.isEmpty ? 'Empty plate' : '${_state.system.title} sigil',
@@ -666,9 +678,12 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
 
 /// The empty plate after combustion: silence, then the banishing line.
 class _IncineratedPlate extends StatefulWidget {
-  const _IncineratedPlate({required this.theme});
+  const _IncineratedPlate({required this.theme, this.witness});
 
   final SigilSkinTheme theme;
+
+  /// The release's on-chain record, when the rite is enabled.
+  final Widget? witness;
 
   @override
   State<_IncineratedPlate> createState() => _IncineratedPlateState();
@@ -719,6 +734,7 @@ class _IncineratedPlateState extends State<_IncineratedPlate> {
                   style: TextStyle(color: theme.accent, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.4),
                 ),
               ),
+              if (widget.witness != null) ...[const SizedBox(height: 6), widget.witness!],
             ],
           ),
         ),
