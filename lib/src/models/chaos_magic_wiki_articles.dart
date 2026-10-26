@@ -66,8 +66,9 @@ class ChaosMagicWikiArticles {
             'and the eye loses the sentence in the rings well before the hand has finished writing it.',
       ],
       sources: [
-        'Provenance: IGNOSIS’s own (2026), from a wheel drawn by hand by the app’s maker. It belongs to no historical '
-            'tradition; from the older alphabet wheels and cipher discs it takes only the habit of setting letters on a circle.',
+        'Provenance: IGNOSIS’s own (2026), first drawn by hand as a wheel of letters filling outward. It belongs to no '
+            'historical tradition; from the older alphabet wheels and cipher discs it takes only the habit of setting letters '
+            'on a circle. It is the studio’s default because it is the only system that keeps every word.',
         'The name is meant plainly: circumlocution is speech that goes round, and this is the system in which going round '
             'is the whole of the method.',
       ],
@@ -178,17 +179,15 @@ class ChaosMagicWikiArticles {
       title: 'Pen & Ink, and the Vermilion Seal',
       summary: 'Why the studio looks the way it does, and the one colour it will not give up.',
       body: [
-        'The first rule of the project, set before a line of the present code was written, was to keep the visual '
-            'identity: Pen & Ink, minimal, with a vermilion accent. A sigil is a private instrument, and an instrument '
-            'should not perform. So the plate is paper, the strokes are ink, the chrome is hairline, and almost nothing '
-            'moves that the mathematics does not move.',
-        'The vermilion survived a design review intact by being promoted from a colour to a role. Several premium skins '
-            'had made their accent the same as their ink, which quietly erased the bind point. The fix was a dedicated seal '
-            'colour, red on paper and a brighter red in the dark, that every skin must honour: the bind point, the kernel '
-            'letters and the focus ring all wear it.',
-        'The same review measured every text colour against its background and raised the ones that fell short of '
-            'WCAG 2.2: a new tertiary ink for small text, a 12-point floor for labels, 44-point touch targets, and dialogs '
-            'that take the skin’s own colours, so that a meditative rite in a dark room is never interrupted by a white panel.',
+        'IGNOSIS is drawn in Pen & Ink: paper for the plate, ink for the strokes, hairlines for everything else, and one '
+            'vermilion accent. A sigil is a private instrument, and an instrument should not perform. So the studio is '
+            'quiet by design, and almost nothing moves that the mathematics does not move.',
+        'The vermilion is a role, not merely a colour. Every skin, light or dark, must honour a seal colour, red on paper '
+            'and a brighter red in the dark, and the bind point, the kernel letters and the focus ring all wear it. A skin '
+            'may change everything else; it may not erase the seal.',
+        'The studio is built to WCAG 2.2: every text colour is measured against its background, small text has its own '
+            'tertiary ink, labels never fall below 12 points, touch targets are 44 points, and dialogs take the skin’s own '
+            'colours, so a meditative rite in a dark room is never interrupted by a white panel.',
       ],
     ),
     WikiArticle(
@@ -196,31 +195,31 @@ class ChaosMagicWikiArticles {
       title: 'Same Intent, Same Seal',
       summary: 'Determinism as a promise.',
       body: [
-        'The second rule: the same intent must always give the same sigil. A practitioner who returns to a phrase should '
-            'find the same seal waiting, on any device, years later. It is a small promise and an expensive one.',
-        'It forbade randomness without a seed, and seeds taken from anything but the intent. It forbade trusting the '
+        'The same intent always gives the same sigil. A practitioner who returns to a phrase finds the same seal waiting, '
+            'on any device, years later. It is a small promise and an expensive one.',
+        'It forbids randomness without a seed, and seeds taken from anything but the intent. It forbids trusting the '
             'platform’s floating-point functions in the chaotic system, and so the studio carries its own. It is enforced '
             'by tests that render each system for fixed phrases and compare the images pixel for pixel, and by a test that '
             'runs the same engines in a browser and on the desktop and demands identical results.',
-        'Where the studio adds chance on purpose, as in the burn’s embers or the brush’s dry streaks, the chance is seeded '
+        'Where the studio uses chance on purpose, as in the burn’s embers or the brush’s dry streaks, the chance is seeded '
             'from the seal itself, so even the accidents repeat.',
       ],
     ),
     WikiArticle(
       category: making,
       title: 'Nothing Moves Unless the Mathematics Moves It',
-      summary: 'The motion doctrine, and the decorations it removed.',
+      summary: 'The motion doctrine.',
       body: [
-        'An early version of the studio decorated its sigils: generic rotation, glow, sparks that came from nowhere. They '
-            'were removed under one thesis. Every animation is the time-evolution of the same function that drew the glyph: '
+        'The studio does not decorate. Every animation is the time-evolution of the same function that drew the glyph: '
             'either its construction (how it is written), the field it lives in (the square, the rose, the plate), or its '
-            'dissolution (the burn). Decoration that belongs to none of these does not ship.',
+            'dissolution (the burn). Generic rotation, glow and sparks from nowhere belong to none of these, and so they '
+            'have no place here.',
         'Practically: one clock, counted in seconds, that stops when nothing is moving. Strokes revealed by arc length at '
             'a fixed pen speed, so a long sigil takes honestly longer to write. Timing from the minimum-jerk profile that '
             'describes the human hand (Flash & Hogan, 1985), which is what makes a stroke look written rather than tweened. '
             'Idle motion, where there is any, at ratios of φ, so it never visibly repeats. And for anyone whose device asks '
             'for reduced motion, still states in place of movement.',
-        'Later the strokes gained a sumi-e brush, after the ink-wash painting of Ōkami: pressure that swells and tapers, '
+        'The strokes are laid with a sumi-e brush, after the ink-wash painting of Ōkami: pressure that swells and tapers, '
             'dry-brush streaks near the end of a stroke, and splatter only where the brush first lands. Its texture is '
             'seeded by the stroke, not the moment, so a turning rose does not boil.',
       ],
@@ -230,10 +229,10 @@ class ChaosMagicWikiArticles {
       title: 'The Letters: What Is Tradition and What Is Ours',
       summary: 'Why the studio labels its sources.',
       body: [
-        'A review of the app’s early copy found it confident in the way occult writing often is: “Pythagorean” numerology '
-            'that Pythagoras never knew, vowel-stripping credited to Spare, who did not do it, burning presented as a '
-            'requirement when Carroll calls it one option among three. The studio now says what is attested, in which '
-            'source, and what it invented.',
+        'Occult writing is often more confident than its sources. Numerology sold as Pythagorean that Pythagoras never '
+            'knew; vowel-stripping credited to Spare, who did not do it; burning presented as a requirement when Carroll '
+            'offers it as one option among three. IGNOSIS does not repeat these. It says what is attested, in which source, '
+            'and what it invented.',
         'So the default reduction strikes repeated letters, as Carroll does, and dropping vowels is an option marked as '
             'a later convention. The Kamea and the Rose trace the Hebrew spelling, as the Golden Dawn did, and show it. '
             'The “Why reduce?” note explains the step rather than mystifying it. Circumlocution, Cymatic Resonance and Cyber '
@@ -270,46 +269,28 @@ class ChaosMagicWikiArticles {
     ),
     WikiArticle(
       category: making,
-      title: 'The Money, Honestly',
-      summary: 'From a token that was never real, to a burn that matches the paper.',
+      title: 'The Joule: Paper and Ledger',
+      summary: 'Why the on-chain burn is measured against a square of burning paper.',
       body: [
-        'The studio inherited a cryptocurrency design that existed only as a façade. Wallet creation, balances, burns and '
-            'purchase checks all reported success without doing anything; the “wallet” had no private key, so tokens sent '
-            'to it could never be recovered; and the hard-coded coin was not IGNOSIS’s at all but someone else’s, already '
-            'trading. All of it was removed. The first release was set to ship with no token: the studio, paid skins and '
-            'print. Skins unlock only on a completed payment from the store, and nothing is ever granted on a simulated '
-            'or failed purchase.',
-        'The token returned later in a different form, from a different question: how much energy does the old ritual '
-            'actually release? A one-inch square of ordinary 80 gsm paper weighs about 0.052 g and burns to about 830 '
-            'joules. One Solana transaction, by the network’s own 2022 report, costs about 3,290 joules. The on-chain act '
-            'releases energy on the same scale as the paper it replaces.',
-        'So the Joule. It is minted once, a fixed supply in which one token stands for one joule, held entirely by the '
-            'studio and made non-transferable by the chain itself, so that no one can buy, hold or trade it. When a '
-            'practitioner pays for a witnessed release, the studio burns 1,618 Joules, after φ, roughly a square of heavy '
-            'card, at the moment the seal is released. The burn carries only a salted hash of the intent, computed on the '
-            'device. The intent never leaves it, and without the salt nobody, the studio included, can connect the burn to '
-            'the words.',
+        'The question behind the on-chain rite is a physical one: how much energy does the old ritual release? A '
+            'two-inch square of ordinary 80 gsm paper weighs about 0.21 g and burns to about 3,300 joules. One Solana '
+            'transaction, by the network’s own 2022 report, costs about 3,290. The on-chain act and the square of paper '
+            'release, within half a percent, the same energy. The burn on the ledger is not a metaphor for the burn on the '
+            'altar; it is the same quantity of fire, spent elsewhere.',
+        'The Joule is the record of it. It is minted once, a fixed supply in which one token stands for one joule, held '
+            'entirely by the studio and made non-transferable by the chain itself, so that no one can buy, hold or trade it. '
+            'When a practitioner chooses an on-chain witness, the studio burns 1,618 Joules, after φ, at the moment the seal '
+            'is released. The burn carries only a salted hash of the intent, computed on the device. The intent never '
+            'leaves it, and without the salt nobody, the studio included, can connect the burn to the words.',
         'What the burn is not: an investment, a currency, a sacrifice of money. A token no one can own destroys no '
             'value. The chain is a public witness, permanent and indifferent, which is perhaps the most a ledger can be.',
+        'Skins are free while the studio has no store products. When they are sold, they will unlock only on a payment '
+            'the store has completed, never on a simulated or failed one.',
       ],
       sources: [
-        'Energy: Solana Foundation, Energy Use Report (September 2022): 3,290 J per non-voting transaction. Paper: 80 gsm '
-            'at about 16 MJ/kg.',
+        'Energy: Solana Foundation, Energy Use Report (September 2022): 3,290 J per non-voting transaction. Paper: '
+            '2″ × 2″ (25.8 cm²) at 80 gsm and about 16 MJ/kg.',
         'Symbolic and artistic practice. No physical, medical or financial effect is claimed.',
-      ],
-    ),
-    WikiArticle(
-      category: making,
-      title: 'How Circumlocution Came to Be the Default',
-      summary: 'A drawing, a description, and a decision.',
-      body: [
-        'The newest system began as a sketch: a wheel of letters with rings filling outward, drawn by hand and described '
-            'in a sentence. Start on the inner circle at the first letter’s spoke, fill to the next letter’s spoke, step '
-            'out a ring, continue until the phrase is complete, always choosing the shorter way round.',
-        'It was built exactly as described, under the code name Ring Cipher, with two decisions left to the builder: '
-            'that an exact half-turn goes clockwise, and that a doubled letter leaves a notch rather than nothing. Its maker '
-            'called it perfect, named it Circumlocution, and made it the first system the studio offers, the only one that '
-            'keeps every word.',
       ],
     ),
   ];
