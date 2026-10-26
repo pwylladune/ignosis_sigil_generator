@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
+import '../../engines/infinite_engine.dart';
 import '../../motion/clock.dart';
 import '../../motion/reduce_motion.dart';
 import '../theme/sigil_skins.dart';
 import 'combustion.dart';
+import 'infinite_scene.dart';
 import 'scene.dart';
 import 'scene_factory.dart';
 import 'sigil_spec.dart';
@@ -22,6 +25,10 @@ class SigilBurnController extends ChangeNotifier {
   }
 }
 
+/// A zoom in progress, in reference coordinates: a point p is drawn at
+/// `to + scale·(p − from)`.
+typedef PlateLens = ({double scale, Offset from, Offset to});
+
 /// The animated sigil plate. Owns the single [MotionClock]; everything inside
 /// is a function of its time, and frames stop once the plate is still.
 class SigilCanvas extends StatefulWidget {
@@ -32,9 +39,14 @@ class SigilCanvas extends StatefulWidget {
     required this.burn,
     required this.onIncinerated,
     this.breath,
+    this.onViewChanged,
   });
 
   final SigilSpec spec;
+
+  /// Set for The Infinite: pinch, scroll and double-tap zoom the plate, and
+  /// the new window is reported here when a gesture ends (null = whole set).
+  final ValueChanged<InfiniteView?>? onViewChanged;
   final SigilSkinTheme skin;
   final SigilBurnController burn;
   final VoidCallback onIncinerated;
@@ -64,6 +76,12 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
   int _burnGeneration = 0;
   int _version = 0;
   bool _reduceMotion = false;
+
+  /// The zoom being dragged, drawn as a transform until it is committed.
+  PlateLens? _lens;
+  Offset? _gestureFrom;
+  Offset? _doubleTapAt;
+  Timer? _scrollCommit;
 
   @override
   void initState() {
@@ -125,17 +143,93 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
 
   void _show(SigilSpec spec) {
     if (!mounted) return;
+    // A new zoom window appears at once; only new sigils are written out.
+    final viewOnly = spec.differsOnlyInView(_shownSpec);
     _shownSpec = spec;
+    _lens = null;
     _combustion?.dispose();
     _combustion = null;
     _version++;
     if (_hasLayout) {
-      _scene = buildScene(spec, SigilCanvas.referenceSize, _startTime(), previous: _scene);
+      _scene = buildScene(spec, SigilCanvas.referenceSize, viewOnly ? _clock.now - 1e6 : _startTime(), previous: _scene);
       _clock.wake();
     } else {
       _scene = null;
     }
     setState(() {});
+  }
+
+  // ── Zoom (The Infinite) ───────────────────────────────────────────────
+
+  bool get _zoomable => widget.onViewChanged != null && _combustion == null && _scene is InfiniteScene;
+
+  /// Widget-local point to reference coordinates.
+  Offset _toRef(Offset local) {
+    final size = _size ?? Size.zero;
+    const ref = SigilCanvas.referenceSize;
+    final scale = math.min(size.width, size.height) / ref.width;
+    final origin = Offset((size.width - ref.width * scale) / 2, (size.height - ref.height * scale) / 2);
+    return (local - origin) / scale;
+  }
+
+  void _setLens(PlateLens? lens) => setState(() {
+        _lens = lens;
+        _version++;
+      });
+
+  /// Zooms by [factor] about the reference point [at], on top of any lens.
+  void _zoomAbout(Offset at, double factor) {
+    final l = _lens ?? (scale: 1.0, from: at, to: at);
+    _setLens((scale: l.scale * factor, from: l.from, to: at + (l.to - at) * factor));
+  }
+
+  /// Turns the lens into a new view and reports it.
+  void _commitLens() {
+    _scrollCommit?.cancel();
+    final lens = _lens;
+    final scene = _scene;
+    if (lens == null || scene is! InfiniteScene) return;
+    final s = scene.sigil;
+    final home = s.params.home;
+    // The point that the lens brings to the plate's centre becomes the new centre.
+    final p = lens.from + (s.center - lens.to) / lens.scale;
+    final (re, im) = InfiniteEngine.toComplex(p, s.view, s.center, s.radius);
+    final half = math.max(s.view.halfWidth / lens.scale, InfiniteView.minHalfWidth);
+    widget.onViewChanged!(half >= home.halfWidth * 0.98 ? null : InfiniteView(re, im, half));
+  }
+
+  void _onScaleStart(ScaleStartDetails d) {
+    _gestureFrom = _toRef(d.localFocalPoint);
+  }
+
+  void _onScaleUpdate(ScaleUpdateDetails d) {
+    final from = _gestureFrom;
+    if (from == null) return;
+    _setLens((scale: d.scale, from: from, to: _toRef(d.localFocalPoint)));
+  }
+
+  void _onScaleEnd(ScaleEndDetails d) {
+    _gestureFrom = null;
+    final l = _lens;
+    if (l == null || (l.scale == 1 && (l.to - l.from).distance < 2)) {
+      _setLens(null);
+      return;
+    }
+    _commitLens();
+  }
+
+  void _onPointerSignal(PointerSignalEvent e) {
+    if (e is! PointerScrollEvent || !_zoomable) return;
+    _zoomAbout(_toRef(e.localPosition), math.exp(-e.scrollDelta.dy / 400));
+    _scrollCommit?.cancel();
+    _scrollCommit = Timer(const Duration(milliseconds: 280), _commitLens);
+  }
+
+  void _onDoubleTap() {
+    final at = _doubleTapAt;
+    if (at == null || !_zoomable) return;
+    _zoomAbout(_toRef(at), 2);
+    _commitLens();
   }
 
   /// Scenes start now, or long ago when motion is reduced (already settled).
@@ -209,6 +303,7 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
   @override
   void dispose() {
     _debounce?.cancel();
+    _scrollCommit?.cancel();
     widget.burn.removeListener(_onBurnRequested);
     WidgetsBinding.instance.removeObserver(this);
     _combustion?.dispose();
@@ -220,15 +315,31 @@ class _SigilCanvasState extends State<SigilCanvas> with SingleTickerProviderStat
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
       _onLayout(constraints.biggest);
-      return CustomPaint(
+      final plate = CustomPaint(
         size: constraints.biggest,
         painter: _SigilPlatePainter(
           clock: _clock,
           version: _version,
           scene: () => _scene,
           combustion: () => _combustion,
+          lens: () => _lens,
           skin: widget.skin,
           breath: widget.breath,
+        ),
+      );
+      if (!_zoomable) return plate;
+      return Semantics(
+        label: 'The Infinite: pinch, scroll or double-tap to zoom',
+        child: Listener(
+          onPointerSignal: _onPointerSignal,
+          child: GestureDetector(
+            onScaleStart: _onScaleStart,
+            onScaleUpdate: _onScaleUpdate,
+            onScaleEnd: _onScaleEnd,
+            onDoubleTapDown: (d) => _doubleTapAt = d.localPosition,
+            onDoubleTap: _onDoubleTap,
+            child: plate,
+          ),
         ),
       );
     });
@@ -241,6 +352,7 @@ class _SigilPlatePainter extends CustomPainter {
     required this.version,
     required this.scene,
     required this.combustion,
+    required this.lens,
     required this.skin,
     required this.breath,
   }) : super(repaint: breath == null ? clock : Listenable.merge([clock, breath]));
@@ -251,12 +363,14 @@ class _SigilPlatePainter extends CustomPainter {
   final int version;
   final SigilScene? Function() scene;
   final Combustion? Function() combustion;
+  final PlateLens? Function() lens;
   final SigilSkinTheme skin;
   final ValueListenable<double?>? breath;
 
   @override
   void paint(Canvas canvas, Size size) {
-    paintPlate(canvas, size, skin: skin, scene: scene(), combustion: combustion(), now: clock.now, breath: breath?.value);
+    paintPlate(canvas, size,
+        skin: skin, scene: scene(), combustion: combustion(), lens: lens(), now: clock.now, breath: breath?.value);
   }
 
   @override
@@ -272,6 +386,7 @@ void paintPlate(
   required SigilSkinTheme skin,
   required SigilScene? scene,
   Combustion? combustion,
+  PlateLens? lens,
   required double now,
   double? breath,
 }) {
@@ -318,6 +433,15 @@ void paintPlate(
 
   if (combustion != null) {
     combustion.paint(canvas, ref, now, style);
+  } else if (scene != null && lens != null) {
+    // A zoom in progress: the scene moves under the plate, clipped to it.
+    canvas.save();
+    canvas.clipPath(Path()..addOval(Rect.fromCircle(center: center, radius: radius)));
+    canvas.translate(lens.to.dx, lens.to.dy);
+    canvas.scale(lens.scale);
+    canvas.translate(-lens.from.dx, -lens.from.dy);
+    scene.paint(canvas, ref, now, style);
+    canvas.restore();
   } else if (scene != null) {
     scene.paint(canvas, ref, now, style);
   }

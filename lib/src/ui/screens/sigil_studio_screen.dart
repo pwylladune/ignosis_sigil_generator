@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/feature_flags.dart';
+import '../../engines/infinite_engine.dart';
 import '../../engines/kamea_engine.dart';
 import '../../engines/ring_cipher_engine.dart';
 import '../../models/hebrew_letters.dart';
@@ -45,6 +46,10 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
   SigilSkinTheme get _skinTheme => SigilSkinTheme.getSkin(_previewSkinId ?? _currentSkinId);
 
   SigilState _state = const SigilState();
+
+  /// The Infinite: drawn by the inverse map, and the zoomed window (null = whole set).
+  bool _infiniteInverted = false;
+  InfiniteView? _infiniteView;
   IntentKernel _kernel = IntentKernel.fromText('I COMMAND RADIANT CLARITY');
 
   @override
@@ -106,6 +111,8 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
 
   void _onIntentChanged(String value) {
     setState(() {
+      // A new intent is a new set: its old window means nothing.
+      _infiniteView = null;
       _state = _state.copyWith(rawIntent: value, isIncinerated: false);
       _kernel = IntentKernel.fromText(value, stripVowels: _state.stripVowels);
     });
@@ -168,8 +175,20 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
     }
   }
 
+  /// The Infinite's map and zoom, e.g. "z² + c, c = −0.4321 − 0.5631i · ×8".
+  String get _infiniteLabel {
+    final c = JuliaParams.fromKernel(_kernel);
+    final view = _infiniteView;
+    final zoom = view == null ? '' : ' · ×${_formatZoom(view.magnificationFrom(c.home))}';
+    return 'z² + c, ${c.toString()}$zoom';
+  }
+
+  static String _formatZoom(double m) => m >= 1e4 ? m.toStringAsExponential(1) : m.toStringAsFixed(m < 10 ? 1 : 0);
+
   /// Kamea and Rose trace the Hebrew transliteration, not the reduced kernel.
   bool get _tracesHebrew => _state.system == SigilSystem.kamea || _state.system == SigilSystem.roseCross;
+
+  bool get _isInfinite => _state.system == SigilSystem.infinite;
 
   SigilSpec get _spec => SigilSpec(
         kernel: _kernel,
@@ -177,6 +196,8 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
         kameaType: _state.kameaType,
         symmetryFolds: _state.symmetryFolds,
         symmetryGroup: _state.symmetryGroup,
+        inverted: _isInfinite && _infiniteInverted,
+        view: _isInfinite ? _infiniteView : null,
       );
 
   void _triggerLocalBurn() {
@@ -348,6 +369,21 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
             tooltip: '$n-fold symmetry',
           ));
         }
+      case SigilSystem.infinite:
+        chips.add(chip(
+          'INVERT · √',
+          _infiniteInverted,
+          () => setState(() => _infiniteInverted = !_infiniteInverted),
+          tooltip: 'Draw the set by the inverse map z ↦ ±√(z − c) instead of the rings around it',
+        ));
+        if (_infiniteView != null) {
+          chips.add(chip('RESET VIEW', false, () => setState(() => _infiniteView = null),
+              tooltip: 'Back out to the whole set'));
+        }
+        chips.add(Padding(
+          padding: const EdgeInsets.only(left: 6),
+          child: Text('Pinch, scroll or double-tap to zoom', style: TextStyle(fontSize: 12, color: theme.inkTertiary)),
+        ));
       default:
         return const SizedBox.shrink();
     }
@@ -484,7 +520,9 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                               ? 'HEBREW: '
                               : _state.system == SigilSystem.ringCipher
                                   ? 'PHRASE: '
-                                  : 'KERNEL: ',
+                                  : _isInfinite
+                                      ? 'MAP: '
+                                      : 'KERNEL: ',
                           style: TextStyle(
                             color: theme.inkTertiary,
                             fontSize: 11,
@@ -497,7 +535,9 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                               ? transliterate(_kernel.normalized).map((l) => l.glyph).join()
                               : _state.system == SigilSystem.ringCipher
                                   ? RingCipherEngine.cipherText(_kernel.rawIntent).split('').join(' · ')
-                                  : _kernel.reducedConsonants.split('').join(' · '),
+                                  : _isInfinite
+                                      ? _infiniteLabel
+                                      : _kernel.reducedConsonants.split('').join(' · '),
                           style: TextStyle(
                             color: theme.seal,
                             fontSize: 11,
@@ -505,8 +545,9 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                             letterSpacing: 1.8,
                           ),
                         ),
-                        // Circumlocution traces the whole phrase: nothing is reduced.
-                        if (_state.system != SigilSystem.ringCipher)
+                        // Circumlocution traces the whole phrase, and The
+                        // Infinite hashes it: nothing is reduced.
+                        if (_state.system != SigilSystem.ringCipher && !_isInfinite)
                           TextButton(
                             // TextButton keeps a 48 pt hit area around the small link.
                             onPressed: _showExegesisModal,
@@ -563,6 +604,9 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                                 burn: _burn,
                                 onIncinerated: _onIncinerated,
                                 breath: _breath,
+                                onViewChanged: _isInfinite && !_charging
+                                    ? (v) => setState(() => _infiniteView = v)
+                                    : null,
                               ),
                             ),
                     ),
