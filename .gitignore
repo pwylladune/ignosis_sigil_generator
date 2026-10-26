@@ -53,3 +53,6 @@ deployer-keypair.json
 
 # Golden test failure output
 test/goldens/failures/
+
+# Netlify CLI link state (never commit)
+.netlify

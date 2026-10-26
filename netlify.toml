@@ -1,0 +1,27 @@
+# Netlify hosting for the Flutter web build (project: ignosis-studio).
+#
+# Netlify's build image has no Flutter, so the site is built locally or in CI
+# (`flutter build web --release`) and the static output is deployed with
+# `netlify deploy --dir build/web [--prod]`. No build command runs here.
+
+[build]
+  publish = "build/web"
+
+# Flutter web file names are not content-hashed (main.dart.js, flutter.js),
+# so everything revalidates; the service worker and bootstrap must never be
+# served stale after a deploy.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=()"
+
+# Large, versioned-by-release assets that rarely change between deploys can be
+# cached briefly at the edge while still revalidating.
+[[headers]]
+  for = "/canvaskit/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, must-revalidate"
