@@ -7,8 +7,9 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "ts-node src/server.ts",
-    "test": "tsc && node dist/test-server.js",
-    "mint:devnet": "tsc && node dist/tools/createJouleMint.js"
+    "test": "tsc && node dist/test-server.js && node dist/test-rite.js",
+    "mint:devnet": "tsc && node dist/tools/createJouleMint.js",
+    "test:devnet": "tsc && node dist/tools/devnetRite.js"
   },
   "dependencies": {
     "@solana/spl-token": "^0.4.8",
