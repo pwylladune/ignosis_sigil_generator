@@ -6,7 +6,7 @@ import { RiteCheck, explorerUrl } from '../services/riteVerifier.js';
 import { PyreIndexerService } from '../services/pyreIndexer.js';
 import { RiteLedger } from '../services/riteLedger.js';
 import { ritePackById, ritePackByProduct } from '../services/ritePacks.js';
-import { CHECKOUT_SESSION_ID, StripeGateway, webPurchaseId } from '../services/stripeRite.js';
+import { StripeGateway, sessionInMode, webPurchaseId } from '../services/stripeRite.js';
 
 export interface PurchaseVerifier {
   verifyReceipt(params: {
@@ -150,7 +150,7 @@ export function createRiteRouter(deps: RiteRouterDeps): Router {
     const stripe = deps.stripe;
     if (!stripe) return res.status(503).json({ success: false, error: 'Web payment is not available' });
     const sessionId = req.params.sessionId;
-    if (!CHECKOUT_SESSION_ID.test(sessionId)) return res.status(400).json({ success: false, error: 'Invalid session' });
+    if (!sessionInMode(sessionId, stripe.gateway.live)) return res.status(400).json({ success: false, error: 'Invalid session' });
     let credit = stripe.ledger.getCredit(sessionId);
     if (!credit) {
       // The webhook may not have arrived yet: ask Stripe.

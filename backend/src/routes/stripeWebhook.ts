@@ -19,7 +19,7 @@ export function createStripeWebhookRouter(deps: { gateway: StripeGateway; ledger
     } catch {
       return res.status(400).json({ received: false });
     }
-    const result = applyStripeEvent(event, deps.ledger);
+    const result = applyStripeEvent(event, deps.ledger, deps.gateway.live);
     if (result !== 'ignored') console.log(`[stripe] ${event.type} ${event.id}: ${result}`);
     return res.json({ received: true });
   });

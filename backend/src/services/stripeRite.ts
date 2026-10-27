@@ -23,6 +23,8 @@ export interface PackOffer {
 
 /** What the rite needs from Stripe; a fake stands in for it in tests. */
 export interface StripeGateway {
+  /** A live key (real money), not a test key. */
+  readonly live: boolean;
   createCheckout(pack: RitePack): Promise<{ id: string; url: string }>;
   /** The packages that have a Stripe price, cheapest first. */
   offers(): Promise<PackOffer[]>;
@@ -36,6 +38,14 @@ export interface StripeGateway {
 export const RITE_METADATA = { ignosis: 'rite' } as const;
 
 export const CHECKOUT_SESSION_ID = /^cs_(test|live)_[A-Za-z0-9]{10,200}$/;
+
+/**
+ * A Checkout session ID of the gateway's own mode: under a live key only
+ * `cs_live_` sessions, under a test key only `cs_test_`. A test payment can
+ * never spend real Joules, even one already credited in the ledger.
+ */
+export const sessionInMode = (sessionId: string, live: boolean) =>
+  CHECKOUT_SESSION_ID.test(sessionId) && sessionId.startsWith(live ? 'cs_live_' : 'cs_test_');
 
 /** Ledger key of the web payment [sessionId]: its rites are spent against it. */
 export const webPurchaseId = (sessionId: string) => `web:${sessionId}`;
@@ -72,9 +82,11 @@ export interface StripeRiteOptions {
 export class StripeRiteGateway implements StripeGateway {
   private readonly stripe: Stripe;
   private cached: { offers: PackOffer[]; until: number } | null = null;
+  readonly live: boolean;
 
   constructor(private readonly options: StripeRiteOptions) {
     this.stripe = new Stripe(options.secretKey);
+    this.live = /^(sk|rk)_live_/.test(options.secretKey);
   }
 
   async createCheckout(pack: RitePack): Promise<{ id: string; url: string }> {
@@ -131,7 +143,13 @@ export class StripeRiteGateway implements StripeGateway {
  * a credit; a refund or dispute revokes the payment's unused credits. Other
  * events are ignored. Returns what it did, for logs and tests.
  */
-export function applyStripeEvent(event: Stripe.Event, ledger: RiteLedger): 'credited' | 'revoked' | 'ignored' {
+export function applyStripeEvent(
+  event: Stripe.Event,
+  ledger: RiteLedger,
+  live: boolean
+): 'credited' | 'revoked' | 'ignored' {
+  // Events of the other mode (a test payment under a live key) change nothing.
+  if (event.livemode !== live) return 'ignored';
   switch (event.type) {
     case 'checkout.session.completed':
     case 'checkout.session.async_payment_succeeded': {
@@ -174,7 +192,7 @@ export class StripeCreditVerifier {
       environment: sessionId.startsWith('cs_live_') ? 'production' : 'sandbox',
       errorMessage,
     });
-    if (!CHECKOUT_SESSION_ID.test(sessionId)) return invalid('Not a Checkout session ID');
+    if (!sessionInMode(sessionId, this.gateway.live)) return invalid('Not a Checkout session of this mode');
 
     let credit = this.ledger.getCredit(sessionId);
     if (!credit) {
