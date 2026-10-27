@@ -4,6 +4,7 @@ import http from 'http';
 import os from 'os';
 import path from 'path';
 import fs from 'fs';
+import { DatabaseSync } from 'node:sqlite';
 import { Keypair } from '@solana/web3.js';
 import { createApp } from './server.js';
 import { config } from './config.js';
@@ -160,7 +161,46 @@ async function unitTests() {
     assert.equal(chain.burns.size, 15);
     assert.ok([...chain.burns.values()].every((j) => j === J));
   }
-  console.log('✅ Rite fulfilment: one burn per purchase under lost, rejected, hidden and concurrent sends.');
+
+  // 10. A package of three: concurrent releases of five intents burn three,
+  //     and asking again for a spent intent finds its burn.
+  {
+    const commit = (p: number) => (p + 1).toString(16).padStart(64, '0');
+    const chain = new FakeChain();
+    const s = service(chain);
+    const allowance = { key: 'web:pack', rites: 3 };
+    const results = await Promise.all(
+      [0, 1, 2, 3, 4].map((p) => s.fulfil(`web:pack#${commit(p)}`, commit(p), allowance))
+    );
+    assert.equal(results.filter((r) => r.status === 'confirmed').length, 3);
+    assert.equal(results.filter((r) => r.status === 'exhausted').length, 2);
+    assert.equal(chain.totalBurnt(), 3 * J);
+    assert.equal(s.ritesLeft(allowance), 0);
+    const spent = results.findIndex((r) => r.status === 'confirmed');
+    assert.equal((await s.fulfil(`web:pack#${commit(spent)}`, commit(spent), allowance)).status, 'confirmed');
+    assert.equal(chain.totalBurnt(), 3 * J);
+  }
+
+  // 11. A ledger made before packages gains their columns and keeps its rows.
+  {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rite-ledger-'));
+    const file = path.join(dir, 'ledger.sqlite');
+    const old = new DatabaseSync(file);
+    old.exec(`
+      CREATE TABLE rites (purchase_id TEXT PRIMARY KEY, commitment TEXT NOT NULL, state TEXT NOT NULL,
+        signature TEXT NOT NULL, last_valid_block_height INTEGER NOT NULL, raw_tx TEXT NOT NULL, updated_at INTEGER NOT NULL);
+      CREATE TABLE credits (session_id TEXT PRIMARY KEY, payment_intent TEXT NOT NULL, amount_total INTEGER NOT NULL,
+        currency TEXT NOT NULL, state TEXT NOT NULL, created_at INTEGER NOT NULL);
+      INSERT INTO credits VALUES ('cs_old', 'pi_old', 100, 'usd', 'paid', 1);`);
+    old.close();
+    const ledger = new RiteLedger(file);
+    assert.equal(ledger.getCredit('cs_old')?.rites, 1);
+    assert.equal(ledger.ritesSpent('web:cs_old'), 0);
+    ledger.close();
+    new RiteLedger(file).close(); // opening again changes nothing
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  console.log('✅ Rite fulfilment: one burn per rite under lost, rejected, hidden and concurrent sends; packages capped.');
 }
 
 async function routeTests() {
@@ -201,7 +241,7 @@ async function routeTests() {
     fetch(`${base}/rite/consecrate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ platform: 'ios', productId: 'net.ignosis.studio.rite', ...body }),
+      body: JSON.stringify({ platform: 'ios', productId: 'net.ignosis.studio.rite.pack3', ...body }),
     });
 
   assert.equal((await consecrate({ receiptData: 'valid:t1', commitment: 'plaintext' })).status, 400);
@@ -215,10 +255,13 @@ async function routeTests() {
   assert.equal(body.signature, 'sig1');
   assert.equal(body.joules, J);
   assert.match(body.explorerUrl, /explorer\.solana\.com\/tx\/sig1/);
-  assert.equal((await consecrate({ receiptData: 'valid:t3', commitment: C2 })).status, 409);
+  assert.equal(body.remaining, 2);
   const again: any = await consecrate({ receiptData: 'valid:t3', commitment: C1 }).then((r) => r.json());
   assert.equal(again.signature, 'sig1');
+  assert.equal(again.remaining, 2);
   assert.equal(chain.totalBurnt(), J);
+  // The old single-rite product is no longer sold.
+  assert.equal((await consecrate({ receiptData: 'valid:t4', commitment: C2, productId: 'net.ignosis.studio.rite' })).status, 400);
 
   const stats: any = await fetch(`${base}/pyre/stats`).then((r) => r.json());
   assert.equal(stats.stats.totalBurned, J);
@@ -229,7 +272,7 @@ async function routeTests() {
   assert.equal(verified.commitment, C1);
 
   server.close();
-  console.log('✅ Rite route: verified purchases only, rite products only, idempotent, no plaintext.');
+  console.log('✅ Rite route: verified purchases only, rite packages only, idempotent, no plaintext.');
 }
 
 unitTests()

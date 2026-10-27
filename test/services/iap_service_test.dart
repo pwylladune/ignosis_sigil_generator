@@ -89,19 +89,27 @@ void main() {
     expect(RevenueSchemaConfig.skinProductIds.containsKey('vellumDraft'), isFalse);
   });
 
-  test('a paid rite purchase is held as an unconsumed rite; a pending one is not', () async {
+  test('the rite packages are 3, 7 and 21 rites, each its own Play product', () {
+    expect([for (final p in RevenueSchemaConfig.ritePacks) p.rites], [3, 7, 21]);
+    expect(RevenueSchemaConfig.riteProductIds,
+        {'net.ignosis.studio.rite.pack3', 'net.ignosis.studio.rite.pack7', 'net.ignosis.studio.rite.pack21'});
+    expect(RevenueSchemaConfig.ritePackForProduct('net.ignosis.studio.rite.pack7')?.rites, 7);
+    expect(RevenueSchemaConfig.ritePackForProduct('net.ignosis.studio.rite'), isNull);
+  });
+
+  test('a paid rite package is held as an unconsumed purchase; a pending one is not', () async {
     final iap = IapService.instance;
+    final pack = RevenueSchemaConfig.ritePacks[1];
     await iap.initialize();
-    await iap.handlePurchaseUpdates(
-        [playPurchase(RevenueSchemaConfig.riteProductId, PurchaseStateWrapper.pending, PurchaseStatus.pending)]);
+    await iap.handlePurchaseUpdates([playPurchase(pack.productId, PurchaseStateWrapper.pending, PurchaseStatus.pending)]);
     expect(iap.unconsumedRites, isEmpty);
     await iap.handlePurchaseUpdates(
-        [playPurchase(RevenueSchemaConfig.riteProductId, PurchaseStateWrapper.purchased, PurchaseStatus.purchased)]);
-    expect(iap.unconsumedRites, ['token']);
+        [playPurchase(pack.productId, PurchaseStateWrapper.purchased, PurchaseStatus.purchased)]);
+    expect(iap.unconsumedRites, {'token': pack.productId});
     // A rite is not a skin, and unlocks nothing.
     iap.sellSkins = true;
     expect(iap.isSkinUnlocked('cosmic'), isFalse);
-    // With no store in tests, buying a rite cannot start.
-    expect(await iap.buyRite(), isFalse);
+    // With no store in tests, buying a package cannot start.
+    expect(await iap.buyRite(pack), isFalse);
   });
 }

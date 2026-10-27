@@ -11,9 +11,12 @@ import { GooglePlayGateway, PlayGateway, PlayPurchase, PlayVoidedSync } from './
 import { FakeChain } from './test-support.js';
 
 const J = config.riteJoules;
-const RITE = 'net.ignosis.studio.rite';
+/** A package of three rites. */
+const RITE = 'net.ignosis.studio.rite.pack3';
 const C1 = 'e'.repeat(64);
 const C2 = 'f'.repeat(64);
+const C3 = '3'.repeat(64);
+const C4 = '4'.repeat(64);
 const token = (n: number) => `play-token-${'x'.repeat(30)}-${n}`;
 
 /** Google Play as the app's purchases leave it; tests change purchases in place. */
@@ -33,8 +36,10 @@ class FakePlay implements PlayGateway {
       ...overrides,
     });
   }
+  /** Purchases of a package other than [RITE]. */
+  productOf = new Map<string, string>();
   async getPurchase(productId: string, purchaseToken: string) {
-    return productId === RITE ? this.purchases.get(purchaseToken) ?? null : null;
+    return productId === (this.productOf.get(purchaseToken) ?? RITE) ? this.purchases.get(purchaseToken) ?? null : null;
   }
   async acknowledge(_productId: string, purchaseToken: string) {
     this.acknowledged.push(purchaseToken);
@@ -75,35 +80,53 @@ async function routeTests() {
   play.buy(5, { purchaseType: undefined });
   assert.equal((await consecrate(token(5), C1)).status, 402);
 
-  // 3. A completed test purchase burns once and is acknowledged.
+  // 3. A completed test purchase of three rites burns three times, once per
+  //    intent, and is acknowledged; asking again for an intent finds its burn.
   const ok = await consecrate(token(4), C1);
   assert.equal(ok.status, 200);
   assert.equal(ok.body.joules, J);
+  assert.equal(ok.body.remaining, 2);
   assert.deepEqual(play.acknowledged, [token(4)]);
-  assert.equal((await consecrate(token(4), C2)).status, 409);
+  assert.equal((await consecrate(token(4), C1)).body.signature, ok.body.signature);
+  assert.equal((await consecrate(token(4), C2)).body.remaining, 1);
+  assert.equal((await consecrate(token(4), C3)).body.remaining, 0);
+  const fourth = await consecrate(token(4), C4);
+  assert.equal(fourth.status, 409);
+  assert.equal(fourth.body.exhausted, true);
+  assert.equal(chain.totalBurnt(), 3 * J);
 
-  // 4. After the app consumes it, the same token still finds its own burn,
-  //    and nothing else.
+  // 4. After the app consumes it, the same token still finds its own burns,
+  //    and buys nothing more; a consumed token never spent buys nothing.
   play.purchases.get(token(4))!.consumptionState = 1;
   assert.equal((await consecrate(token(4), C1)).body.signature, ok.body.signature);
+  assert.equal((await consecrate(token(4), C4)).status, 409);
   play.buy(6, { consumptionState: 1 });
   assert.equal((await consecrate(token(6), C1)).status, 402);
-  assert.equal(chain.totalBurnt(), J);
+  assert.equal(chain.totalBurnt(), 3 * J);
 
-  // 5. A refund reported by Play revokes an unused purchase; a used one keeps its burn.
+  // 5. A refund reported by Play revokes a package's unused rites; burns made stay.
   play.buy(7);
-  play.voided = [`GPA.0000-0000-0000-0007`, `GPA.0000-0000-0000-0004`];
   assert.equal((await consecrate(token(7), C1)).status, 200, 'credited before the refund is known');
   play.buy(8);
   await consecrate(token(8), 'not hex'); // rejected by the body schema, nothing recorded
-  ledger.recordCredit({ sessionId: 'GPA.0000-0000-0000-0008', paymentIntent: 'GPA.0000-0000-0000-0008', amountTotal: 0, currency: '' });
-  play.voided = ['GPA.0000-0000-0000-0008'];
-  assert.equal(await new PlayVoidedSync(play, ledger).runOnce(), 1);
+  ledger.recordCredit({
+    sessionId: 'GPA.0000-0000-0000-0008', paymentIntent: 'GPA.0000-0000-0000-0008', amountTotal: 0, currency: '', rites: 3,
+  });
+  play.voided = ['GPA.0000-0000-0000-0007', 'GPA.0000-0000-0000-0008'];
+  assert.equal(await new PlayVoidedSync(play, ledger).runOnce(), 2);
   assert.equal((await consecrate(token(8), C1)).status, 402);
-  assert.equal(chain.totalBurnt(), 2 * J);
+  assert.equal((await consecrate(token(7), C2)).status, 402);
+  assert.equal(chain.totalBurnt(), 4 * J);
+
+  // 6. Each package buys its own count of rites.
+  play.buy(11);
+  play.productOf.set(token(11), 'net.ignosis.studio.rite.pack7');
+  const seven = await consecrate(token(11), C1, 'net.ignosis.studio.rite.pack7');
+  assert.equal(seven.body.remaining, 6);
+  assert.equal((await consecrate(token(11), C2, RITE)).status, 402, 'the token is checked against its own product');
   server.close();
 
-  // 6. On mainnet it is the other way round: test purchases are refused.
+  // 7. On mainnet it is the other way round: test purchases are refused.
   const saved = config.solanaCluster;
   Object.assign(config, { solanaCluster: 'mainnet-beta' });
   const mainnet = routingVerifier(rite, new ReceiptValidatorService());
@@ -113,7 +136,7 @@ async function routeTests() {
   assert.equal((await mainnet.verifyReceipt({ platform: 'android', receiptData: token(10), productId: RITE })).isValid, true);
   Object.assign(config, { solanaCluster: saved });
 
-  // 7. Without Google Play configured, Android rites are refused.
+  // 8. Without Google Play configured, Android rites are refused.
   const none = routingVerifier({ burns, check: null }, new ReceiptValidatorService());
   assert.equal((await none.verifyReceipt({ platform: 'android', receiptData: token(9), productId: RITE })).isValid, false);
 }
@@ -165,7 +188,7 @@ async function gatewayTests() {
     await g.acknowledge(RITE, 'tok');
     assert.deepEqual(await g.voidedOrderIds(0), ['GPA.A', 'GPA.B']);
     assert.equal(tokenRequests, 1, 'the access token is reused until it nears expiry');
-    assert.ok(calls.some((c) => c.startsWith('GET https://androidpublisher.googleapis.com/androidpublisher/v3/applications/net.ignosis.studio/purchases/products/net.ignosis.studio.rite/tokens/tok')));
+    assert.ok(calls.some((c) => c.startsWith(`GET https://androidpublisher.googleapis.com/androidpublisher/v3/applications/net.ignosis.studio/purchases/products/${RITE}/tokens/tok`)));
     assert.ok(calls.some((c) => c.startsWith('POST') && c.endsWith('/tokens/tok:acknowledge')));
     assert.throws(() => new GooglePlayGateway('{}', 'net.ignosis.studio'));
   } finally {
@@ -175,7 +198,7 @@ async function gatewayTests() {
 
 routeTests()
   .then(gatewayTests)
-  .then(() => console.log('✅ Play: completed test purchases only off mainnet, acknowledged, burnt once, refunds revoke unused credits.'))
+  .then(() => console.log('✅ Play: completed test purchases only off mainnet, acknowledged, one burn per rite up to the package, refunds revoke unused rites.'))
   .catch((e) => {
     console.error('❌ Play test failed:', e);
     process.exit(1);
