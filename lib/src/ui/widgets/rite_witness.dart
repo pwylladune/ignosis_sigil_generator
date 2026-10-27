@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../config/legal_links.dart';
 import '../../services/rite/checkout_window.dart';
 import '../../models/revenue_schema.dart';
 import '../../services/rite/rite_service.dart';
@@ -144,6 +145,27 @@ class RitePackChooser extends StatelessWidget {
                   style: TextStyle(color: theme.inkTertiary, fontSize: 12, height: 1.4),
                 ),
                 const SizedBox(height: 12),
+                Text(
+                  'By buying you agree to the Terms. Unused rites can be refunded for 14 days.',
+                  style: TextStyle(color: theme.inkTertiary, fontSize: 12, height: 1.4),
+                ),
+                Wrap(
+                  spacing: 16,
+                  children: [
+                    for (final page in const [LegalPage.terms, LegalPage.refunds])
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: theme.inkPrimary,
+                          minimumSize: const Size(44, 40),
+                          padding: EdgeInsets.zero,
+                          textStyle: const TextStyle(fontSize: 12, decoration: TextDecoration.underline),
+                        ),
+                        onPressed: page.open,
+                        child: Text(page.label),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
                 for (final offer in service.offers)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),

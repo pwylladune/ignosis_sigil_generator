@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/feature_flags.dart';
+import '../../config/legal_links.dart';
 import '../../engines/infinite_engine.dart';
 import '../../engines/kamea_engine.dart';
 import '../../engines/ring_cipher_engine.dart';
@@ -452,6 +453,8 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
               PopupMenuItem(value: _showSkinModal, child: const Text('Skins')),
               PopupMenuItem(value: _showPayModal, child: const Text('Skins & support')),
               PopupMenuItem(value: _showExegesisModal, child: const Text('Why reduce?')),
+              const PopupMenuDivider(),
+              for (final page in LegalPage.values) PopupMenuItem(value: page.open, child: Text(page.label)),
             ],
           ),
           const SizedBox(width: 4),
