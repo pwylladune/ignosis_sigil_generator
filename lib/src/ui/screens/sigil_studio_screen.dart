@@ -484,15 +484,14 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Hidden during the rite, like the kernel: the seal is the only focus.
-                  if (!_charging && !_isBurning)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Text(
-                        _purpose,
-                        style: TextStyle(color: theme.inkTertiary, fontSize: 12.5, height: 1.4),
-                      ),
+                  // Stays through the rite: only the spelled-out kernel is hidden then.
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      _purpose,
+                      style: TextStyle(color: theme.inkTertiary, fontSize: 12.5, height: 1.4),
                     ),
+                  ),
                   TextField(
                     controller: _textController,
                     // A released seal burns to the end; the intent is fixed meanwhile.
@@ -675,19 +674,18 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
               ),
             ),
 
-            // The selected system's ritual, in a line or two.
-            if (!_charging && !_isBurning)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                child: Semantics(
-                  liveRegion: true,
-                  child: Text(
-                    _state.system.ritual,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: theme.inkSecondary, fontSize: 12.5, height: 1.4, fontStyle: FontStyle.italic),
-                  ),
+            // The selected system's ritual, in a line or two; it stays through the rite.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+              child: Semantics(
+                liveRegion: true,
+                child: Text(
+                  _state.system.ritual,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: theme.inkSecondary, fontSize: 12.5, height: 1.4, fontStyle: FontStyle.italic),
                 ),
               ),
+            ),
 
             _buildSystemOptions(theme),
 

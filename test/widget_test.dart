@@ -41,6 +41,13 @@ void main() {
     expect(find.text(SigilSystem.ringCipher.ritual), findsNothing);
     // Every system has its own line.
     expect(SigilSystem.values.map((s) => s.ritual).toSet(), hasLength(SigilSystem.values.length));
+    // Both stay through the rite; only the spelled-out kernel is hidden then.
+    expect(find.textContaining('KERNEL:'), findsOneWidget);
+    await tester.tap(find.text('BEGIN THE RITE'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.textContaining('IGNOSIS transforms intent into a sigil meant for consumption.'), findsOneWidget);
+    expect(find.text(SigilSystem.cyberChaos.ritual), findsOneWidget);
+    expect(find.textContaining('KERNEL:'), findsNothing);
   });
 
   testWidgets('every skin is free while none are sold', (tester) async {
