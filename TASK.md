@@ -464,7 +464,11 @@ Six reviewers took part: esoteric-researcher, research, ellie, code-reviewer, se
 - **The ledger counts the rites per payment.** It refuses a burn past the package in the same statement that records it, so concurrent releases cannot overspend. A refund or dispute revokes the rites left; burns already made stay.
 - **Configuration.** `STRIPE_RITE_PRICES=pack3=price_…,pack7=price_…,pack21=price_…` replaces `STRIPE_RITE_PRICE_ID`. `RITE_PRODUCT_IDS` is removed. The old single-rite product `net.ignosis.studio.rite` is no longer accepted.
 - **Verified.** `npm test`: 5 of 5 suites pass. `flutter analyze --fatal-infos` is clean. `flutter test`: 165 passed, 2 skipped. In the browser I opened the package chooser.
-- **Not yet done.** A real Stripe test payment (it needs the keys and three prices), and the three Play Console products.
+- **Stripe test mode, end to end on devnet (2026-10-27).** Prices are $0.93, $1.61 and $3.14.
+  - A 3-rite package was paid; its webhook credited it. Three releases burnt 1618 J each, all confirmed and read back with their commitments. A fourth release was refused (409, nothing burnt).
+  - A second package had one rite burnt, then was refunded in the Dashboard. The `charge.refunded` webhook revoked it, so it shows 0 rites left and the next release was refused (402). Its one burn stays on-chain.
+- **Not yet done.** The three Play Console products, and live keys at mainnet.
+- **Note:** the Browser pane blocks the Checkout tab the app opens, because a tab may only open from the user's own click. Test payments in the pane need a click by the user.
 
 ### 6.4 Still open (beyond the checkboxes)
 - ~~Bundle ID decision~~ Done: `net.ignosis.studio` (8321ef6a).
