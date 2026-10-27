@@ -482,6 +482,17 @@ Six reviewers took part: esoteric-researcher, research, ellie, code-reviewer, se
   - Terms, privacy and refund pages.
   - Switching ignosis.net (CORS, `WEB_ORIGIN`, and a build with the rite on).
 
+### 6.15 Mainnet treasury in place (2026-10-27)
+- **Joule mint (mainnet):** `HoDanvE1TVJQfBxt8jWbPQM4a5HPamtjDm5KNPo8V5Sj`. Supply 10¹² J, 0 decimals, NonTransferable, no mint or freeze authority. The server's own mint check passes.
+- **Cold owner:** `B94KMTKhdJugAwdugDKRRPNpK3jnShq9Sjq6irwJZhwb`. Its key is in an AES-256 encrypted disk image, mounted only for minting and approvals, with the seed phrase on paper. It holds all the Joules in `Fmku2Bq1iPAzc5P9LxsHTzHZpL8ZFNWQpcfbERbovzMS`.
+- **Server key (delegate):** `2teqTcHeTs9QX8qxicJR1NSjipnMDWv5TXEfmvptzXi3`, funded with 0.08 SOL (about 16,000 burns of fees). It is approved for 1,618,000 J (1,000 rites). It is staged on Fly as `TREASURY_PRIVATE_KEY`, and the local copy is deleted.
+- **Cost so far:** about 0.004 SOL for the mint, plus fees.
+- **Before cutover:**
+  - A fresh ledger file, and refusal of `cs_test_` sessions under a live Stripe key. The devnet ledger holds a paid test credit with rites left.
+  - Settings: `SOLANA_CLUSTER`, `JOULE_MINT_ADDRESS`, `TREASURY_OWNER`, ignosis.net in CORS and `WEB_ORIGIN`.
+  - Secrets: `SOLANA_RPC_URL` (Helius, mainnet), and live Stripe keys, webhook secret and prices.
+  - Terms, privacy and refund pages.
+
 ### 6.4 Still open (beyond the checkboxes)
 - ~~Bundle ID decision~~ Done: `net.ignosis.studio` (8321ef6a).
 - Skin entitlements are cached client-side in `SharedPreferences`. That is acceptable for cosmetic non-consumables, but it can be edited on a rooted device.
