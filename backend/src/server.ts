@@ -42,6 +42,30 @@ export interface RiteDeps extends Pick<RiteRouterDeps, 'burns' | 'check' | 'stri
   voidedSync?: PlayVoidedSync | null;
 }
 
+/**
+ * The cold owner of the treasury's Joules: null when the server's own key is
+ * the owner, undefined (rites off) when the configuration is invalid. On
+ * mainnet a separate cold owner is required.
+ */
+export function treasuryOwner(treasury: Keypair): PublicKey | null | undefined {
+  const raw = config.treasuryOwner.trim();
+  let owner: PublicKey | null = null;
+  if (raw) {
+    try {
+      owner = new PublicKey(raw);
+    } catch {
+      console.error('[rite] TREASURY_OWNER is not a valid public key: rites disabled.');
+      return undefined;
+    }
+  }
+  if (owner?.equals(treasury.publicKey)) owner = null;
+  if (!owner && config.solanaCluster === 'mainnet-beta') {
+    console.error('[rite] On mainnet the Joules must belong to a cold TREASURY_OWNER, not the server key: rites disabled.');
+    return undefined;
+  }
+  return owner;
+}
+
 /** Google Play from configuration, or null (Android rites off). */
 export function playFromConfig(): PlayGateway | null {
   if (!config.googlePlayServiceAccount) return null;
@@ -76,13 +100,15 @@ export function riteFromConfig(): RiteDeps {
     console.error('[rite] JOULE_MINT_ADDRESS is not a valid public key: rites disabled.');
   }
   if (!treasury || !mint) return { burns: null, check: null };
+  const owner = treasuryOwner(treasury);
+  if (owner === undefined) return { burns: null, check: null };
   const connection = new Connection(config.solanaRpcUrl, 'confirmed');
-  const check = (sig: string) => verifyRite(connection, sig, mint, treasury.publicKey);
+  const chain = new SolanaRiteChain(connection, treasury, mint, owner ?? undefined);
+  const check = (sig: string) => verifyRite(connection, sig, mint, treasury.publicKey, chain.treasuryAccount);
   if (!config.riteLedgerPath) {
     console.error('[rite] No RITE_LEDGER_PATH: rites disabled (fulfilment needs a persistent ledger).');
     return { burns: null, check };
   }
-  const chain = new SolanaRiteChain(connection, treasury, mint);
   const ledger = new RiteLedger(config.riteLedgerPath);
   const burns = new RiteBurnService(chain, ledger, { joules: config.riteJoules });
   const gateway = stripeFromConfig();

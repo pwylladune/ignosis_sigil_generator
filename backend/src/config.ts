@@ -25,6 +25,12 @@ export const config = {
   // ever generated in its place.
   treasuryPrivateKey: process.env.TREASURY_PRIVATE_KEY || '',
 
+  // The cold owner of the treasury's Joules (a public key). It approves the
+  // server's key above as delegate for a limited allowance, and the server
+  // burns as delegate (ADR 2026-10-27-ignosis-treasury-cold-owner-hot-delegate).
+  // Empty: the server's key owns the Joules itself, which mainnet refuses.
+  treasuryOwner: process.env.TREASURY_OWNER || '',
+
   // Joules burnt per rite: 1618, after phi (1.618...). The physical basis is
   // a 2" x 2" square of 80 gsm paper (25.8 cm2, ~0.21 g at ~16 MJ/kg), which
   // burns to ~3,300 J: the energy of one Solana transaction (~3,290 J).
