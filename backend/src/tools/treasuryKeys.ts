@@ -6,13 +6,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { Connection, Keypair } from '@solana/web3.js';
+import { GENESIS_HASHES } from '../services/joule.js';
 
 export type Cluster = 'mainnet-beta' | 'devnet' | 'local';
-
-const GENESIS: Record<string, Cluster> = {
-  '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d': 'mainnet-beta',
-  EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG: 'devnet',
-};
 
 /**
  * The cluster [connection] reaches, by its genesis hash. Mainnet is refused
@@ -20,7 +16,8 @@ const GENESIS: Record<string, Cluster> = {
  * by accident; an unknown cluster is refused unless it is local.
  */
 export async function checkedCluster(connection: Connection, rpcUrl: string): Promise<Cluster> {
-  const cluster = GENESIS[await connection.getGenesisHash()] ?? (/localhost|127\.0\.0\.1/.test(rpcUrl) ? 'local' : null);
+  const known: Cluster | undefined = GENESIS_HASHES[await connection.getGenesisHash()];
+  const cluster = known ?? (/localhost|127\.0\.0\.1/.test(rpcUrl) ? 'local' : null);
   if (!cluster) throw new Error(`Refusing an RPC that is neither mainnet-beta, devnet nor local: ${rpcUrl}`);
   if (cluster === 'mainnet-beta' && !process.argv.includes('--mainnet')) {
     throw new Error('This RPC is mainnet-beta. Run again with --mainnet to act on real Joules.');

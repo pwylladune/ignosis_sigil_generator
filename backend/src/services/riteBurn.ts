@@ -4,6 +4,7 @@ import {
   JOULE_DECIMALS,
   JOULE_PROGRAM_ID,
   base58,
+  clusterProblem,
   createMemoInstruction,
   isCommitment,
   jouleMintProblem,
@@ -184,11 +185,16 @@ export class SolanaRiteChain implements RiteChain {
   readonly owner: PublicKey;
   private mintChecked: Promise<void> | null = null;
 
+  /**
+   * [cluster], when given, is the chain the RPC must serve: a mainnet
+   * configuration with a devnet RPC (or the reverse) refuses to burn.
+   */
   constructor(
     private readonly connection: Connection,
     private readonly treasury: Keypair,
     readonly mint: PublicKey,
-    owner?: PublicKey
+    owner?: PublicKey,
+    private readonly cluster?: string
   ) {
     this.owner = owner ?? treasury.publicKey;
     this.treasuryAccount = getAssociatedTokenAddressSync(mint, this.owner, false, JOULE_PROGRAM_ID);
@@ -210,12 +216,16 @@ export class SolanaRiteChain implements RiteChain {
     return account.delegatedAmount < account.amount ? account.delegatedAmount : account.amount;
   }
 
-  /** Refuses to burn from anything but a proper Joule mint (checked once). */
+  /** Refuses to burn on the wrong chain or from anything but a proper Joule mint (checked once). */
   private checkMint(): Promise<void> {
-    this.mintChecked ??= getMint(this.connection, this.mint, 'confirmed', JOULE_PROGRAM_ID).then((info) => {
-      const problem = jouleMintProblem(info);
+    this.mintChecked ??= (async () => {
+      if (this.cluster) {
+        const wrong = clusterProblem(await this.connection.getGenesisHash(), this.cluster);
+        if (wrong) throw new Error(`Refusing to burn: ${wrong}`);
+      }
+      const problem = jouleMintProblem(await getMint(this.connection, this.mint, 'confirmed', JOULE_PROGRAM_ID));
       if (problem) throw new Error(`Refusing to burn: ${problem}`);
-    });
+    })();
     // A failed check (e.g. an RPC outage) is retried on the next rite.
     return this.mintChecked.catch((e) => {
       this.mintChecked = null;

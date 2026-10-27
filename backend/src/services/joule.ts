@@ -7,6 +7,22 @@ export const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqX
 export const JOULE_PROGRAM_ID = TOKEN_2022_PROGRAM_ID;
 export const JOULE_DECIMALS = 0;
 
+/** Clusters by genesis hash: an RPC proves which chain it serves. */
+export const GENESIS_HASHES: Record<string, 'mainnet-beta' | 'devnet'> = {
+  '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d': 'mainnet-beta',
+  EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG: 'devnet',
+};
+
+/**
+ * Why an RPC whose genesis hash is [genesis] must not serve [cluster], or
+ * null if it may. A local validator has its own genesis and is not checked.
+ */
+export function clusterProblem(genesis: string, cluster: string): string | null {
+  if (cluster === 'localnet') return null;
+  const actual = GENESIS_HASHES[genesis] ?? 'an unknown cluster';
+  return actual === cluster ? null : `the RPC serves ${actual}, not ${cluster}`;
+}
+
 /** Memo prefix; the version changes if the commitment scheme ever does. */
 export const RITE_MEMO_PREFIX = 'IGNOSIS:v1:';
 

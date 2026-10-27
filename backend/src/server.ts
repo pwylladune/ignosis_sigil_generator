@@ -103,7 +103,7 @@ export function riteFromConfig(): RiteDeps {
   const owner = treasuryOwner(treasury);
   if (owner === undefined) return { burns: null, check: null };
   const connection = new Connection(config.solanaRpcUrl, 'confirmed');
-  const chain = new SolanaRiteChain(connection, treasury, mint, owner ?? undefined);
+  const chain = new SolanaRiteChain(connection, treasury, mint, owner ?? undefined, config.solanaCluster);
   const check = (sig: string) => verifyRite(connection, sig, mint, treasury.publicKey, chain.treasuryAccount);
   if (!config.riteLedgerPath) {
     console.error('[rite] No RITE_LEDGER_PATH: rites disabled (fulfilment needs a persistent ledger).');
