@@ -13,8 +13,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 const session = 'cs_test_aaaaaaaaaaaaaaaaaaaa1';
 const signature = '3z8AGqQ4erPPkr7V1YvjTbxxoE1pkWqjniZ6UcJZ1VqhNU3cwC6s55QGDqoN6qizior5WiMeep31hQBmjLuBDEVZ';
 const intent = 'I am free of the fear of the open road';
-final pack3 = RevenueSchemaConfig.ritePacks[0];
-final pack7 = RevenueSchemaConfig.ritePacks[1];
+/// The smallest package (7 rites) and the next (21).
+final small = RevenueSchemaConfig.ritePacks[0];
+final large = RevenueSchemaConfig.ritePacks[1];
 
 /// A scripted backend: each route answers from a queue (the last answer repeats).
 class FakeBackend {
@@ -46,7 +47,7 @@ class FakeBackend {
 http.Response json(int status, Object body) => http.Response(jsonEncode(body), status);
 
 /// The backend's answer for a web payment of [rites], [used] of them spent.
-Map<String, Object?> credit({bool paid = true, int rites = 3, int used = 0}) => {
+Map<String, Object?> credit({bool paid = true, int rites = 7, int used = 0}) => {
       'success': true,
       'paid': paid,
       'revoked': false,
@@ -58,7 +59,7 @@ Map<String, Object?> credit({bool paid = true, int rites = 3, int used = 0}) => 
       'signature': null,
     };
 
-http.Response burnt({int remaining = 2}) => json(200, {
+http.Response burnt({int remaining = 6}) => json(200, {
       'success': true,
       'signature': signature,
       'joules': 1618,
@@ -78,7 +79,7 @@ class FakeStore extends ChangeNotifier implements RiteStore {
   Map<String, String> get unconsumedRites => Map.of(tokens);
 
   @override
-  String? packPrice(RitePack pack) => pack == pack3 ? r'$2.99' : null;
+  String? packPrice(RitePack pack) => pack == small ? r'$3.14' : null;
 
   @override
   Future<bool> buyRite(RitePack pack) async {
@@ -99,14 +100,14 @@ class FakeStore extends ChangeNotifier implements RiteStore {
 RiteService serviceFor(FakeBackend b) =>
     RiteService(client: b.client, apiBase: 'https://api.test/', pollInterval: const Duration(milliseconds: 1));
 
-/// A service holding one paid package of three rites.
+/// A service holding one paid package of seven rites.
 Future<RiteService> withCredit(FakeBackend b) async {
   b.on('POST /checkout', [json(200, {'success': true, 'sessionId': session, 'url': 'https://checkout.stripe.com/x'})]);
   b.on('GET /credit', [json(200, credit())]);
   final s = serviceFor(b);
-  await s.beginCheckout(pack3);
+  await s.beginCheckout(small);
   await s.checkPayment();
-  expect(s.credits, 3);
+  expect(s.credits, 7);
   return s;
 }
 
@@ -129,37 +130,38 @@ void main() {
   test('a paid checkout becomes a package of rites that survives a reload', () async {
     final b = FakeBackend();
     b.on('POST /checkout', [json(200, {'success': true, 'sessionId': session, 'url': 'https://checkout.stripe.com/x'})]);
-    b.on('GET /credit', [json(200, credit(paid: false)), json(200, credit(rites: 7))]);
+    b.on('GET /credit', [json(200, credit(paid: false)), json(200, credit(rites: 21))]);
     final s = serviceFor(b);
-    expect(await s.beginCheckout(pack7), Uri.parse('https://checkout.stripe.com/x'));
-    expect(b.bodies('/checkout').single, {'pack': 'pack7'});
+    expect(await s.beginCheckout(large), Uri.parse('https://checkout.stripe.com/x'));
+    expect(b.bodies('/checkout').single, {'pack': 'pack21'});
     expect(s.awaitingPayment, isTrue);
     await s.checkPayment();
     expect(s.credits, 0);
     await s.checkPayment();
-    expect((s.awaitingPayment, s.credits), (false, 7));
+    expect((s.awaitingPayment, s.credits), (false, 21));
     s.dispose();
 
     final reloaded = serviceFor(FakeBackend());
     await reloaded.load();
-    expect(reloaded.credits, 7);
+    expect(reloaded.credits, 21);
     reloaded.dispose();
   });
 
   test('each release spends one rite; the backend count is kept', () async {
     final b = FakeBackend();
     final s = await withCredit(b);
-    b.on('POST /consecrate', [burnt(remaining: 2), burnt(remaining: 1), burnt(remaining: 0)]);
+    b.on('POST /consecrate', [for (var left = 6; left >= 0; left--) burnt(remaining: left)]);
     await s.releaseWith(intent);
-    expect(s.credits, 2);
-    await s.releaseWith('second intent');
-    await s.releaseWith('third intent');
-    expect((s.credits, s.receipts.length), (0, 3));
+    expect(s.credits, 6);
+    for (var i = 2; i <= 7; i++) {
+      await s.releaseWith('intent $i');
+    }
+    expect((s.credits, s.receipts.length), (0, 7));
     expect(b.bodies('/consecrate').map((m) => m['receiptData']).toSet(), {session});
-    expect(b.bodies('/consecrate').map((m) => m['commitment']).toSet(), hasLength(3));
+    expect(b.bodies('/consecrate').map((m) => m['commitment']).toSet(), hasLength(7));
     // Spent: the next release stays off-chain.
     await s.releaseWith('fourth intent');
-    expect((s.state, b.bodies('/consecrate').length), (RiteWitnessState.none, 3));
+    expect((s.state, b.bodies('/consecrate').length), (RiteWitnessState.none, 7));
     s.dispose();
   });
 
@@ -179,14 +181,14 @@ void main() {
         json(200, {
           'success': true,
           'packs': [
-            {'id': 'pack3', 'rites': 3, 'amount': 900, 'currency': 'usd'},
-            {'id': 'pack7', 'rites': 7, 'amount': 1799, 'currency': 'eur'},
+            {'id': 'pack7', 'rites': 7, 'amount': 300, 'currency': 'usd'},
+            {'id': 'pack21', 'rites': 21, 'amount': 1799, 'currency': 'eur'},
           ],
         }),
       ]);
     final s = serviceFor(b);
     await s.loadOffers();
-    expect([for (final o in s.offers) (o.pack.rites, o.price)], [(3, r'$9'), (7, '€17.99'), (21, null)]);
+    expect([for (final o in s.offers) (o.pack.rites, o.price)], [(7, r'$3'), (21, '€17.99'), (100, null)]);
     expect(formatRitePrice(1250, 'jpy'), '12.50 JPY');
     s.dispose();
   });
@@ -204,7 +206,7 @@ void main() {
     expect(jsonEncode(body).contains('fear'), isFalse);
     final receipt = s.receipts.single;
     expect(riteCommitment(intent, hexDecode(receipt.saltHex)), sent);
-    expect((s.state, s.credits, s.current?.signature), (RiteWitnessState.witnessed, 2, signature));
+    expect((s.state, s.credits, s.current?.signature), (RiteWitnessState.witnessed, 6, signature));
 
     b.on('GET /verify', [json(200, {'success': true, 'commitment': sent, 'joules': 1618})]);
     expect(await s.verify(s.current!), isTrue);
@@ -262,7 +264,7 @@ void main() {
     final s = await withCredit(b);
     s.witness = false;
     await s.releaseWith(intent);
-    expect((s.state, s.credits, b.bodies('/consecrate').length), (RiteWitnessState.none, 3, 0));
+    expect((s.state, s.credits, b.bodies('/consecrate').length), (RiteWitnessState.none, 7, 0));
     s.dispose();
   });
 
@@ -279,21 +281,22 @@ void main() {
 
   group('Android (Google Play)', () {
     test('a Play package is spent one rite per release, then consumed', () async {
-      final b = FakeBackend()..on('POST /consecrate', [burnt(remaining: 2), burnt(remaining: 1), burnt(remaining: 0)]);
+      final b = FakeBackend()..on('POST /consecrate', [for (var left = 6; left >= 0; left--) burnt(remaining: left)]);
       final store = FakeStore();
       final s = serviceFor(b)..attachStore(store);
       expect((s.usesStore, s.credits), (true, 0));
-      expect([for (final o in s.offers) o.price], [r'$2.99', null, null]);
-      await s.buyInStore(pack3);
-      expect(s.credits, 3);
+      expect([for (final o in s.offers) o.price], [r'$3.14', null, null]);
+      await s.buyInStore(small);
+      expect(s.credits, 7);
       await s.releaseWith(intent);
       final body = b.bodies('/consecrate').single;
-      expect((body['platform'], body['receiptData'], body['productId']), ('android', 'play-token-1', pack3.productId));
+      expect((body['platform'], body['receiptData'], body['productId']), ('android', 'play-token-1', small.productId));
       expect(riteCommitment(intent, hexDecode(s.receipts.single.saltHex)), body['commitment']);
-      expect((s.state, s.credits), (RiteWitnessState.witnessed, 2));
+      expect((s.state, s.credits), (RiteWitnessState.witnessed, 6));
       expect(store.consumed, isEmpty);
-      await s.releaseWith('second intent');
-      await s.releaseWith('third intent');
+      for (var i = 2; i <= 7; i++) {
+        await s.releaseWith('intent $i');
+      }
       expect(s.credits, 0);
       expect(store.consumed, ['play-token-1']);
       s.dispose();
@@ -303,9 +306,9 @@ void main() {
       final b = FakeBackend()..on('POST /consecrate', [json(402, {'success': false})]);
       final store = FakeStore();
       final s = serviceFor(b)..attachStore(store);
-      await s.buyInStore(pack3);
+      await s.buyInStore(small);
       await s.releaseWith(intent);
-      expect((s.state, s.credits), (RiteWitnessState.failed, 3), reason: 'its rite is given back');
+      expect((s.state, s.credits), (RiteWitnessState.failed, 7), reason: 'its rite is given back');
       expect(store.consumed, isEmpty);
 
       b.on('POST /consecrate', [json(409, {'success': false, 'exhausted': true})]);
@@ -319,14 +322,14 @@ void main() {
       final b = FakeBackend()..on('POST /consecrate', [burnt(remaining: 0)]);
       final store = FakeStore()..loseConsumes = true;
       final s = serviceFor(b)..attachStore(store);
-      await s.buyInStore(pack3);
+      await s.buyInStore(small);
       await s.releaseWith(intent);
       expect((s.state, store.tokens.length, s.credits), (RiteWitnessState.witnessed, 1, 0));
       s.dispose();
 
       final restarted = serviceFor(FakeBackend());
       await restarted.load();
-      final again = FakeStore()..tokens['play-token-1'] = pack3.productId;
+      final again = FakeStore()..tokens['play-token-1'] = small.productId;
       restarted.attachStore(again);
       expect(again.consumed, ['play-token-1']);
       expect(restarted.credits, 0, reason: 'a spent purchase is never offered again');
@@ -334,18 +337,18 @@ void main() {
     });
 
     test('the rites left in a package survive a restart', () async {
-      final b = FakeBackend()..on('POST /consecrate', [burnt(remaining: 6)]);
+      final b = FakeBackend()..on('POST /consecrate', [burnt(remaining: 20)]);
       final store = FakeStore();
       final s = serviceFor(b)..attachStore(store);
-      await s.buyInStore(pack7);
+      await s.buyInStore(large);
       await s.releaseWith(intent);
-      expect(s.credits, 6);
+      expect(s.credits, 20);
       s.dispose();
 
       final restarted = serviceFor(FakeBackend());
       await restarted.load();
       restarted.attachStore(store);
-      expect(restarted.credits, 6);
+      expect(restarted.credits, 20);
       restarted.dispose();
     });
 
@@ -371,7 +374,7 @@ void main() {
         json(200, {
           'success': true,
           'packs': [
-            {'id': 'pack3', 'rites': 3, 'amount': 900, 'currency': 'usd'},
+            {'id': 'pack7', 'rites': 7, 'amount': 314, 'currency': 'usd'},
           ],
         }),
       ]);
@@ -387,10 +390,10 @@ void main() {
 
     await tester.tap(find.text('ADD RITES'));
     await tester.pumpAndSettle();
-    expect(find.text('3 RITES'), findsOneWidget);
-    expect(find.text(r'$9'), findsOneWidget);
     expect(find.text('7 RITES'), findsOneWidget);
+    expect(find.text(r'$3.14'), findsOneWidget);
     expect(find.text('21 RITES'), findsOneWidget);
+    expect(find.text('100 RITES'), findsOneWidget);
     expect(find.textContaining('By buying you agree to the Terms'), findsOneWidget);
     expect(find.text('Terms'), findsOneWidget);
     expect(find.text('Refunds'), findsOneWidget);
@@ -400,12 +403,12 @@ void main() {
     b.on('POST /checkout', [json(200, {'success': true, 'sessionId': session, 'url': 'https://checkout.stripe.com/x'})]);
     b.on('GET /credit', [json(200, credit())]);
     await tester.runAsync(() async {
-      await s.beginCheckout(pack3);
+      await s.beginCheckout(small);
       await s.checkPayment();
     });
     await tester.pump();
     expect(find.byType(Switch), findsOneWidget);
-    expect(find.text('3 rites left. Your release will be burnt on-chain.'), findsOneWidget);
+    expect(find.text('7 rites left. Your release will be burnt on-chain.'), findsOneWidget);
     s.dispose();
   });
 }

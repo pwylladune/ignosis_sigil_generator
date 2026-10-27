@@ -256,7 +256,7 @@ async function routeTests() {
     fetch(`${base}/rite/consecrate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ platform: 'ios', productId: 'net.ignosis.studio.rite.pack3', ...body }),
+      body: JSON.stringify({ platform: 'ios', productId: 'net.ignosis.studio.rite.pack7', ...body }),
     });
 
   assert.equal((await consecrate({ receiptData: 'valid:t1', commitment: 'plaintext' })).status, 400);
@@ -270,10 +270,10 @@ async function routeTests() {
   assert.equal(body.signature, 'sig1');
   assert.equal(body.joules, J);
   assert.match(body.explorerUrl, /explorer\.solana\.com\/tx\/sig1/);
-  assert.equal(body.remaining, 2);
+  assert.equal(body.remaining, 6);
   const again: any = await consecrate({ receiptData: 'valid:t3', commitment: C1 }).then((r) => r.json());
   assert.equal(again.signature, 'sig1');
-  assert.equal(again.remaining, 2);
+  assert.equal(again.remaining, 6);
   assert.equal(chain.totalBurnt(), J);
   // The old single-rite product is no longer sold.
   assert.equal((await consecrate({ receiptData: 'valid:t4', commitment: C2, productId: 'net.ignosis.studio.rite' })).status, 400);
@@ -315,12 +315,12 @@ async function routeTests() {
       fetch(`${b2}/rite/consecrate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platform: 'ios', productId: 'net.ignosis.studio.rite.pack3', receiptData: 'valid:t9', commitment: C1 }),
+        body: JSON.stringify({ platform: 'ios', productId: 'net.ignosis.studio.rite.pack7', receiptData: 'valid:t9', commitment: C1 }),
       });
     assert.equal((await post()).status, 502);
     assert.equal((await post()).status, 502, 'still serving');
     assert.equal((await fetch(`${b2}/rite/${'5'.repeat(88)}`)).status, 502);
-    assert.equal(brokenBurns.ritesLeft({ key: 'ios:t9', rites: 3 }), 3);
+    assert.equal(brokenBurns.ritesLeft({ key: 'ios:t9', rites: 7 }), 7);
     s2.close();
   }
   console.log('✅ Rite route: verified purchases only, rite packages only, idempotent, no plaintext, survives a failing chain.');

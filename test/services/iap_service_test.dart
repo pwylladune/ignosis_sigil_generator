@@ -89,11 +89,12 @@ void main() {
     expect(RevenueSchemaConfig.skinProductIds.containsKey('vellumDraft'), isFalse);
   });
 
-  test('the rite packages are 3, 7 and 21 rites, each its own Play product', () {
-    expect([for (final p in RevenueSchemaConfig.ritePacks) p.rites], [3, 7, 21]);
+  test('the rite packages are 7, 21 and 100 rites, each its own Play product', () {
+    expect([for (final p in RevenueSchemaConfig.ritePacks) p.rites], [7, 21, 100]);
     expect(RevenueSchemaConfig.riteProductIds,
-        {'net.ignosis.studio.rite.pack3', 'net.ignosis.studio.rite.pack7', 'net.ignosis.studio.rite.pack21'});
-    expect(RevenueSchemaConfig.ritePackForProduct('net.ignosis.studio.rite.pack7')?.rites, 7);
+        {'net.ignosis.studio.rite.pack7', 'net.ignosis.studio.rite.pack21', 'net.ignosis.studio.rite.pack100'});
+    expect(RevenueSchemaConfig.ritePackForProduct('net.ignosis.studio.rite.pack100')?.rites, 100);
+    expect(RevenueSchemaConfig.ritePackForProduct('net.ignosis.studio.rite.pack3'), isNull);
     expect(RevenueSchemaConfig.ritePackForProduct('net.ignosis.studio.rite'), isNull);
   });
 
