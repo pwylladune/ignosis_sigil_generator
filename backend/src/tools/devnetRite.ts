@@ -5,6 +5,10 @@
  *
  *   JOULE_MINT_ADDRESS=... TREASURY_KEYPAIR_PATH=... npm run test:devnet
  *
+ * With TREASURY_OWNER set, TREASURY_KEYPAIR_PATH is the server's key and
+ * burns as the cold owner's delegate (ADR 2026-10-27-ignosis-treasury-cold-
+ * owner-hot-delegate); approve it first with approveRiteDelegate.
+ *
  * Checks: the burn confirms; the on-chain check finds the commitment; supply
  * falls by exactly the rite's joules; a retry does not burn again; and the
  * chain refuses to transfer a Joule to anyone.
@@ -46,10 +50,12 @@ async function main() {
 
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rite-devnet-'));
   const ledger = new RiteLedger(path.join(dir, 'ledger.sqlite'));
-  const burns = new RiteBurnService(new SolanaRiteChain(connection, treasury, mint), ledger, {
-    joules: config.riteJoules,
-  });
-  const check = (sig: string) => verifyRite(connection, sig, mint, treasury.publicKey);
+  const owner = process.env.TREASURY_OWNER ? new PublicKey(process.env.TREASURY_OWNER) : undefined;
+  const chain = new SolanaRiteChain(connection, treasury, mint, owner);
+  console.log(`Treasury account: ${chain.treasuryAccount.toBase58()} (${chain.delegated ? 'burnt by delegate' : 'burnt by owner'})`);
+  const allowanceBefore = await chain.allowance();
+  const burns = new RiteBurnService(chain, ledger, { joules: config.riteJoules });
+  const check = (sig: string) => verifyRite(connection, sig, mint, treasury.publicKey, chain.treasuryAccount);
   const app = createApp({
     rite: { burns, check },
     verifier: {
@@ -78,7 +84,7 @@ async function main() {
     fetch(`${base}/consecrate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ platform: 'web', productId: 'net.ignosis.studio.rite', receiptData: purchase, commitment }),
+      body: JSON.stringify({ platform: 'web', productId: 'net.ignosis.studio.rite.pack3', receiptData: purchase, commitment }),
     }).then(async (r) => ({ status: r.status, body: (await r.json()) as any }));
 
   const first = await consecrate();
@@ -97,6 +103,11 @@ async function main() {
   const supplyAfter = (await getMint(connection, mint, 'confirmed', JOULE_PROGRAM_ID)).supply;
   console.log(`Supply: ${supplyBefore} -> ${supplyAfter}`);
   assert.equal(supplyBefore - supplyAfter, BigInt(config.riteJoules));
+  if (chain.delegated) {
+    const allowanceAfter = await chain.allowance();
+    console.log(`Allowance: ${allowanceBefore} -> ${allowanceAfter} J`);
+    assert.equal(allowanceBefore - allowanceAfter, BigInt(config.riteJoules));
+  }
 
   const again = await consecrate();
   assert.equal(again.body.signature, first.body.signature);
@@ -105,7 +116,7 @@ async function main() {
 
   // The chain itself must refuse to move a Joule to anyone.
   const stranger = Keypair.generate().publicKey;
-  const from = getAssociatedTokenAddressSync(mint, treasury.publicKey, false, JOULE_PROGRAM_ID);
+  const from = chain.treasuryAccount;
   const to = getAssociatedTokenAddressSync(mint, stranger, false, JOULE_PROGRAM_ID);
   await assert.rejects(
     sendAndConfirmTransaction(

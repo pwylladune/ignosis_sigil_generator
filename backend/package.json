@@ -9,7 +9,9 @@
     "dev": "ts-node src/server.ts",
     "test": "tsc && node dist/test-server.js && node dist/test-rite.js && node dist/test-stripe.js && node dist/test-play.js",
     "mint:devnet": "tsc && node dist/tools/createJouleMint.js",
-    "test:devnet": "tsc && node dist/tools/devnetRite.js"
+    "test:devnet": "tsc && node dist/tools/devnetRite.js",
+    "treasury:approve": "tsc && node dist/tools/approveRiteDelegate.js",
+    "treasury:status": "tsc && node dist/tools/treasuryStatus.js"
   },
   "dependencies": {
     "@solana/spl-token": "^0.4.8",

@@ -1,18 +1,22 @@
 /**
  * Creates the IGNOSIS Joule mint (ADR 2026-10-25-ignosis-joule-token):
  * a Token-2022 mint with the NonTransferable extension, 0 decimals and no
- * freeze authority. The whole supply goes to the treasury's own account, then
+ * freeze authority. The whole supply goes to the owner's own account, then
  * the mint authority is revoked, so the supply can only ever shrink.
  *
- *   npm run build && node dist/tools/createJouleMint.js
+ *   npm run build && node dist/tools/createJouleMint.js [--mainnet]
  *
  * Environment:
  *   SOLANA_RPC_URL        default https://api.devnet.solana.com
- *   TREASURY_KEYPAIR_PATH default ./treasury.keypair.json (created on devnet
- *                         or a local validator if missing; never on mainnet)
+ *   TREASURY_KEYPAIR_PATH the owner's keypair, default ./treasury.keypair.json.
+ *                         Created if missing on devnet or a local validator.
+ *                         On mainnet it must already exist: it is the cold key
+ *                         the owner holds offline (ADR 2026-10-27-ignosis-
+ *                         treasury-cold-owner-hot-delegate), and it pays the
+ *                         rent (about 0.01 SOL).
  *
- * Mainnet is refused: a mainnet mint needs a treasury key the owner controls,
- * held in a KMS or HSM, and a deliberate change to this script.
+ * Mainnet needs `--mainnet` on the command line. Afterwards the owner approves
+ * the server's key as delegate with approveRiteDelegate.
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -39,18 +43,17 @@ import {
   tokenMetadataInitializeWithRentTransfer,
 } from '@solana/spl-token';
 import { JOULE_DECIMALS, JOULE_PROGRAM_ID, jouleMintProblem } from '../services/joule.js';
+import { Cluster, checkedCluster, readKeypair } from './treasuryKeys.js';
 
 /** 10^12 joules: about 618 million rites at 1618 J each. */
 const SUPPLY = 1_000_000_000_000n;
 
 const rpcUrl = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
-const isLocal = /localhost|127\.0\.0\.1/.test(rpcUrl);
 
-function loadOrCreateTreasury(): Keypair {
+function loadOrCreateTreasury(cluster: Cluster): Keypair {
   const file = path.resolve(process.env.TREASURY_KEYPAIR_PATH || 'treasury.keypair.json');
-  if (fs.existsSync(file)) {
-    return Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(file, 'utf8'))));
-  }
+  // A mainnet owner key is made and kept offline by its owner, never here.
+  if (fs.existsSync(file) || cluster === 'mainnet-beta') return readKeypair(file);
   const kp = Keypair.generate();
   // Owner-only permissions: this file is a private key.
   fs.writeFileSync(file, JSON.stringify(Array.from(kp.secretKey)), { mode: 0o600 });
@@ -58,9 +61,12 @@ function loadOrCreateTreasury(): Keypair {
   return kp;
 }
 
-async function ensureFunded(connection: Connection, treasury: Keypair) {
+async function ensureFunded(connection: Connection, treasury: Keypair, cluster: Cluster) {
   const need = 0.05 * LAMPORTS_PER_SOL;
   if ((await connection.getBalance(treasury.publicKey)) >= need) return;
+  if (cluster === 'mainnet-beta') {
+    throw new Error(`Fund the owner ${treasury.publicKey.toBase58()} with at least 0.05 SOL first (rent and fees).`);
+  }
   console.log('Requesting an airdrop of 1 SOL for fees and rent...');
   const sig = await connection.requestAirdrop(treasury.publicKey, LAMPORTS_PER_SOL);
   const latest = await connection.getLatestBlockhash();
@@ -69,18 +75,12 @@ async function ensureFunded(connection: Connection, treasury: Keypair) {
 
 async function main() {
   const connection = new Connection(rpcUrl, 'confirmed');
-  const genesis = await connection.getGenesisHash();
-  // Mainnet-beta's genesis hash.
-  if (genesis === '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d') {
-    throw new Error('Refusing to mint on mainnet-beta (see the header comment).');
-  }
-  if (!isLocal && !rpcUrl.includes('devnet')) {
-    throw new Error(`Refusing an RPC that is neither devnet nor local: ${rpcUrl}`);
-  }
+  const cluster = await checkedCluster(connection, rpcUrl);
 
-  const treasury = loadOrCreateTreasury();
-  console.log(`Treasury: ${treasury.publicKey.toBase58()}`);
-  await ensureFunded(connection, treasury);
+  const treasury = loadOrCreateTreasury(cluster);
+  console.log(`Cluster:  ${cluster}`);
+  console.log(`Owner:    ${treasury.publicKey.toBase58()}`);
+  await ensureFunded(connection, treasury, cluster);
 
   const mint = Keypair.generate();
   const mintLen = getMintLen([ExtensionType.NonTransferable, ExtensionType.MetadataPointer]);
@@ -152,8 +152,14 @@ async function main() {
   console.log(`\nJoule mint:    ${mint.publicKey.toBase58()}`);
   console.log(`Supply:        ${info.supply} J in ${treasuryAta.toBase58()}`);
   console.log(`Mint revoked:  ${sig}`);
-  console.log(`\nSet in backend/.env:\n  JOULE_MINT_ADDRESS=${mint.publicKey.toBase58()}`);
-  console.log(`  TREASURY_PRIVATE_KEY=<contents of the treasury keypair file>`);
+  console.log(`\nSet on the server:\n  JOULE_MINT_ADDRESS=${mint.publicKey.toBase58()}`);
+  if (cluster === 'mainnet-beta') {
+    console.log(`  TREASURY_OWNER=${treasury.publicKey.toBase58()}`);
+    console.log(`  TREASURY_PRIVATE_KEY=<the server's own key, never this one>`);
+    console.log(`Then approve the server's key with approveRiteDelegate --mainnet.`);
+  } else {
+    console.log(`  TREASURY_PRIVATE_KEY=<contents of the treasury keypair file>`);
+  }
 }
 
 main().catch((e) => {
