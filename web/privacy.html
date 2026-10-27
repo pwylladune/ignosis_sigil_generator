@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IGNOSIS · Privacy Policy</title>
+  <link rel="stylesheet" href="legal.css">
+</head>
+<body>
+<main>
+  <header>
+    <a class="brand" href="/">IGNOSIS</a>
+    <nav aria-label="Legal">
+      <a href="terms.html">Terms</a>
+      <a href="privacy.html" aria-current="page">Privacy</a>
+      <a href="refunds.html">Refunds</a>
+    </nav>
+  </header>
+
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated 26 October 2026</p>
+
+  <p class="summary">
+    Your intent never leaves your device. IGNOSIS has no accounts, no analytics, no advertising and no
+    tracking cookies. If you buy rites, the payment provider handles your payment details, and each rite
+    publishes a salted hash of your intent that only you can link back to it.
+  </p>
+
+  <h2>Who is responsible</h2>
+  <p>
+    Michael Roland, Florida, USA, is responsible for IGNOSIS (ignosis.net and the IGNOSIS apps).
+    Contact: <a href="mailto:info@ignosis.net">info@ignosis.net</a>.
+  </p>
+
+  <h2>What stays on your device</h2>
+  <ul>
+    <li><strong>Your intent.</strong> It is turned into a sigil on your device and is never sent to us or stored, even locally; it is cleared when you release the seal.</li>
+    <li><strong>Settings:</strong> the skin you chose.</li>
+    <li>
+      <strong>If you buy rites:</strong> the payment reference for your package, how many rites are left, and
+      for each rite its burn record, commitment and salt (the random value that links the commitment to your
+      intent). These are kept in your browser's storage (or the app's storage on Android) so you can spend
+      your rites and prove a burn is yours. Clearing the site's data deletes them.
+    </li>
+  </ul>
+  <p>We use no cookies. The storage above is not readable by us or by other sites.</p>
+
+  <h2>What we receive</h2>
+  <ul>
+    <li>
+      <strong>For each rite:</strong> the commitment (a SHA-256 hash of your intent combined with the secret
+      salt, which we cannot reverse) and the payment reference it is paid from. We keep these, with the
+      resulting burn record, in our fulfilment ledger so each rite is burnt exactly once and refunds can be
+      handled correctly.
+    </li>
+    <li>
+      <strong>Payments on the web (Stripe):</strong> Stripe collects your card details, email address and
+      billing details under its own <a href="https://stripe.com/privacy">privacy policy</a>. We never see
+      your full card number. Stripe shares with us the payment record: the amount, time and status, and the
+      email address (and name, if asked for) that you entered, which we use for receipts, refunds, disputes
+      and our accounts.
+    </li>
+    <li>
+      <strong>Payments on Android (Google Play):</strong> Google handles the payment under its own
+      <a href="https://policies.google.com/privacy">privacy policy</a>. We receive the order number and purchase
+      token to confirm the purchase and process refunds.
+    </li>
+    <li>
+      <strong>Technical data:</strong> like any website, our servers see your IP address when you connect. We
+      use it in memory to limit abuse (a cap on requests per minute) and do not store it with your rites. Our
+      hosting providers keep short-lived server logs, which may include IP addresses.
+    </li>
+  </ul>
+
+  <h2>What becomes public</h2>
+  <p>
+    Each rite is recorded on the Solana blockchain, which anyone can read and no one can change or delete:
+    the commitment, the 1,618 Joules burnt, the time, and our treasury's signature. Nothing in it names you or
+    reveals your intent. Without the salt on your device, a commitment cannot be linked to you or to the
+    intent. Our site and API also show recent burns, using the same public data.
+  </p>
+
+  <h2>Who processes data for us</h2>
+  <ul>
+    <li><strong>Stripe</strong> (web payments) and <strong>Google Play</strong> (Android payments).</li>
+    <li><strong>Netlify</strong> hosts the website; <strong>Fly.io</strong> hosts our API and ledger in the United States.</li>
+    <li><strong>Helius</strong> relays our transactions to Solana; it sees only what is published on-chain.</li>
+    <li>
+      <strong>Google</strong> serves the web app's rendering engine and fallback fonts from www.gstatic.com and
+      fonts.gstatic.com, so your browser connects to Google when the site loads.
+    </li>
+  </ul>
+  <p>We do not sell or share personal information for advertising, and we do not use it to profile you.</p>
+
+  <h2>How long we keep it</h2>
+  <p>
+    Ledger records and payment records are kept while IGNOSIS operates and for as long as tax and accounting
+    law requires (generally up to seven years). On-chain records are permanent. Hosting logs are kept by our
+    providers for a short period.
+  </p>
+
+  <h2>Your choices and rights</h2>
+  <p>
+    You can use the studio without giving us any personal data. You may ask us what we hold about you, and
+    ask us to correct or delete it, by writing to <a href="mailto:info@ignosis.net">info@ignosis.net</a>; we
+    will answer within 30 days. We cannot delete on-chain records, and we may keep payment records the law
+    requires. Depending on where you live (for example in the EU, the UK or certain US states), you may have
+    further rights, including to complain to your data protection authority.
+  </p>
+
+  <h2>Children</h2>
+  <p>
+    IGNOSIS is not directed to children under 13, and we do not knowingly collect personal information from
+    them. Buying rites requires being 18 or having a parent's permission.
+  </p>
+
+  <h2>Links</h2>
+  <p>The Compendium links to other websites. Their own privacy policies apply there.</p>
+
+  <h2>Changes</h2>
+  <p>
+    If we change how we handle data, we will update this page and its date, and tell you in the app before
+    a significant change applies.
+  </p>
+
+  <footer>IGNOSIS · Michael Roland · Florida, USA · <a href="mailto:info@ignosis.net">info@ignosis.net</a></footer>
+</main>
+</body>
+</html>
