@@ -2,7 +2,8 @@ process.env.NODE_ENV = 'test';
 import { config } from './config.js';
 import { createApp } from './server.js';
 import http from 'http';
-import { Keypair } from '@solana/web3.js';
+import fs from 'fs';
+import { Keypair, PublicKey } from '@solana/web3.js';
 import { ReceiptValidatorService } from './services/receiptValidator.js';
 
 async function testBackend() {
@@ -106,7 +107,33 @@ async function testBackend() {
 
   server.close();
   await rateLimitTests();
+  flyConfigTests();
   console.log('✅ Backend fails closed as expected.\n');
+}
+
+/**
+ * The deployed configuration (fly.toml [env]) is consistent: on mainnet the
+ * Joules have a cold owner, the RPC (with its API key) is a secret rather than
+ * plain text, the ledger is not the devnet one, and only production origins
+ * may call the API.
+ */
+function flyConfigTests() {
+  const toml = fs.readFileSync('fly.toml', 'utf8');
+  const envBlock = toml.split('[env]')[1].split(/\n\[/)[0];
+  const env = Object.fromEntries(
+    [...envBlock.matchAll(/^\s*([A-Z_]+)\s*=\s*"([^"]*)"/gm)].map((m) => [m[1], m[2]])
+  );
+  if (env.SOLANA_CLUSTER === 'mainnet-beta') {
+    new PublicKey(env.JOULE_MINT_ADDRESS);
+    const owner = new PublicKey(env.TREASURY_OWNER);
+    if (owner.equals(new PublicKey(env.JOULE_MINT_ADDRESS))) throw new Error('The owner is not the mint');
+    if ('SOLANA_RPC_URL' in env) throw new Error('A mainnet RPC carries an API key: set it as a secret, not in fly.toml');
+    if (env.RITE_LEDGER_PATH === '/data/rite-ledger.sqlite') throw new Error('Mainnet must not reuse the devnet ledger');
+    const origins = env.CORS_ORIGINS.split(',');
+    if (origins.some((o) => /localhost|netlify\.app|^http:/.test(o))) throw new Error(`Non-production origin on mainnet: ${origins}`);
+    if (!origins.includes(env.WEB_ORIGIN)) throw new Error('WEB_ORIGIN must be an allowed origin');
+  }
+  console.log(`7. fly.toml is consistent for ${env.SOLANA_CLUSTER}.`);
 }
 
 /**

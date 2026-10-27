@@ -9,7 +9,15 @@ import { Keypair, PublicKey } from '@solana/web3.js';
 import { createApp, treasuryOwner } from './server.js';
 import { verifyRite } from './services/riteVerifier.js';
 import { config } from './config.js';
-import { JOULE_PROGRAM_ID, MEMO_PROGRAM_ID, base58, commitmentFromMemo, isCommitment, riteMemo } from './services/joule.js';
+import {
+  JOULE_PROGRAM_ID,
+  MEMO_PROGRAM_ID,
+  base58,
+  clusterProblem,
+  commitmentFromMemo,
+  isCommitment,
+  riteMemo,
+} from './services/joule.js';
 import { RiteBurnService } from './services/riteBurn.js';
 import { FakeChain } from './test-support.js';
 import { RiteLedger } from './services/riteLedger.js';
@@ -36,6 +44,12 @@ async function unitTests() {
   assert.equal(commitmentFromMemo(riteMemo(C1)), C1);
   assert.equal(commitmentFromMemo('IGNOSIS:v1:nothex'), null);
   assert.throws(() => riteMemo('plaintext intent'));
+  // The RPC must serve the configured cluster.
+  assert.equal(clusterProblem('5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d', 'mainnet-beta'), null);
+  assert.equal(clusterProblem('EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG', 'devnet'), null);
+  assert.match(clusterProblem('EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG', 'mainnet-beta')!, /serves devnet/);
+  assert.match(clusterProblem('somethingElse', 'mainnet-beta')!, /unknown cluster/);
+  assert.equal(clusterProblem('somethingElse', 'localnet'), null);
 
   // 1. A purchase burns once; asking again returns the same burn.
   {

@@ -22,6 +22,7 @@ const session = (n: number) => `cs_test_${'a'.repeat(20)}${n}`;
 
 /** Stripe's Checkout and lookup are faked; webhook signatures are verified for real. */
 class FakeStripe implements StripeGateway {
+  constructor(readonly live = false) {}
   created = 0;
   /** The package each session was opened for. */
   packs: string[] = [];
@@ -47,6 +48,7 @@ function sessionEvent(type: string, id: string, overrides: Partial<Stripe.Checko
   return {
     id: `evt_${Math.random().toString(36).slice(2)}`,
     object: 'event',
+    livemode: false,
     type,
     data: {
       object: {
@@ -67,6 +69,7 @@ function sessionEvent(type: string, id: string, overrides: Partial<Stripe.Checko
 const chargeEvent = (type: string, paymentIntent: string) => ({
   id: `evt_${Math.random().toString(36).slice(2)}`,
   object: 'event',
+  livemode: false,
   type,
   data: { object: { id: `ch_${paymentIntent}`, object: 'charge', payment_intent: paymentIntent } },
 });
@@ -200,6 +203,50 @@ async function main() {
   assert.equal(pyreAfter.stats.totalBurned - pyreBefore.stats.totalBurned, J);
   assert.equal((await credit(session(5))).burnt, true);
   assert.equal(chain.totalBurnt(), 6 * J);
+  // 10b. Under a live key, test sessions and test-mode events are refused,
+  //      even a test credit already in the ledger; under a test key, live
+  //      events are ignored.
+  {
+    const liveGateway = new FakeStripe(true);
+    const liveServer = http
+      .createServer(createApp({ rite: { burns, check: null, stripe: { gateway: liveGateway, ledger } } }))
+      .listen(0);
+    const liveBase = `http://localhost:${(liveServer.address() as any).port}/api/v1`;
+    const testCredit = session(7);
+    await hook(sessionEvent('checkout.session.completed', testCredit));
+    assert.equal((await credit(testCredit)).remaining, 3, 'a test credit with rites left');
+    const before = chain.totalBurnt();
+    const spend = await fetch(`${liveBase}/rite/consecrate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform: 'web', productId: 'stripe-checkout', receiptData: testCredit, commitment: C4 }),
+    });
+    assert.equal(spend.status, 402);
+    assert.equal((await fetch(`${liveBase}/rite/credit/${testCredit}`)).status, 400);
+    const liveHook = (event: object) => {
+      const payload = JSON.stringify(event);
+      return fetch(`${liveBase}/stripe/webhook`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret: WHSEC }),
+        },
+        body: payload,
+      });
+    };
+    const liveSession = `cs_live_${'b'.repeat(20)}1`;
+    await liveHook(sessionEvent('checkout.session.completed', liveSession)); // livemode false: ignored
+    assert.equal(ledger.getCredit(liveSession), undefined);
+    await liveHook({ ...sessionEvent('checkout.session.completed', liveSession), livemode: true });
+    assert.equal(ledger.getCredit(liveSession)?.rites, 3);
+    // And the test-key server ignores a live event.
+    const otherLive = `cs_live_${'c'.repeat(20)}1`;
+    await hook({ ...sessionEvent('checkout.session.completed', otherLive), livemode: true });
+    assert.equal(ledger.getCredit(otherLive), undefined);
+    assert.equal(chain.totalBurnt(), before);
+    liveServer.close();
+  }
+
   server.close();
 
   // 11. Stripe's mode must match the chain: no real money for a devnet burn.
@@ -219,7 +266,7 @@ async function main() {
   assert.equal(stripeFromConfig(), null, 'no known package has a price');
   Object.assign(config, saved);
 
-  console.log('✅ Stripe: signed webhooks, packages spent one rite per release, refunds revoke unused rites, sweeper finishes paid burns.');
+  console.log('✅ Stripe: signed webhooks, packages spent one rite per release, refunds revoke unused rites, sweeper finishes paid burns, test and live never mix.');
 }
 
 main().catch((e) => {
