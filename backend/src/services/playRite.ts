@@ -1,6 +1,7 @@
 import { createSign } from 'crypto';
 import { PurchaseVerificationResult } from './receiptValidator.js';
 import { RiteLedger } from './riteLedger.js';
+import { ritePackByProduct } from './ritePacks.js';
 
 /** A Play in-app purchase as the Play Developer API reports it. */
 export interface PlayPurchase {
@@ -24,7 +25,7 @@ export interface PlayGateway {
   voidedOrderIds(sinceMs: number): Promise<string[]>;
 }
 
-/** Ledger purchase ID for an Android rite paid in Play order [orderId]. */
+/** Ledger key of the Play order [orderId]: its rites are spent against it. */
 export const androidPurchaseId = (orderId: string) => `android:${orderId}`;
 
 /** Play purchase tokens: long, URL-safe; anything else is refused before Google is asked. */
@@ -134,8 +135,6 @@ export class GooglePlayGateway implements PlayGateway {
 }
 
 export interface PlayVerifierOptions {
-  /** Products that buy a rite. */
-  riteProductIds: string[];
   /**
    * Whether purchases must be Play test purchases (license testers). True off
    * mainnet, so real money never buys a devnet burn; false on mainnet, so a
@@ -146,11 +145,11 @@ export interface PlayVerifierOptions {
 
 /**
  * Verifies an Android rite: [purchaseToken] is the Play purchase token. Play
- * decides whether it is a completed purchase of a rite product; the ledger
+ * decides whether it is a completed purchase of a rite package; the ledger
  * decides whether a refund has revoked it. A purchase is acknowledged here, so
- * Play does not refund it after three days, and consumed by the app only after
- * its burn is confirmed. A consumed purchase is valid only to look up its own
- * earlier burn.
+ * Play does not refund it after three days, and consumed by the app only once
+ * its package's rites are all burnt. A consumed purchase is valid only to look
+ * up its own earlier burns.
  */
 export class PlayCreditVerifier {
   constructor(
@@ -168,7 +167,8 @@ export class PlayCreditVerifier {
       environment: this.options.testPurchasesOnly ? 'sandbox' : 'production',
       errorMessage,
     });
-    if (!this.options.riteProductIds.includes(productId)) return invalid('Not a rite product');
+    const pack = ritePackByProduct(productId);
+    if (!pack) return invalid('Not a rite package');
     if (!PLAY_PURCHASE_TOKEN.test(purchaseToken)) return invalid('Not a Play purchase token');
 
     const p = await this.gateway.getPurchase(productId, purchaseToken).catch(() => null);
@@ -176,10 +176,16 @@ export class PlayCreditVerifier {
     if ((p.purchaseType === 0) !== this.options.testPurchasesOnly) {
       return invalid(this.options.testPurchasesOnly ? 'Real purchases are refused here' : 'Test purchases are refused here');
     }
-    const spent = this.ledger.get(androidPurchaseId(p.orderId));
+    const spent = this.ledger.ritesSpent(androidPurchaseId(p.orderId)) > 0;
     if (p.consumptionState === 1 && !spent) return invalid('Purchase already consumed');
 
-    this.ledger.recordCredit({ sessionId: p.orderId, paymentIntent: p.orderId, amountTotal: 0, currency: '' });
+    this.ledger.recordCredit({
+      sessionId: p.orderId,
+      paymentIntent: p.orderId,
+      amountTotal: 0,
+      currency: '',
+      rites: pack.rites,
+    });
     if (this.ledger.getCredit(p.orderId)?.state !== 'paid') return invalid('Payment was refunded or revoked');
     if (p.acknowledgementState === 0) {
       // Best effort: the app acknowledges too, and the next request retries.
@@ -211,7 +217,7 @@ export class PlayVoidedSync {
   async runOnce(): Promise<number> {
     const ids = await this.gateway.voidedOrderIds(Date.now() - this.windowMs);
     let revoked = 0;
-    for (const id of ids) revoked += this.ledger.revokeCredits(id, androidPurchaseId);
+    for (const id of ids) revoked += this.ledger.revokeCredits(id);
     if (revoked) console.log(`[play] revoked ${revoked} refunded credit(s)`);
     return revoked;
   }

@@ -105,11 +105,10 @@ export interface AppDeps {
 
 /** Web purchases go to Stripe, Android to Google Play, the rest to the store validator. */
 export function routingVerifier(rite: RiteDeps, stores: PurchaseVerifier): PurchaseVerifier {
-  const web = rite.stripe && new StripeCreditVerifier(rite.stripe.gateway, rite.stripe.ledger, config.riteProductIds[0]);
+  const web = rite.stripe && new StripeCreditVerifier(rite.stripe.gateway, rite.stripe.ledger);
   const android =
     rite.play &&
     new PlayCreditVerifier(rite.play.gateway, rite.play.ledger, {
-      riteProductIds: config.riteProductIds,
       testPurchasesOnly: config.solanaCluster !== 'mainnet-beta',
     });
   return {
