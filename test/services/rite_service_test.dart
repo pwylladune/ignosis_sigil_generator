@@ -391,6 +391,9 @@ void main() {
     expect(find.text(r'$9'), findsOneWidget);
     expect(find.text('7 RITES'), findsOneWidget);
     expect(find.text('21 RITES'), findsOneWidget);
+    expect(find.textContaining('By buying you agree to the Terms'), findsOneWidget);
+    expect(find.text('Terms'), findsOneWidget);
+    expect(find.text('Refunds'), findsOneWidget);
     await tester.tap(find.text('CANCEL'));
     await tester.pumpAndSettle();
 
