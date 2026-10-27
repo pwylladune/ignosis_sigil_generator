@@ -66,8 +66,21 @@ export function createRiteRouter(deps: RiteRouterDeps): Router {
     if (!burns) return res.status(503).json({ success: false, error: 'Rites are not available' });
     const parsed = consecrateSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ success: false, error: 'Invalid request body' });
-    const { platform, productId, receiptData, transactionId, commitment } = parsed.data;
+    try {
+      return await consecrate(burns, parsed.data, res);
+    } catch (e: any) {
+      // A chain or store outage (or a spent treasury allowance) must not take
+      // the server down: the payer keeps the rite and asks again.
+      console.error(`[rite] Consecrate failed: ${e.message}`);
+      return res.status(502).json({ success: false, error: 'The burn did not go through; try again' });
+    }
+  });
 
+  const consecrate = async (
+    burns: RiteBurnService,
+    { platform, productId, receiptData, transactionId, commitment }: z.infer<typeof consecrateSchema>,
+    res: Response
+  ) => {
     const purchase = await deps.verifier.verifyReceipt({ platform, receiptData, productId, transactionId });
     // The store's own record decides the product and the purchase ID, not the client.
     if (!purchase.isValid || !purchase.transactionId) {
@@ -101,7 +114,7 @@ export function createRiteRouter(deps: RiteRouterDeps): Router {
         console.error(`[rite] Burn failed: ${outcome.reason}`);
         return res.status(502).json({ success: false, error: 'The burn did not go through; try again' });
     }
-  });
+  };
 
   // GET /api/v1/rite/packs: the packages on sale on the web, with prices.
   router.get('/packs', async (_req: Request, res: Response) => {
@@ -169,7 +182,13 @@ export function createRiteRouter(deps: RiteRouterDeps): Router {
     if (!deps.check) return res.status(503).json({ success: false, error: 'Rites are not available' });
     const sig = signatureSchema.safeParse(req.params.signature);
     if (!sig.success) return res.status(400).json({ success: false, error: 'Invalid signature' });
-    const result = await deps.check(sig.data);
+    let result: RiteCheck;
+    try {
+      result = await deps.check(sig.data);
+    } catch (e: any) {
+      console.error(`[rite] Check failed: ${e.message}`);
+      return res.status(502).json({ success: false, error: 'The chain could not be read; try again' });
+    }
     if (!result.valid) return res.status(404).json({ success: false, error: result.reason });
     return res.json({ success: true, ...result, explorerUrl: explorerUrl(sig.data, deps.cluster) });
   });
