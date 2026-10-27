@@ -145,7 +145,7 @@ class IapService extends ChangeNotifier implements RiteStore {
     notifyListeners();
     try {
       final response =
-          await iap.queryProductDetails({...RevenueSchemaConfig.allProductIds, RevenueSchemaConfig.riteProductId});
+          await iap.queryProductDetails({...RevenueSchemaConfig.allProductIds, ...RevenueSchemaConfig.riteProductIds});
       if (response.error != null) {
         debugPrint('[IAP] Product query failed: ${response.error!.message}');
       }
@@ -194,19 +194,19 @@ class IapService extends ChangeNotifier implements RiteStore {
   }
 
   @override
-  List<String> get unconsumedRites => _rites.keys.toList();
+  Map<String, String> get unconsumedRites => {for (final e in _rites.entries) e.key: e.value.productID};
 
   @override
-  String? get ritePrice => _products[RevenueSchemaConfig.riteProductId]?.price;
+  String? packPrice(RitePack pack) => _products[pack.productId]?.price;
 
-  /// Starts the purchase of one rite. It is not consumed automatically: the
-  /// rite service consumes it once its burn is confirmed.
+  /// Starts the purchase of a package of rites. It is not consumed
+  /// automatically: the rite service consumes it once its rites are all burnt.
   @override
-  Future<bool> buyRite() async {
+  Future<bool> buyRite(RitePack pack) async {
     await initialize();
     final iap = _iap;
     if (!_isAvailable || iap == null) return false;
-    const id = RevenueSchemaConfig.riteProductId;
+    final id = pack.productId;
     if (!_products.containsKey(id)) await _loadProducts();
     final product = _products[id];
     if (product == null) return false;
@@ -276,7 +276,7 @@ class IapService extends ChangeNotifier implements RiteStore {
       final paid = _isPaid(p);
       // A rite stays owned (unconsumed) until its burn is confirmed; the
       // acknowledgement below keeps Play from refunding it meanwhile.
-      if (paid && p.productID == RevenueSchemaConfig.riteProductId) {
+      if (paid && RevenueSchemaConfig.riteProductIds.contains(p.productID)) {
         _rites[p.verificationData.serverVerificationData] = p;
       }
       if (paid && RevenueSchemaConfig.allProductIds.contains(p.productID)) {
