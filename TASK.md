@@ -470,6 +470,18 @@ Six reviewers took part: esoteric-researcher, research, ellie, code-reviewer, se
 - **Not yet done.** The three Play Console products, and live keys at mainnet.
 - **Note:** the Browser pane blocks the Checkout tab the app opens, because a tab may only open from the user's own click. Test payments in the pane need a click by the user.
 
+### 6.14 Mainnet treasury: cold owner, hot delegate (2026-10-27)
+- **Decision:** ADR 2026-10-27-ignosis-treasury-cold-owner-hot-delegate (vault). A cold key the owner holds offline owns the Joules. It approves the server key (`TREASURY_PRIVATE_KEY`) as delegate for a limited allowance, and the server burns as delegate and pays the fees. On mainnet, rites stay off without a separate `TREASURY_OWNER`.
+- **Owner tools:** `npm run treasury:approve` (with `--mainnet` and `--revoke`), `npm run treasury:status`, and `createJouleMint --mainnet` with an existing cold key.
+- **Proven on devnet:** mint `9yHVi492J49fZ3rgwa6pxW2jmXYccATXdXcgb3y6aSwQ`, with an allowance of 2 rites. Two burns went through the route (allowance 3236 → 1618 → 0), and the third was refused with a 502 and nothing burnt.
+- **Bug found and fixed:** a throw from the chain during a burn or check was an unhandled rejection, which ends the Node 22 process. It now returns a 502.
+- **Still to go live:**
+  - The cold key, the mainnet mint and a funded server key.
+  - A mainnet RPC.
+  - Live Stripe keys.
+  - Terms, privacy and refund pages.
+  - Switching ignosis.net (CORS, `WEB_ORIGIN`, and a build with the rite on).
+
 ### 6.4 Still open (beyond the checkboxes)
 - ~~Bundle ID decision~~ Done: `net.ignosis.studio` (8321ef6a).
 - Skin entitlements are cached client-side in `SharedPreferences`. That is acceptable for cosmetic non-consumables, but it can be edited on a rooted device.
