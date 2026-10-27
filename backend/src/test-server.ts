@@ -1,4 +1,5 @@
 process.env.NODE_ENV = 'test';
+import { config } from './config.js';
 import { createApp } from './server.js';
 import http from 'http';
 import { Keypair } from '@solana/web3.js';
@@ -104,7 +105,46 @@ async function testBackend() {
   if ('mintAddress' in root || 'treasuryPublicAddress' in root) throw new Error('Root must not expose configuration');
 
   server.close();
+  await rateLimitTests();
   console.log('✅ Backend fails closed as expected.\n');
+}
+
+/**
+ * The rate limit is per client: behind one trusted proxy, by the address the
+ * proxy appended; with no trusted proxy, X-Forwarded-For is ignored.
+ */
+async function rateLimitTests() {
+  const saved = config.trustProxyHops;
+  const hit = async (base: string, forwardedFor: string) => {
+    const res = await fetch(`${base}/api/v1/pyre/stats`, { headers: { 'X-Forwarded-For': forwardedFor } });
+    return res.status;
+  };
+  const listen = async () => {
+    const s = http.createServer(createApp()).listen(0);
+    await new Promise<void>((r) => s.once('listening', () => r()));
+    return { s, base: `http://localhost:${(s.address() as any).port}` };
+  };
+  try {
+    // Behind Fly: a client's own spoofed entry comes first; the proxy's last.
+    config.trustProxyHops = 1;
+    const fly = await listen();
+    for (let i = 0; i < 120; i++) {
+      if ((await hit(fly.base, `9.9.9.${i % 250}, 203.0.113.1`)) !== 200) throw new Error(`Request ${i + 1} limited too early`);
+    }
+    if ((await hit(fly.base, '1.1.1.1, 203.0.113.1')) !== 429) throw new Error('A spoofed first entry must not escape the limit');
+    if ((await hit(fly.base, '203.0.113.2')) !== 200) throw new Error('Another client must not share the limit');
+    fly.s.close();
+
+    // Reached directly: X-Forwarded-For cannot buy a fresh limit.
+    config.trustProxyHops = 0;
+    const direct = await listen();
+    for (let i = 0; i < 120; i++) await hit(direct.base, `198.51.100.${i % 250}`);
+    if ((await hit(direct.base, '198.51.100.251')) !== 429) throw new Error('Without a trusted proxy, the header must be ignored');
+    direct.s.close();
+    console.log('6. Rate limit keyed by the proxied client address, and spoof-proof.');
+  } finally {
+    config.trustProxyHops = saved;
+  }
 }
 
 testBackend().catch((e) => {
