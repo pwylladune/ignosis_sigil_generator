@@ -84,7 +84,7 @@ async function main() {
     fetch(`${base}/consecrate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ platform: 'web', productId: 'net.ignosis.studio.rite.pack3', receiptData: purchase, commitment }),
+      body: JSON.stringify({ platform: 'web', productId: 'net.ignosis.studio.rite.pack7', receiptData: purchase, commitment }),
     }).then(async (r) => ({ status: r.status, body: (await r.json()) as any }));
 
   const first = await consecrate();

@@ -43,7 +43,7 @@ export const config = {
 
   // Web payments (Stripe Checkout). All four are needed, or web payment is off.
   // STRIPE_RITE_PRICES maps each rite package (services/ritePacks.ts) to its
-  // Stripe price: `pack3=price_…,pack7=price_…,pack21=price_…`.
+  // Stripe price: `pack7=price_…,pack21=price_…,pack100=price_…`.
   // A live key (sk_live_) is refused unless the cluster is mainnet-beta, and a
   // test key unless it is not: real money never buys a devnet burn.
   stripeSecretKey: process.env.STRIPE_SECRET_KEY || '',

@@ -14,9 +14,9 @@ export interface RitePack {
 
 /** Counts are distinct: a credit's count names its package. */
 export const RITE_PACKS: readonly RitePack[] = [
-  { id: 'pack3', rites: 3, productId: 'net.ignosis.studio.rite.pack3' },
   { id: 'pack7', rites: 7, productId: 'net.ignosis.studio.rite.pack7' },
   { id: 'pack21', rites: 21, productId: 'net.ignosis.studio.rite.pack21' },
+  { id: 'pack100', rites: 100, productId: 'net.ignosis.studio.rite.pack100' },
 ];
 
 export const ritePackById = (id: string): RitePack | undefined => RITE_PACKS.find((p) => p.id === id);
@@ -25,7 +25,7 @@ export const ritePackByProduct = (productId: string): RitePack | undefined =>
   RITE_PACKS.find((p) => p.productId === productId);
 
 /**
- * Parses STRIPE_RITE_PRICES, `pack3=price_…,pack7=price_…,pack21=price_…`,
+ * Parses STRIPE_RITE_PRICES, `pack7=price_…,pack21=price_…,pack100=price_…`,
  * into a map from package ID to Stripe price. Unknown packages are dropped.
  */
 export function parsePackPrices(value: string): Map<string, string> {

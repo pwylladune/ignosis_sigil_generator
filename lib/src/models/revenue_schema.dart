@@ -24,7 +24,7 @@ class RevenueSchemaConfig {
   /// The on-chain rite packages, smallest first (matches the backend's
   /// services/ritePacks.ts). Each is a Play consumable, consumed once all its
   /// rites are burnt; on the web each has a Stripe price.
-  static const List<RitePack> ritePacks = [RitePack('pack3', 3), RitePack('pack7', 7), RitePack('pack21', 21)];
+  static const List<RitePack> ritePacks = [RitePack('pack7', 7), RitePack('pack21', 21), RitePack('pack100', 100)];
 
   static Set<String> get riteProductIds => {for (final p in ritePacks) p.productId};
 
