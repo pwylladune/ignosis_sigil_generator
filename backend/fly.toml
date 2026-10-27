@@ -5,9 +5,17 @@
 # purchase. Deploy with `fly deploy --ha=false`; never scale above 1.
 # The machine never stops: the sweeper and the Play refund check run in it.
 #
-# Secrets (fly secrets set / import): TREASURY_PRIVATE_KEY, and when ready
-# STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_RITE_PRICES,
-# GOOGLE_PLAY_SERVICE_ACCOUNT, and a paid SOLANA_RPC_URL.
+# Mainnet (ADR 2026-10-27-ignosis-treasury-cold-owner-hot-delegate). The
+# Joules belong to the cold TREASURY_OWNER; the server key burns as its
+# delegate within the allowance the owner approves.
+#
+# Secrets (fly secrets set / import):
+#   TREASURY_PRIVATE_KEY  the server key (the delegate), never the owner's
+#   SOLANA_RPC_URL        a mainnet RPC with its API key (Helius)
+#   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_RITE_PRICES  live mode
+#   GOOGLE_PLAY_SERVICE_ACCOUNT  when Android rites are ready
+# Each fails closed: without a mainnet RPC rites refuse to burn (the default
+# RPC is devnet), and a test Stripe key turns web payment off on mainnet.
 
 app = "ignosis-api"
 primary_region = "sjc"
@@ -18,15 +26,16 @@ primary_region = "sjc"
 [env]
   NODE_ENV = "production"
   PORT = "8080"
-  SOLANA_CLUSTER = "devnet"
-  SOLANA_RPC_URL = "https://api.devnet.solana.com"
-  JOULE_MINT_ADDRESS = "2Aj4PVH2RoxdQScMHkvjzPR4whMZiGUWwvZoZyHMjwNA"
-  RITE_LEDGER_PATH = "/data/rite-ledger.sqlite"
+  SOLANA_CLUSTER = "mainnet-beta"
+  JOULE_MINT_ADDRESS = "HoDanvE1TVJQfBxt8jWbPQM4a5HPamtjDm5KNPo8V5Sj"
+  TREASURY_OWNER = "B94KMTKhdJugAwdugDKRRPNpK3jnShq9Sjq6irwJZhwb"
+  # A fresh ledger: the devnet one (rite-ledger.sqlite) holds test credits.
+  RITE_LEDGER_PATH = "/data/rite-ledger-mainnet.sqlite"
   # Fly's edge proxy appends the client's address to X-Forwarded-For.
   TRUST_PROXY_HOPS = "1"
-  # The staging web build (a fixed Netlify alias) and local testing.
-  CORS_ORIGINS = "https://rite-staging--ignosis-studio.netlify.app,http://localhost:8642"
-  WEB_ORIGIN = "https://rite-staging--ignosis-studio.netlify.app"
+  # The production web app only.
+  CORS_ORIGINS = "https://ignosis.net,https://www.ignosis.net"
+  WEB_ORIGIN = "https://ignosis.net"
 
 [[mounts]]
   source = "rite_data"
