@@ -1,5 +1,5 @@
 import { Connection, Keypair, PublicKey, SendTransactionError, Transaction } from '@solana/web3.js';
-import { createBurnCheckedInstruction, getAssociatedTokenAddressSync, getMint } from '@solana/spl-token';
+import { createBurnCheckedInstruction, getAccount, getAssociatedTokenAddressSync, getMint } from '@solana/spl-token';
 import {
   JOULE_DECIMALS,
   JOULE_PROGRAM_ID,
@@ -166,17 +166,48 @@ export class RiteBurnService {
   }
 }
 
-/** The real chain: Token-2022 BurnChecked plus a signed memo, from the treasury. */
+/** Rites left in the treasury's allowance below which every burn logs a warning. */
+export const LOW_ALLOWANCE_RITES = 100;
+
+/**
+ * The real chain: Token-2022 BurnChecked plus a signed memo, from the
+ * treasury's token account.
+ *
+ * The account belongs to [owner]. On mainnet that is a cold key the user
+ * holds offline, which approves the server's [signer] as delegate for a
+ * limited allowance; the signer burns as delegate and pays the fees (ADR
+ * 2026-10-27-ignosis-treasury-cold-owner-hot-delegate). Without a separate
+ * owner the signer owns the account itself (the devnet setup).
+ */
 export class SolanaRiteChain implements RiteChain {
   readonly treasuryAccount: PublicKey;
+  readonly owner: PublicKey;
   private mintChecked: Promise<void> | null = null;
 
   constructor(
     private readonly connection: Connection,
     private readonly treasury: Keypair,
-    readonly mint: PublicKey
+    readonly mint: PublicKey,
+    owner?: PublicKey
   ) {
-    this.treasuryAccount = getAssociatedTokenAddressSync(mint, treasury.publicKey, false, JOULE_PROGRAM_ID);
+    this.owner = owner ?? treasury.publicKey;
+    this.treasuryAccount = getAssociatedTokenAddressSync(mint, this.owner, false, JOULE_PROGRAM_ID);
+  }
+
+  /** The signer burns as the owner's delegate, not as the owner. */
+  get delegated(): boolean {
+    return !this.owner.equals(this.treasury.publicKey);
+  }
+
+  /**
+   * Joules the signer may still burn: its delegated allowance, or the whole
+   * balance when it owns the account.
+   */
+  async allowance(): Promise<bigint> {
+    const account = await getAccount(this.connection, this.treasuryAccount, 'confirmed', JOULE_PROGRAM_ID);
+    if (!this.delegated) return account.amount;
+    if (!account.delegate?.equals(this.treasury.publicKey)) return 0n;
+    return account.delegatedAmount < account.amount ? account.delegatedAmount : account.amount;
   }
 
   /** Refuses to burn from anything but a proper Joule mint (checked once). */
@@ -194,6 +225,17 @@ export class SolanaRiteChain implements RiteChain {
 
   async prepareBurn(memo: string, joules: number): Promise<PreparedBurn> {
     await this.checkMint();
+    if (this.delegated) {
+      // Refused here, before anything is signed or recorded, so the payer's
+      // rite is untouched and burns once the owner approves more.
+      const left = await this.allowance();
+      if (left < BigInt(joules)) {
+        throw new Error('The treasury allowance is spent: the owner must approve the server key for more rites');
+      }
+      if (left < BigInt(joules) * BigInt(LOW_ALLOWANCE_RITES)) {
+        console.warn(`[rite] Treasury allowance low: ${left / BigInt(joules)} rites left. The owner should approve more.`);
+      }
+    }
     const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash('confirmed');
     const tx = new Transaction({ feePayer: this.treasury.publicKey, blockhash, lastValidBlockHeight }).add(
       createBurnCheckedInstruction(

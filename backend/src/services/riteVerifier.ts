@@ -8,14 +8,17 @@ export type RiteCheck =
 /**
  * Checks on-chain that [signature] is a rite: a confirmed transaction that
  * burns Joules of [mint] on the [treasury]'s authority and carries an
- * IGNOSIS memo. It reads only the public chain, so the app (or anyone) can
- * run the same check without trusting this server.
+ * IGNOSIS memo. With [account], the burn must also come from that token
+ * account (the cold owner's, burnt by the treasury as delegate). It reads only
+ * the public chain, so the app (or anyone) can run the same check without
+ * trusting this server.
  */
 export async function verifyRite(
   connection: Connection,
   signature: string,
   mint: PublicKey,
-  treasury: PublicKey
+  treasury: PublicKey,
+  account?: PublicKey
 ): Promise<RiteCheck> {
   const tx = await connection.getParsedTransaction(signature, {
     commitment: 'confirmed',
@@ -31,6 +34,7 @@ export async function verifyRite(
     if (ix.programId.equals(JOULE_PROGRAM_ID) && (ix.parsed?.type === 'burnChecked' || ix.parsed?.type === 'burn')) {
       const info = ix.parsed.info;
       if (info.mint !== mint.toBase58() || info.authority !== treasury.toBase58()) continue;
+      if (account && info.account !== account.toBase58()) continue;
       joules += Number(info.tokenAmount?.amount ?? info.amount);
     } else if (ix.programId.equals(MEMO_PROGRAM_ID) && typeof ix.parsed === 'string') {
       commitment = commitmentFromMemo(ix.parsed) ?? commitment;
