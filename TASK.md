@@ -459,6 +459,13 @@ Six reviewers took part: esoteric-researcher, research, ellie, code-reviewer, se
   - **Contradicts the review (§1.1, §1.2):** the review lists "Chaos-magic interview wiki" and the files `chaos_wiki_screen.dart` and `chaos_magic_wiki_data.dart`. These are removed, along with the codex articles. The Exegesis dialog stays.
 - **Verified.** `flutter analyze --fatal-infos` is clean. `flutter test`: 159 passed, 2 skipped. In the browser I opened the home, a part and the glossary.
 
+### 6.13 Rite packages (2026-10-26)
+- **Rites are sold in packages of 3, 7 and 21, not one at a time.** One payment buys a package: a Stripe Checkout session on the web, a Play order on Android (`net.ignosis.studio.rite.pack3`, `.pack7`, `.pack21`). Each release spends one rite, and each rite is one burn of 1618 J.
+- **The ledger counts the rites per payment.** It refuses a burn past the package in the same statement that records it, so concurrent releases cannot overspend. A refund or dispute revokes the rites left; burns already made stay.
+- **Configuration.** `STRIPE_RITE_PRICES=pack3=price_…,pack7=price_…,pack21=price_…` replaces `STRIPE_RITE_PRICE_ID`. `RITE_PRODUCT_IDS` is removed. The old single-rite product `net.ignosis.studio.rite` is no longer accepted.
+- **Verified.** `npm test`: 5 of 5 suites pass. `flutter analyze --fatal-infos` is clean. `flutter test`: 165 passed, 2 skipped. In the browser I opened the package chooser.
+- **Not yet done.** A real Stripe test payment (it needs the keys and three prices), and the three Play Console products.
+
 ### 6.4 Still open (beyond the checkboxes)
 - ~~Bundle ID decision~~ Done: `net.ignosis.studio` (8321ef6a).
 - Skin entitlements are cached client-side in `SharedPreferences`. That is acceptable for cosmetic non-consumables, but it can be edited on a rooted device.
