@@ -1,11 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { config } from '../config.js';
 import { PurchaseVerificationResult } from '../services/receiptValidator.js';
 import { RiteBurnService } from '../services/riteBurn.js';
 import { RiteCheck, explorerUrl } from '../services/riteVerifier.js';
 import { PyreIndexerService } from '../services/pyreIndexer.js';
 import { RiteLedger } from '../services/riteLedger.js';
+import { ritePackById, ritePackByProduct } from '../services/ritePacks.js';
 import { CHECKOUT_SESSION_ID, StripeGateway, webPurchaseId } from '../services/stripeRite.js';
 
 export interface PurchaseVerifier {
@@ -50,6 +50,8 @@ const consecrateSchema = z.object({
 
 const signatureSchema = z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{64,90}$/);
 
+const checkoutSchema = z.object({ pack: z.string().min(1).max(32) });
+
 /**
  * The rite: a verified purchase burns the rite's Joules on-chain with the
  * user's intent commitment in the memo (ADR 2026-10-25-ignosis-joule-token).
@@ -71,11 +73,13 @@ export function createRiteRouter(deps: RiteRouterDeps): Router {
     if (!purchase.isValid || !purchase.transactionId) {
       return res.status(402).json({ success: false, error: 'Purchase could not be verified' });
     }
-    if (!config.riteProductIds.includes(purchase.productId)) {
-      return res.status(400).json({ success: false, error: 'This product is not a rite' });
-    }
+    const pack = ritePackByProduct(purchase.productId);
+    if (!pack) return res.status(400).json({ success: false, error: 'This product is not a rite package' });
 
-    const outcome = await burns.fulfil(`${platform}:${purchase.transactionId}`, commitment);
+    // One payment buys the package's rites; each rite is the payment plus the
+    // commitment it burns, so asking again for the same intent finds its burn.
+    const allowance = { key: `${platform}:${purchase.transactionId}`, rites: pack.rites };
+    const outcome = await burns.fulfil(`${allowance.key}#${commitment}`, commitment, allowance);
     switch (outcome.status) {
       case 'confirmed':
         // Count each burn once, not again when a client asks a second time.
@@ -85,23 +89,41 @@ export function createRiteRouter(deps: RiteRouterDeps): Router {
           signature: outcome.signature,
           joules: outcome.joules,
           explorerUrl: explorerUrl(outcome.signature, deps.cluster),
+          remaining: burns.ritesLeft(allowance),
         });
       case 'pending':
         return res.status(202).json({ success: false, pending: true, signature: outcome.signature });
       case 'conflict':
         return res.status(409).json({ success: false, error: 'This purchase was used for another rite' });
+      case 'exhausted':
+        return res.status(409).json({ success: false, exhausted: true, error: 'Every rite in this package is spent' });
       case 'failed':
         console.error(`[rite] Burn failed: ${outcome.reason}`);
         return res.status(502).json({ success: false, error: 'The burn did not go through; try again' });
     }
   });
 
-  // POST /api/v1/rite/checkout: a Stripe Checkout session for one rite. The
-  // session ID is the payer's credit; it is spent at /consecrate on release.
-  router.post('/checkout', async (_req: Request, res: Response) => {
+  // GET /api/v1/rite/packs: the packages on sale on the web, with prices.
+  router.get('/packs', async (_req: Request, res: Response) => {
     if (!deps.burns || !deps.stripe) return res.status(503).json({ success: false, error: 'Web payment is not available' });
     try {
-      const { id, url } = await deps.stripe.gateway.createCheckout();
+      return res.json({ success: true, packs: await deps.stripe.gateway.offers() });
+    } catch (e: any) {
+      console.error(`[rite] Prices failed: ${e.message}`);
+      return res.status(502).json({ success: false, error: 'Could not load prices' });
+    }
+  });
+
+  // POST /api/v1/rite/checkout {pack}: a Stripe Checkout session for a package
+  // of rites. The session ID is the payer's credit; each release at
+  // /consecrate spends one of its rites.
+  router.post('/checkout', async (req: Request, res: Response) => {
+    if (!deps.burns || !deps.stripe) return res.status(503).json({ success: false, error: 'Web payment is not available' });
+    const parsed = checkoutSchema.safeParse(req.body);
+    const pack = parsed.success ? ritePackById(parsed.data.pack) : undefined;
+    if (!pack) return res.status(400).json({ success: false, error: 'Unknown package' });
+    try {
+      const { id, url } = await deps.stripe.gateway.createCheckout(pack);
       return res.json({ success: true, sessionId: id, url });
     } catch (e: any) {
       console.error(`[rite] Checkout failed: ${e.message}`);
@@ -109,7 +131,8 @@ export function createRiteRouter(deps: RiteRouterDeps): Router {
     }
   });
 
-  // GET /api/v1/rite/credit/:sessionId: is this payment ready to spend, or spent?
+  // GET /api/v1/rite/credit/:sessionId: is this payment paid, and how many of
+  // its rites are left?
   router.get('/credit/:sessionId', async (req: Request, res: Response) => {
     const stripe = deps.stripe;
     if (!stripe) return res.status(503).json({ success: false, error: 'Web payment is not available' });
@@ -124,14 +147,20 @@ export function createRiteRouter(deps: RiteRouterDeps): Router {
         credit = stripe.ledger.getCredit(sessionId);
       }
     }
-    const rite = stripe.ledger.get(webPurchaseId(sessionId));
+    const key = webPurchaseId(sessionId);
+    const used = stripe.ledger.ritesSpent(key);
+    const rites = credit?.rites ?? 0;
+    const latest = stripe.ledger.latestRite(key);
     return res.json({
       success: true,
       paid: credit?.state === 'paid',
       revoked: credit?.state === 'revoked',
-      spent: !!rite,
-      burnt: rite?.state === 'done',
-      signature: rite?.signature ?? null,
+      rites,
+      used,
+      remaining: credit?.state === 'paid' ? Math.max(0, rites - used) : 0,
+      spent: !!credit && used >= rites,
+      burnt: latest?.state === 'done',
+      signature: latest?.signature ?? null,
     });
   });
 

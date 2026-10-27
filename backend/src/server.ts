@@ -12,6 +12,7 @@ import { RiteSweeper } from './services/riteSweeper.js';
 import { verifyRite } from './services/riteVerifier.js';
 import { StripeCreditVerifier, StripeGateway, StripeRiteGateway } from './services/stripeRite.js';
 import { GooglePlayGateway, PlayCreditVerifier, PlayGateway, PlayVoidedSync } from './services/playRite.js';
+import { parsePackPrices } from './services/ritePacks.js';
 import { createIapRouter } from './routes/iap.js';
 import { createPyreRouter } from './routes/pyre.js';
 import { PurchaseVerifier, RiteRouterDeps, createRiteRouter, recordInPyre } from './routes/rite.js';
@@ -54,14 +55,15 @@ export function playFromConfig(): PlayGateway | null {
 
 /** Stripe from configuration, or null (web payment off) if anything is missing or mismatched. */
 export function stripeFromConfig(): StripeGateway | null {
-  const { stripeSecretKey: key, stripeWebhookSecret, stripeRitePriceId, webOrigin } = config;
-  if (!key || !stripeWebhookSecret || !stripeRitePriceId || !webOrigin) return null;
+  const { stripeSecretKey: key, stripeWebhookSecret, webOrigin } = config;
+  const prices = parsePackPrices(config.stripeRitePrices);
+  if (!key || !stripeWebhookSecret || prices.size === 0 || !webOrigin) return null;
   const live = key.startsWith('sk_live_') || key.startsWith('rk_live_');
   if (live !== (config.solanaCluster === 'mainnet-beta')) {
     console.error(`[stripe] A ${live ? 'live' : 'test'} key with cluster ${config.solanaCluster}: web payment off.`);
     return null;
   }
-  return new StripeRiteGateway({ secretKey: key, webhookSecret: stripeWebhookSecret, priceId: stripeRitePriceId, webOrigin });
+  return new StripeRiteGateway({ secretKey: key, webhookSecret: stripeWebhookSecret, prices, webOrigin });
 }
 
 /** The rite services from configuration, or nulls (rites disabled) if anything is missing. */

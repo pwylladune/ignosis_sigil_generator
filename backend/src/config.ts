@@ -25,22 +25,19 @@ export const config = {
   // burns to ~3,300 J: the energy of one Solana transaction (~3,290 J).
   riteJoules: 1618,
 
-  // Store products that buy one rite (comma-separated RITE_PRODUCT_IDS).
-  riteProductIds: (process.env.RITE_PRODUCT_IDS || 'net.ignosis.studio.rite')
-    .split(',')
-    .map((p) => p.trim())
-    .filter(Boolean),
-
-  // SQLite file for the fulfilment ledger (one burn per store transaction).
+  // SQLite file for the fulfilment ledger (one burn per rite; a package's
+  // rites are counted against its payment).
   // Without it, rites are disabled: idempotency needs persistence.
   riteLedgerPath: process.env.RITE_LEDGER_PATH || '',
 
   // Web payments (Stripe Checkout). All four are needed, or web payment is off.
+  // STRIPE_RITE_PRICES maps each rite package (services/ritePacks.ts) to its
+  // Stripe price: `pack3=price_…,pack7=price_…,pack21=price_…`.
   // A live key (sk_live_) is refused unless the cluster is mainnet-beta, and a
   // test key unless it is not: real money never buys a devnet burn.
   stripeSecretKey: process.env.STRIPE_SECRET_KEY || '',
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
-  stripeRitePriceId: process.env.STRIPE_RITE_PRICE_ID || '',
+  stripeRitePrices: process.env.STRIPE_RITE_PRICES || '',
   webOrigin: (process.env.WEB_ORIGIN || '').replace(/\/+$/, ''),
 
   // Android rites (Google Play Billing): the service account JSON, from a Google

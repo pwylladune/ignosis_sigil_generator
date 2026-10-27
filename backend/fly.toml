@@ -6,7 +6,7 @@
 # The machine never stops: the sweeper and the Play refund check run in it.
 #
 # Secrets (fly secrets set / import): TREASURY_PRIVATE_KEY, and when ready
-# STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_RITE_PRICE_ID,
+# STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_RITE_PRICES,
 # GOOGLE_PLAY_SERVICE_ACCOUNT, and a paid SOLANA_RPC_URL.
 
 app = "ignosis-api"
