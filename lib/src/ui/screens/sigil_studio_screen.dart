@@ -131,7 +131,8 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
 
   bool get _canExport => !_state.isIncinerated && !_isBurning && !_kernel.isEmpty;
 
-  /// One entry point for getting the seal out of the app: share or print.
+  /// One entry point for getting the seal out of the app: download (in a
+  /// browser), share or print.
   void _showExportSheet() {
     showModalBottomSheet<void>(
       context: context,
@@ -140,6 +141,15 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (UniversalExportService.canDownload)
+              ListTile(
+                leading: const Icon(Icons.download_outlined),
+                title: const Text('Download seal (PNG)'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _downloadSigil();
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.image_outlined),
               title: const Text('Share seal (PNG)'),
@@ -161,6 +171,11 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
         ),
       )),
     );
+  }
+
+  Future<void> _downloadSigil() async {
+    final bytes = await _settledSealPng();
+    if (bytes != null) await UniversalExportService.downloadSigilPng(bytes, 'ignosis_sigil');
   }
 
   Future<void> _exportSigil() async {
