@@ -5,10 +5,11 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs';
 import { DatabaseSync } from 'node:sqlite';
-import { Keypair } from '@solana/web3.js';
-import { createApp } from './server.js';
+import { Keypair, PublicKey } from '@solana/web3.js';
+import { createApp, treasuryOwner } from './server.js';
+import { verifyRite } from './services/riteVerifier.js';
 import { config } from './config.js';
-import { base58, commitmentFromMemo, isCommitment, riteMemo } from './services/joule.js';
+import { JOULE_PROGRAM_ID, MEMO_PROGRAM_ID, base58, commitmentFromMemo, isCommitment, riteMemo } from './services/joule.js';
 import { RiteBurnService } from './services/riteBurn.js';
 import { FakeChain } from './test-support.js';
 import { RiteLedger } from './services/riteLedger.js';
@@ -272,11 +273,107 @@ async function routeTests() {
   assert.equal(verified.commitment, C1);
 
   server.close();
-  console.log('✅ Rite route: verified purchases only, rite packages only, idempotent, no plaintext.');
+
+  // A chain that throws (an RPC outage, or a spent treasury allowance) gets a
+  // 502, and the server keeps serving: nothing is recorded, so the payer's
+  // rite is intact for the next attempt.
+  {
+    const broken = new FakeChain();
+    broken.prepareBurn = async () => {
+      throw new Error('The treasury allowance is spent');
+    };
+    const brokenBurns = service(broken);
+    const s2 = http
+      .createServer(
+        createApp({
+          verifier,
+          rite: {
+            burns: brokenBurns,
+            check: async () => {
+              throw new Error('RPC down');
+            },
+          },
+        })
+      )
+      .listen(0);
+    const b2 = `http://localhost:${(s2.address() as any).port}/api/v1`;
+    const post = () =>
+      fetch(`${b2}/rite/consecrate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform: 'ios', productId: 'net.ignosis.studio.rite.pack3', receiptData: 'valid:t9', commitment: C1 }),
+      });
+    assert.equal((await post()).status, 502);
+    assert.equal((await post()).status, 502, 'still serving');
+    assert.equal((await fetch(`${b2}/rite/${'5'.repeat(88)}`)).status, 502);
+    assert.equal(brokenBurns.ritesLeft({ key: 'ios:t9', rites: 3 }), 3);
+    s2.close();
+  }
+  console.log('✅ Rite route: verified purchases only, rite packages only, idempotent, no plaintext, survives a failing chain.');
+}
+
+/** The cold owner and the on-chain check (ADR 2026-10-27-ignosis-treasury-cold-owner-hot-delegate). */
+async function treasuryTests() {
+  const server = Keypair.generate();
+  const cold = Keypair.generate().publicKey;
+  const saved = { ...config };
+  try {
+    Object.assign(config, { solanaCluster: 'devnet', treasuryOwner: '' });
+    assert.equal(treasuryOwner(server), null, 'devnet: the server key may own the Joules');
+    Object.assign(config, { treasuryOwner: cold.toBase58() });
+    assert.ok(treasuryOwner(server)?.equals(cold));
+    Object.assign(config, { treasuryOwner: 'not a key' });
+    assert.equal(treasuryOwner(server), undefined);
+    Object.assign(config, { solanaCluster: 'mainnet-beta', treasuryOwner: '' });
+    assert.equal(treasuryOwner(server), undefined, 'mainnet: a cold owner is required');
+    Object.assign(config, { treasuryOwner: server.publicKey.toBase58() });
+    assert.equal(treasuryOwner(server), undefined, 'mainnet: the owner must not be the server key');
+    Object.assign(config, { treasuryOwner: cold.toBase58() });
+    assert.ok(treasuryOwner(server)?.equals(cold));
+  } finally {
+    Object.assign(config, saved);
+  }
+
+  // The check reads a parsed transaction: a burn by the delegate counts only
+  // from the owner's account.
+  const mint = Keypair.generate().publicKey;
+  const ownerAccount = Keypair.generate().publicKey;
+  const otherAccount = Keypair.generate().publicKey;
+  const txFrom = (account: PublicKey) => ({
+    slot: 7,
+    blockTime: null,
+    meta: { err: null },
+    transaction: {
+      message: {
+        instructions: [
+          {
+            programId: JOULE_PROGRAM_ID,
+            parsed: {
+              type: 'burnChecked',
+              info: {
+                account: account.toBase58(),
+                mint: mint.toBase58(),
+                authority: server.publicKey.toBase58(),
+                tokenAmount: { amount: String(J) },
+              },
+            },
+          },
+          { programId: MEMO_PROGRAM_ID, parsed: riteMemo(C1) },
+        ],
+      },
+    },
+  });
+  const chainWith = (tx: object) => ({ getParsedTransaction: async () => tx }) as any;
+  const good = await verifyRite(chainWith(txFrom(ownerAccount)), 'sig', mint, server.publicKey, ownerAccount);
+  assert.deepEqual(good, { valid: true, joules: J, commitment: C1, slot: 7, blockTime: null });
+  const elsewhere = await verifyRite(chainWith(txFrom(otherAccount)), 'sig', mint, server.publicKey, ownerAccount);
+  assert.equal(elsewhere.valid, false);
+  console.log('✅ Treasury: mainnet needs a cold owner; rites count only from its account.');
 }
 
 unitTests()
   .then(routeTests)
+  .then(treasuryTests)
   .catch((e) => {
     console.error('❌ Rite test failed:', e);
     process.exit(1);
