@@ -3,7 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 export type RiteState = 'pending' | 'done' | 'failed';
 
 /**
- * A paid purchase that buys one rite: a Stripe Checkout session (web), or a
+ * A paid purchase of a package of rites: a Stripe Checkout session (web), or a
  * Play order (Android), whose ID is then both [sessionId] and [paymentIntent].
  */
 export interface RiteCredit {
@@ -11,13 +11,15 @@ export interface RiteCredit {
   paymentIntent: string;
   amountTotal: number;
   currency: string;
-  /** Revoked by a refund or dispute before it was used. */
+  /** How many rites the payment buys. */
+  rites: number;
+  /** Revoked by a refund or dispute: its unused rites can no longer be spent. */
   state: 'paid' | 'revoked';
   createdAt: number;
 }
 
 export interface RiteRecord {
-  /** Store transaction / order ID: each is fulfilled at most once. */
+  /** The rite's own ID: each is fulfilled at most once. */
   purchaseId: string;
   commitment: string;
   state: RiteState;
@@ -28,6 +30,13 @@ export interface RiteRecord {
   /** The signed transaction (base64), so a retry can resend the same burn. */
   rawTx: string;
   updatedAt: number;
+}
+
+/** The payment a rite is spent from, and how many rites it buys. */
+export interface RiteAllowance {
+  /** The payment, e.g. `web:<session>` or `android:<order>`. */
+  key: string;
+  rites: number;
 }
 
 /**
@@ -60,6 +69,16 @@ export class RiteLedger {
         created_at INTEGER NOT NULL
       );
       CREATE INDEX IF NOT EXISTS credits_payment_intent ON credits (payment_intent);`);
+    // Packages: a credit buys [rites] rites, and each rite records the payment
+    // it was spent from. Added to ledgers created before packages.
+    this.addColumn('credits', 'rites', 'INTEGER NOT NULL DEFAULT 1');
+    this.addColumn('rites', 'pack', 'TEXT');
+    this.db.exec('CREATE INDEX IF NOT EXISTS rites_pack ON rites (pack)');
+  }
+
+  private addColumn(table: string, column: string, type: string): void {
+    const columns = this.db.prepare(`PRAGMA table_info(${table})`).all() as any[];
+    if (!columns.some((c) => c.name === column)) this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
   }
 
   get(purchaseId: string): RiteRecord | undefined {
@@ -76,16 +95,46 @@ export class RiteLedger {
     };
   }
 
-  /** Records the first burn for a purchase. False if one is already recorded. */
-  insertPending(r: Omit<RiteRecord, 'state' | 'updatedAt'>): boolean {
+  /**
+   * Records the first burn for a rite. False if one is already recorded, or if
+   * [allowance] is given and its rites are all spent: the count and the insert
+   * are one statement, so two requests cannot both take the last rite.
+   */
+  insertPending(r: Omit<RiteRecord, 'state' | 'updatedAt'>, allowance?: RiteAllowance): boolean {
     const res = this.db
       .prepare(
         `INSERT OR IGNORE INTO rites
-           (purchase_id, commitment, state, signature, last_valid_block_height, raw_tx, updated_at)
-         VALUES (?, ?, 'pending', ?, ?, ?, ?)`
+           (purchase_id, commitment, state, signature, last_valid_block_height, raw_tx, updated_at, pack)
+         SELECT ?, ?, 'pending', ?, ?, ?, ?, ?
+         WHERE ? IS NULL OR (SELECT COUNT(*) FROM rites WHERE pack = ?) < ?`
       )
-      .run(r.purchaseId, r.commitment, r.signature, r.lastValidBlockHeight, r.rawTx, Date.now());
+      .run(
+        r.purchaseId,
+        r.commitment,
+        r.signature,
+        r.lastValidBlockHeight,
+        r.rawTx,
+        Date.now(),
+        allowance?.key ?? null,
+        allowance?.key ?? null,
+        allowance?.key ?? null,
+        allowance?.rites ?? 0
+      );
     return res.changes === 1;
+  }
+
+  /** Rites recorded against the payment [key]. */
+  ritesSpent(key: string): number {
+    const row = this.db.prepare('SELECT COUNT(*) AS n FROM rites WHERE pack = ?').get(key) as any;
+    return Number(row.n);
+  }
+
+  /** The latest rite spent from the payment [key]. */
+  latestRite(key: string): RiteRecord | undefined {
+    const row = this.db
+      .prepare('SELECT purchase_id FROM rites WHERE pack = ? ORDER BY updated_at DESC, rowid DESC LIMIT 1')
+      .get(key) as any;
+    return row ? this.get(row.purchase_id) : undefined;
   }
 
   /**
@@ -120,14 +169,14 @@ export class RiteLedger {
     return rows.map((r) => ({ purchaseId: r.purchase_id, commitment: r.commitment }));
   }
 
-  /** Records a paid web purchase; a repeated webhook changes nothing. */
+  /** Records a paid purchase; a repeated webhook changes nothing. */
   recordCredit(c: Omit<RiteCredit, 'state' | 'createdAt'>): void {
     this.db
       .prepare(
-        `INSERT OR IGNORE INTO credits (session_id, payment_intent, amount_total, currency, state, created_at)
-         VALUES (?, ?, ?, ?, 'paid', ?)`
+        `INSERT OR IGNORE INTO credits (session_id, payment_intent, amount_total, currency, rites, state, created_at)
+         VALUES (?, ?, ?, ?, ?, 'paid', ?)`
       )
-      .run(c.sessionId, c.paymentIntent, c.amountTotal, c.currency, Date.now());
+      .run(c.sessionId, c.paymentIntent, c.amountTotal, c.currency, c.rites, Date.now());
   }
 
   getCredit(sessionId: string): RiteCredit | undefined {
@@ -138,29 +187,22 @@ export class RiteLedger {
       paymentIntent: row.payment_intent,
       amountTotal: Number(row.amount_total),
       currency: row.currency,
+      rites: Number(row.rites),
       state: row.state,
       createdAt: Number(row.created_at),
     };
   }
 
   /**
-   * Revokes the unused credits paid by [paymentIntent] (a refund or dispute).
-   * A credit already spent on a burn stays: the burn cannot be undone.
-   * Returns the number revoked.
+   * Revokes the credits paid by [paymentIntent] (a refund or dispute): their
+   * unused rites can no longer be spent. Rites already burnt stay; a burn
+   * cannot be undone. Returns the number of credits revoked.
    */
-  revokeCredits(paymentIntent: string, purchaseIdOf: (sessionId: string) => string): number {
-    const rows = this.db
-      .prepare(`SELECT session_id FROM credits WHERE payment_intent = ? AND state = 'paid'`)
-      .all(paymentIntent) as any[];
-    let revoked = 0;
-    for (const { session_id } of rows) {
-      if (this.get(purchaseIdOf(session_id))) continue;
-      revoked += Number(
-        this.db.prepare(`UPDATE credits SET state = 'revoked' WHERE session_id = ? AND state = 'paid'`).run(session_id)
-          .changes
-      );
-    }
-    return revoked;
+  revokeCredits(paymentIntent: string): number {
+    return Number(
+      this.db.prepare(`UPDATE credits SET state = 'revoked' WHERE payment_intent = ? AND state = 'paid'`).run(paymentIntent)
+        .changes
+    );
   }
 
   close(): void {

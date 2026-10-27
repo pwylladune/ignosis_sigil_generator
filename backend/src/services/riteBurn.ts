@@ -9,7 +9,7 @@ import {
   jouleMintProblem,
   riteMemo,
 } from './joule.js';
-import { RiteLedger, RiteRecord } from './riteLedger.js';
+import { RiteAllowance, RiteLedger, RiteRecord } from './riteLedger.js';
 
 /** A burn signed and ready to send, but not yet sent. */
 export interface PreparedBurn {
@@ -37,7 +37,9 @@ export type RiteOutcome =
   | { status: 'pending'; signature: string }
   | { status: 'failed'; reason: string }
   /** The purchase was already used for a different commitment. */
-  | { status: 'conflict' };
+  | { status: 'conflict' }
+  /** Every rite the payment bought is already spent. */
+  | { status: 'exhausted' };
 
 export interface RiteBurnOptions {
   joules: number;
@@ -74,7 +76,17 @@ export class RiteBurnService {
     return this.joules;
   }
 
-  async fulfil(purchaseId: string, commitment: string): Promise<RiteOutcome> {
+  /** Rites the payment [allowance] still has to spend. */
+  ritesLeft(allowance: RiteAllowance): number {
+    return Math.max(0, allowance.rites - this.ledger.ritesSpent(allowance.key));
+  }
+
+  /**
+   * Burns once for [purchaseId]. A new rite is spent from [allowance] when
+   * given, and refused once the payment's rites are all spent; an existing
+   * rite is always finished, so the sweeper needs no allowance.
+   */
+  async fulfil(purchaseId: string, commitment: string, allowance?: RiteAllowance): Promise<RiteOutcome> {
     if (!purchaseId) return { status: 'failed', reason: 'No purchase ID' };
     if (!isCommitment(commitment)) return { status: 'failed', reason: 'Invalid commitment' };
 
@@ -104,10 +116,13 @@ export class RiteBurnService {
       return this.sendAndConfirm({ ...existing, ...next, state: 'pending' });
     }
 
+    if (allowance && this.ritesLeft(allowance) === 0) return { status: 'exhausted' };
     const prepared = await this.chain.prepareBurn(riteMemo(commitment), this.joules);
-    if (!this.ledger.insertPending({ purchaseId, commitment, ...prepared })) {
+    if (!this.ledger.insertPending({ purchaseId, commitment, ...prepared }, allowance)) {
       // A concurrent request recorded this purchase first; it owns the burn.
-      const winner = this.ledger.get(purchaseId)!;
+      // Or, with nothing recorded, another took the payment's last rite.
+      const winner = this.ledger.get(purchaseId);
+      if (!winner) return { status: 'exhausted' };
       if (winner.commitment !== commitment) return { status: 'conflict' };
       return { status: 'pending', signature: winner.signature };
     }
