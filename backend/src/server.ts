@@ -123,6 +123,9 @@ export function routingVerifier(rite: RiteDeps, stores: PurchaseVerifier): Purch
 
 export function createApp(deps: AppDeps = {}) {
   const app = express();
+  // Behind Fly's proxy, the client's address (for the rate limit) is the
+  // entry the proxy appended to X-Forwarded-For, not the proxy's own.
+  if (config.trustProxyHops > 0) app.set('trust proxy', config.trustProxyHops);
 
   // Security and Middleware
   app.use(helmet());

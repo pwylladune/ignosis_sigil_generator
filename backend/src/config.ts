@@ -5,6 +5,11 @@ export const config = {
   port: parseInt(process.env.PORT || '3001', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
 
+  // Proxies in front of the app whose X-Forwarded-For entry is trusted: 1 on
+  // Fly.io, whose edge appends the client's address. 0 (the default) when the
+  // app is reached directly, so a client cannot choose its own address.
+  trustProxyHops: parseInt(process.env.TRUST_PROXY_HOPS || '0', 10) || 0,
+
   // Solana Network Configuration
   solanaRpcUrl: process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com',
   solanaCluster: (process.env.SOLANA_CLUSTER || 'devnet') as 'devnet' | 'mainnet-beta' | 'localnet',

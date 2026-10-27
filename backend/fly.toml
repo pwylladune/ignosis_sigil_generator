@@ -22,6 +22,8 @@ primary_region = "sjc"
   SOLANA_RPC_URL = "https://api.devnet.solana.com"
   JOULE_MINT_ADDRESS = "2Aj4PVH2RoxdQScMHkvjzPR4whMZiGUWwvZoZyHMjwNA"
   RITE_LEDGER_PATH = "/data/rite-ledger.sqlite"
+  # Fly's edge proxy appends the client's address to X-Forwarded-For.
+  TRUST_PROXY_HOPS = "1"
   # The staging web build (a fixed Netlify alias) and local testing.
   CORS_ORIGINS = "https://rite-staging--ignosis-studio.netlify.app,http://localhost:8642"
   WEB_ORIGIN = "https://rite-staging--ignosis-studio.netlify.app"
