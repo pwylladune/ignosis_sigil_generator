@@ -25,7 +25,7 @@ import {
 } from '@solana/spl-token';
 import { config } from '../config.js';
 import { JOULE_DECIMALS, JOULE_PROGRAM_ID, jouleMintProblem } from '../services/joule.js';
-import { checkedCluster, readKeypair } from './treasuryKeys.js';
+import { checkedCluster, describeError, readKeypair } from './treasuryKeys.js';
 
 async function main() {
   const rpcUrl = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
@@ -64,6 +64,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error(e.message ?? e);
+  console.error(describeError(e));
   process.exit(1);
 });

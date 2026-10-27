@@ -8,6 +8,8 @@ import { DatabaseSync } from 'node:sqlite';
 import { Keypair, PublicKey } from '@solana/web3.js';
 import { createApp, treasuryOwner } from './server.js';
 import { verifyRite } from './services/riteVerifier.js';
+import { describeError } from './tools/treasuryKeys.js';
+import { TokenAccountNotFoundError } from '@solana/spl-token';
 import { config } from './config.js';
 import {
   JOULE_PROGRAM_ID,
@@ -44,6 +46,14 @@ async function unitTests() {
   assert.equal(commitmentFromMemo(riteMemo(C1)), C1);
   assert.equal(commitmentFromMemo('IGNOSIS:v1:nothex'), null);
   assert.throws(() => riteMemo('plaintext intent'));
+  // A tool's error is never blank, even spl-token's message-less errors.
+  assert.match(describeError(new TokenAccountNotFoundError()), /no Joule account.*cold key/);
+  assert.equal(describeError(new Error('boom')), 'boom');
+  const nameless = new Error('');
+  nameless.name = 'SomeError';
+  assert.equal(describeError(nameless), 'SomeError (no message)');
+  assert.equal(describeError('text'), 'text');
+
   // The RPC must serve the configured cluster.
   assert.equal(clusterProblem('5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d', 'mainnet-beta'), null);
   assert.equal(clusterProblem('EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG', 'devnet'), null);

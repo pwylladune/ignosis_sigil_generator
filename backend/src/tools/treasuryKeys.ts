@@ -31,3 +31,16 @@ export function readKeypair(file: string): Keypair {
   if (!fs.existsSync(resolved)) throw new Error(`No keypair at ${resolved}`);
   return Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(resolved, 'utf8'))));
 }
+
+/**
+ * A tool's error, never blank. spl-token's errors carry no message (only a
+ * name), so printing the message alone left a failed run silent.
+ */
+export function describeError(e: unknown): string {
+  if (!(e instanceof Error)) return String(e);
+  if (e.message) return e.message;
+  if (e.name === 'TokenAccountNotFoundError') {
+    return 'TokenAccountNotFoundError: this owner has no Joule account. Is TREASURY_KEYPAIR_PATH (or TREASURY_OWNER) the cold key?';
+  }
+  return `${e.name} (no message)`;
+}

@@ -17,6 +17,7 @@ import { getAccount, getAssociatedTokenAddressSync, getMint } from '@solana/spl-
 import { config } from '../config.js';
 import { JOULE_PROGRAM_ID, jouleMintProblem } from '../services/joule.js';
 import { LOW_ALLOWANCE_RITES } from '../services/riteBurn.js';
+import { describeError } from './treasuryKeys.js';
 
 /** A burn's base fee, in lamports (one signature). */
 const FEE_LAMPORTS = 5000;
@@ -48,6 +49,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error(e.message ?? e);
+  console.error(describeError(e));
   process.exit(1);
 });
