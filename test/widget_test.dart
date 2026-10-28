@@ -52,12 +52,16 @@ void main() {
     await tester.pumpWidget(const IgnosisApp());
     await tester.pump(const Duration(milliseconds: 50));
     expect(find.text('THE RITE, IN FOUR STEPS'), findsOneWidget);
-    expect(find.text('START HERE'), findsOneWidget);
+    Color? circumlocutionInk() => tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Circumlocution')).labelStyle?.color;
+    final accent = SigilSkinTheme.getSkin(SigilSkinId.vellumDraft).accent;
+    expect(find.text('START HERE'), findsNothing);
+    expect(find.text('I. Write what you will. Set your intention.'), findsOneWidget);
+    expect(circumlocutionInk(), accent);
     await tester.ensureVisible(find.text('Got it'));
     await tester.tap(find.text('Got it'));
     await tester.pump();
     expect(find.text('THE RITE, IN FOUR STEPS'), findsNothing);
-    expect(find.text('START HERE'), findsNothing);
+    expect(circumlocutionInk(), isNot(accent));
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getBool('ignosis_intro_seen'), isTrue);
     await tester.tap(find.byTooltip('How it works'));

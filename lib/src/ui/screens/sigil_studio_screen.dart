@@ -53,10 +53,10 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
 
   /// The rite in four steps: the first-visit card and the "?" sheet.
   static const _steps = [
-    'I · Write what you will, plainly, as a single wish.',
-    'II · Choose a system. IGNOSIS turns your words into a seal, the same seal every time.',
-    'III · Breathe with the seal for seven breaths, then release it. It burns.',
-    'IV · Forget it. Forgetting lets the working run.',
+    'I. Write what you will. Set your intention.',
+    'II. Choose a system. IGNOSIS transforms your intent into a seal.',
+    'III. Breathe seven breaths. Release. It burns.',
+    'IV. Forget.',
   ];
 
   /// Drawn faintly on the empty plate. A fixed string, so it never varies.
@@ -829,32 +829,17 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                     Padding(
                       padding: const EdgeInsets.only(right: 8.0),
                       child: ChoiceChip(
-                        label: sys == SigilSystem.ringCipher && _firstVisit
-                            ? Row(mainAxisSize: MainAxisSize.min, children: [
-                                Text(sys.title),
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: theme.accent),
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
-                                  child: Text(
-                                    'START HERE',
-                                    style: TextStyle(
-                                        color: theme.accent,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.8),
-                                  ),
-                                ),
-                              ])
-                            : Text(sys.title),
+                        label: Text(sys.title),
                         selected: isSelected,
                         selectedColor: theme.surfaceElevated,
                         backgroundColor: theme.surface,
                         labelStyle: TextStyle(
-                          color: isSelected ? theme.inkPrimary : theme.inkTertiary,
+                          // On the first visit the place to start is marked in vermilion.
+                          color: sys == SigilSystem.ringCipher && _firstVisit
+                              ? theme.accent
+                              : isSelected
+                                  ? theme.inkPrimary
+                                  : theme.inkTertiary,
                           fontSize: 11,
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                           letterSpacing: 0.5,
