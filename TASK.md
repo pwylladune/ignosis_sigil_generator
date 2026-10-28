@@ -493,6 +493,25 @@ Six reviewers took part: esoteric-researcher, research, ellie, code-reviewer, se
   - Secrets: `SOLANA_RPC_URL` (Helius, mainnet), and live Stripe keys, webhook secret and prices.
   - Terms, privacy and refund pages.
 
+### 6.16 Live, and onboarding (2026-10-27)
+- **Corrects §6.15.**
+  - The server key `2teqTcHe…` was lost with its 0.08 SOL: a re-stage set the secret empty after the local file was deleted. The key now in use is `5BFJHs8o…`.
+  - Every item under "Before cutover" is done. Payments are live on ignosis.net with packages of 7, 21 and 100 rites.
+  - The first real purchase burned on mainnet, and its refund revoked the 6 unused rites.
+- **Also shipped:**
+  - PNG download in the browser (5efaecb6).
+  - Owner tools that name their errors (e7feeb01).
+- **Onboarding (9bcdf895, 7c0c3a42, fc30c2ed).** Users, including people who know chaos magic, asked "what am I looking at?". Ellie and product-manager each did a design pass; the esoteric-researcher checked the copy.
+  - The studio numbers its steps I–IV, and the intent starts empty with a fixed example seal.
+  - The systems are grouped, each with a plain line.
+  - The rite dialog states the instruction and length, and the paid witness folds below the release as optional.
+  - A first-visit card shows the four steps, and "?" reopens them.
+  - Draft PRD: vault `Decisions/2026-10-27-ignosis-onboarding-prd.md`.
+- **Open:**
+  - The hint "e.g. I STAND WITH STRENGTH." is the owner's choice. The helper line says "stated positively"; Spare and Carroll phrase intent as a wish.
+  - "Monogram (after Spare)" could read "after Spare & Carroll". Striking repeats is attested in Carroll.
+  - Watch for "what is this?" questions at info@ignosis.net, and run five first-use sessions.
+
 ### 6.4 Still open (beyond the checkboxes)
 - ~~Bundle ID decision~~ Done: `net.ignosis.studio` (8321ef6a).
 - Skin entitlements are cached client-side in `SharedPreferences`. That is acceptable for cosmetic non-consumables, but it can be edited on a rooted device.
