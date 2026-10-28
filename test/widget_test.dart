@@ -22,15 +22,65 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const IgnosisApp());
     final chips = tester.widgetList<ChoiceChip>(find.byType(ChoiceChip)).toList();
-    expect((chips.first.label as Text).data, 'Circumlocution');
     expect(chips.first.selected, isTrue);
-    expect(find.text('PHRASE: '), findsOneWidget);
+    expect(find.text('Circumlocution'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'I COMMAND RADIANT CLARITY');
+    await tester.pump();
+    expect(find.text('DRAWN FROM'), findsOneWidget);
+    expect(find.text('I · C · O · M · M · A · N · D · R · A · D · I · A · N · T · C · L · A · R · I · T · Y'),
+        findsOneWidget);
   });
 
-  testWidgets('the main page states the purpose and the selected ritual', (tester) async {
+  testWidgets('the intent starts empty: an example seal, a helper, and no rite yet', (tester) async {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const IgnosisApp());
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, isEmpty);
+    expect(find.text('EXAMPLE · write your own'), findsOneWidget);
+    expect(find.text('Write your intent first'), findsOneWidget);
+    final charge = find.widgetWithText(ElevatedButton, 'III · CHARGE THE SEAL');
+    expect(tester.widget<ElevatedButton>(charge).onPressed, isNull);
+    await tester.enterText(find.byType(TextField), 'THIS MY WISH TO SLEEP');
+    await tester.pump();
+    expect(find.text('EXAMPLE · write your own'), findsNothing);
+    expect(find.text('Write your intent first'), findsNothing);
+    expect(tester.widget<ElevatedButton>(charge).onPressed, isNotNull);
+  });
+
+  testWidgets('the four steps show on the first visit until dismissed, then live behind "?"', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(const IgnosisApp());
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.text('THE RITE, IN FOUR STEPS'), findsOneWidget);
+    expect(find.text('START HERE'), findsOneWidget);
+    await tester.ensureVisible(find.text('Got it'));
+    await tester.tap(find.text('Got it'));
+    await tester.pump();
+    expect(find.text('THE RITE, IN FOUR STEPS'), findsNothing);
+    expect(find.text('START HERE'), findsNothing);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getBool('ignosis_intro_seen'), isTrue);
+    await tester.tap(find.byTooltip('How it works'));
+    await tester.pumpAndSettle();
+    expect(find.text('THE RITE, IN FOUR STEPS'), findsOneWidget);
     expect(find.textContaining('IGNOSIS transforms intent into a sigil meant for consumption.'), findsOneWidget);
+  });
+
+  testWidgets('a returning visitor does not see the card', (tester) async {
+    SharedPreferences.setMockInitialValues({'ignosis_intro_seen': true});
+    await tester.pumpWidget(const IgnosisApp());
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.text('THE RITE, IN FOUR STEPS'), findsNothing);
+    expect(find.text('I · INTENT'), findsOneWidget);
+    expect(find.text('II · SEAL'), findsOneWidget);
+  });
+
+  testWidgets('the main page states what the selected system does and its ritual', (tester) async {
+    SharedPreferences.setMockInitialValues({'ignosis_intro_seen': true});
+    await tester.pumpWidget(const IgnosisApp());
+    await tester.enterText(find.byType(TextField), 'I COMMAND RADIANT CLARITY');
+    await tester.pump();
+    expect(find.text(SigilSystem.ringCipher.howTo), findsOneWidget);
     expect(find.text(SigilSystem.ringCipher.ritual), findsOneWidget);
     // Choosing another ritual changes the line under the chips.
     final chip = find.widgetWithText(ChoiceChip, 'Cyber Chaos');
@@ -41,13 +91,21 @@ void main() {
     expect(find.text(SigilSystem.ringCipher.ritual), findsNothing);
     // Every system has its own line.
     expect(SigilSystem.values.map((s) => s.ritual).toSet(), hasLength(SigilSystem.values.length));
+    expect(SigilSystem.values.map((s) => s.howTo).toSet(), hasLength(SigilSystem.values.length));
     // Both stay through the rite; only the spelled-out kernel is hidden then.
-    expect(find.textContaining('KERNEL:'), findsOneWidget);
-    await tester.tap(find.text('BEGIN THE RITE'));
+    expect(find.text('DRAWN FROM'), findsOneWidget);
+    await tester.tap(find.text('III · CHARGE THE SEAL'));
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.textContaining('IGNOSIS transforms intent into a sigil meant for consumption.'), findsOneWidget);
+    expect(find.text(SigilSystem.cyberChaos.howTo), findsOneWidget);
     expect(find.text(SigilSystem.cyberChaos.ritual), findsOneWidget);
-    expect(find.textContaining('KERNEL:'), findsNothing);
+    expect(find.text('DRAWN FROM'), findsNothing);
+    // The rite says what to do and how long it takes; the breath patterns are folded.
+    expect(find.textContaining('Seven breaths, about 1¼ min. Then release.'), findsOneWidget);
+    expect(find.text('Box'), findsNothing);
+    await tester.tap(find.text('Change the breath · Slow paced'));
+    await tester.pump();
+    expect(find.text('Box'), findsOneWidget);
+    expect(find.text('IV · RELEASE THE SEAL'), findsOneWidget);
   });
 
   testWidgets('every skin is free while none are sold', (tester) async {
@@ -118,10 +176,12 @@ void main() {
       double ch(double v) => v <= 0.03928 ? v / 12.92 : math.pow((v + 0.055) / 1.055, 2.4).toDouble();
       return 0.2126 * ch(c.r) + 0.7152 * ch(c.g) + 0.0722 * ch(c.b);
     }
+
     double ratio(Color a, Color b) {
       final la = lum(a), lb = lum(b);
       return (math.max(la, lb) + 0.05) / (math.min(la, lb) + 0.05);
     }
+
     for (final id in SigilSkinId.values) {
       final s = SigilSkinTheme.getSkin(id);
       for (final ground in [s.background, s.surface]) {

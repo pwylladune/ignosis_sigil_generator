@@ -102,7 +102,7 @@ class SigilState {
   final bool isIncinerated;
 
   const SigilState({
-    this.rawIntent = 'I COMMAND RADIANT CLARITY',
+    this.rawIntent = '',
     this.system = SigilSystem.ringCipher,
     this.kameaType = PlanetaryKameaType.sol,
     this.symmetryFolds = 4,

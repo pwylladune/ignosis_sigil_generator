@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
 import 'package:ignosis_sigil_generator/main.dart';
 import 'package:ignosis_sigil_generator/src/services/universal_export_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,6 +16,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     UniversalExportService.canDownload = true;
     await tester.pumpWidget(const IgnosisApp());
+    await tester.enterText(find.byType(TextField), 'I COMMAND RADIANT CLARITY');
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Share or print the seal'));
     await tester.pumpAndSettle();
@@ -27,6 +29,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     UniversalExportService.canDownload = false;
     await tester.pumpWidget(const IgnosisApp());
+    await tester.enterText(find.byType(TextField), 'I COMMAND RADIANT CLARITY');
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Share or print the seal'));
     await tester.pumpAndSettle();

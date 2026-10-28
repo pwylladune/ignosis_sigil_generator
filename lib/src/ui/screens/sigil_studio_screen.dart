@@ -47,16 +47,35 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
 
   SigilSkinTheme get _skinTheme => SigilSkinTheme.getSkin(_previewSkinId ?? _currentSkinId);
 
-  /// The purpose of the work, shown above the intent (the owner's words).
+  /// The purpose of the work (the owner's words), now in the "?" sheet.
   static const _purpose = 'IGNOSIS transforms intent into a sigil meant for consumption. Choose your ritual. '
       'Charge the seal with your breath. Burn it. Forget.';
+
+  /// The rite in four steps: the first-visit card and the "?" sheet.
+  static const _steps = [
+    'I · Write what you will, plainly, as a single wish.',
+    'II · Choose a system. IGNOSIS turns your words into a seal, the same seal every time.',
+    'III · Breathe with the seal for seven breaths, then release it. It burns.',
+    'IV · Forget it. Forgetting lets the working run.',
+  ];
+
+  /// Drawn faintly on the empty plate. A fixed string, so it never varies.
+  static const exampleIntent = 'I STAND WITH STRENGTH';
+  static final _exampleKernel = IntentKernel.fromText(exampleIntent);
 
   SigilState _state = const SigilState();
 
   /// The Infinite: drawn by the inverse map, and the zoomed window (null = whole set).
   bool _infiniteInverted = false;
   InfiniteView? _infiniteView;
-  IntentKernel _kernel = IntentKernel.fromText('I COMMAND RADIANT CLARITY');
+  IntentKernel _kernel = IntentKernel.fromText('');
+
+  static const introPrefsKey = 'ignosis_intro_seen';
+
+  /// Null until preferences load, so a returning user never sees the card flash.
+  bool? _introSeen;
+
+  final _intentFocus = FocusNode();
 
   @override
   void initState() {
@@ -64,6 +83,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
     _textController = TextEditingController(text: _state.rawIntent);
     IapService.instance.addListener(_enforceSkinEntitlement);
     _restoreSkin();
+    _restoreIntro();
     if (kEnableRite) {
       // Off the web the rite is paid through the app store (Google Play).
       if (!kIsWeb) RiteService.instance.attachStore(IapService.instance);
@@ -84,6 +104,20 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
   }
 
   SigilSkinId? _savedSkin;
+
+  Future<void> _restoreIntro() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) setState(() => _introSeen = prefs.getBool(introPrefsKey) ?? false);
+  }
+
+  Future<void> _dismissIntro() async {
+    setState(() => _introSeen = true);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(introPrefsKey, true);
+  }
+
+  /// First visit: the four-step card is up and Circumlocution is marked.
+  bool get _firstVisit => _introSeen == false;
 
   /// Applies the saved skin once entitled, and falls back to the free skin if
   /// the current one is not (for example a saved skin whose unlock is not on
@@ -110,6 +144,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
   void dispose() {
     IapService.instance.removeListener(_enforceSkinEntitlement);
     _textController.dispose();
+    _intentFocus.dispose();
     _burn.dispose();
     _breath.dispose();
     super.dispose();
@@ -238,6 +273,88 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
       _textController.clear();
       _kernel = IntentKernel.fromText('');
     });
+  }
+
+  /// After a release: back to an empty plate, ready for a new intent.
+  void _makeAnother() {
+    setState(() => _state = _state.copyWith(isIncinerated: false));
+    _intentFocus.requestFocus();
+  }
+
+  /// "?": the rite in four steps, why sigils are forgotten, and the owner's line.
+  void _showHowItWorks() {
+    final theme = _skinTheme;
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => _skinned(SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _stepLabel(theme, 'THE RITE, IN FOUR STEPS'),
+              const SizedBox(height: 8),
+              for (final step in _steps)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(step, style: TextStyle(color: theme.inkPrimary, fontSize: 14, height: 1.4)),
+                ),
+              const SizedBox(height: 8),
+              Text(
+                'Sigils work by being forgotten: the desire is hidden from the mind that would worry it.',
+                style: TextStyle(color: theme.inkSecondary, fontSize: 14, height: 1.4),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _purpose,
+                style: TextStyle(color: theme.inkSecondary, fontSize: 13, height: 1.4, fontStyle: FontStyle.italic),
+              ),
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 8,
+                children: [
+                  TextButton(
+                    style: TextButton.styleFrom(foregroundColor: theme.accent, minimumSize: const Size(44, 44)),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _showExegesisModal();
+                    },
+                    child: const Text('Why reduce? →'),
+                  ),
+                  TextButton(
+                    style: TextButton.styleFrom(foregroundColor: theme.accent, minimumSize: const Size(44, 44)),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _openCompendium();
+                    },
+                    child: const Text('The Compendium →'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      )),
+    );
+  }
+
+  /// A step or section label: small caps, readable grey.
+  static Widget _stepLabel(SigilSkinTheme theme, String text) => Text(
+        text,
+        style: TextStyle(color: theme.inkSecondary, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.4),
+      );
+
+  /// What the "drawn from" value is, per system.
+  String get _drawnFromHelp {
+    if (_tracesHebrew) return 'Your intent spelled in Hebrew letters, as the figures require.';
+    if (_state.system == SigilSystem.ringCipher) return 'The full phrase, traced around the rings.';
+    if (_isInfinite) return 'The point your intent chooses on the Mandelbrot edge.';
+    return _state.stripVowels
+        ? 'Your letters with repeats and vowels struck out (a modern convention).'
+        : 'Your letters with repeats struck out (Carroll’s rule).';
   }
 
   void _showExegesisModal() {
@@ -433,6 +550,12 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
         backgroundColor: theme.background,
         elevation: 0,
         centerTitle: true,
+        // Left of the title, so the bar balances at phone width.
+        leading: IconButton(
+          icon: Icon(Icons.help_outline, color: theme.inkSecondary, size: 22),
+          tooltip: 'How it works',
+          onPressed: _showHowItWorks,
+        ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -484,16 +607,13 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Stays through the rite: only the spelled-out kernel is hidden then.
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      _purpose,
-                      style: TextStyle(color: theme.inkTertiary, fontSize: 12.5, height: 1.4),
-                    ),
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: _stepLabel(theme, 'I · INTENT'),
                   ),
                   TextField(
                     controller: _textController,
+                    focusNode: _intentFocus,
                     // A released seal burns to the end; the intent is fixed meanwhile.
                     enabled: !_isBurning,
                     // The intent is private: keep it out of the keyboard's
@@ -511,7 +631,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                       letterSpacing: 0.5,
                     ),
                     decoration: InputDecoration(
-                      hintText: 'Enter Statement of Intent (e.g. MY WILL IS UNBREAKABLE)',
+                      hintText: 'e.g. $exampleIntent.',
                       hintStyle: TextStyle(color: theme.inkTertiary, fontSize: 14),
                       filled: true,
                       fillColor: theme.surface,
@@ -532,6 +652,11 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                     ),
                   ),
                   const SizedBox(height: 6),
+                  if (_kernel.isEmpty && !_state.isIncinerated)
+                    Text(
+                      'One sentence, stated positively. Your intent stays on this device.',
+                      style: TextStyle(color: theme.inkSecondary, fontSize: 12, height: 1.4),
+                    ),
                   // Hidden during the rite: forgetting the intent is part of the practice.
                   if (_kernel.reducedConsonants.isNotEmpty && !_charging && !_isBurning)
                     Wrap(
@@ -539,19 +664,25 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                       spacing: 8,
                       runSpacing: 4,
                       children: [
-                        Text(
-                          _tracesHebrew
-                              ? 'HEBREW: '
-                              : _state.system == SigilSystem.ringCipher
-                                  ? 'PHRASE: '
-                                  : _isInfinite
-                                      ? 'MAP: '
-                                      : 'KERNEL: ',
-                          style: TextStyle(
-                            color: theme.inkTertiary,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
+                        // One label for every system; the tooltip says what each takes.
+                        Tooltip(
+                          message: _drawnFromHelp,
+                          triggerMode: TooltipTriggerMode.tap,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'DRAWN FROM',
+                                style: TextStyle(
+                                  color: theme.inkSecondary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(Icons.info_outline, size: 14, color: theme.inkSecondary),
+                            ],
                           ),
                         ),
                         Text(
@@ -593,96 +724,178 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
 
             // Archival Parchment Canvas Viewport
             Expanded(
-              child: Center(
-                child: AspectRatio(
-                  aspectRatio: 1.0,
-                  child: Container(
-                    margin: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: theme.canvasBackground,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: _state.isIncinerated ? theme.accent.withValues(alpha: 0.3) : theme.hairline,
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: theme.inkPrimary.withValues(alpha: theme.id.isDark ? 0.3 : 0.04),
-                          blurRadius: 30,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: RepaintBoundary(
-                      child: _state.isIncinerated
-                          ? _IncineratedPlate(
-                              theme: theme,
-                              witness: kEnableRite ? RiteWitnessRecord(theme: theme, service: RiteService.instance) : null,
-                            )
-                          : Semantics(
-                              image: true,
-                              label: _kernel.isEmpty ? 'Empty plate' : '${_state.system.title} sigil',
-                              child: SigilCanvas(
-                                spec: _spec,
-                                skin: theme,
-                                burn: _burn,
-                                onIncinerated: _onIncinerated,
-                                breath: _breath,
-                                onViewChanged: _isInfinite && !_charging
-                                    ? (v) => setState(() => _infiniteView = v)
-                                    : null,
-                              ),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Center(
+                      child: AspectRatio(
+                        aspectRatio: 1.0,
+                        child: Container(
+                          margin: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: theme.canvasBackground,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: _state.isIncinerated ? theme.accent.withValues(alpha: 0.3) : theme.hairline,
+                              width: 1.5,
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: theme.inkPrimary.withValues(alpha: theme.id.isDark ? 0.3 : 0.04),
+                                blurRadius: 30,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                          child: RepaintBoundary(
+                            child: _state.isIncinerated
+                                ? _IncineratedPlate(
+                                    theme: theme,
+                                    onAnother: _makeAnother,
+                                    witness: kEnableRite
+                                        ? RiteWitnessRecord(theme: theme, service: RiteService.instance)
+                                        : null,
+                                  )
+                                : _kernel.isEmpty
+                                    ? _ExamplePlate(
+                                        theme: theme,
+                                        spec: SigilSpec(
+                                          kernel: _exampleKernel,
+                                          system: _state.system,
+                                          kameaType: _state.kameaType,
+                                          symmetryFolds: _state.symmetryFolds,
+                                          symmetryGroup: _state.symmetryGroup,
+                                        ),
+                                        burn: _burn,
+                                      )
+                                    : Semantics(
+                                        image: true,
+                                        label: _kernel.isEmpty ? 'Empty plate' : '${_state.system.title} sigil',
+                                        child: SigilCanvas(
+                                          spec: _spec,
+                                          skin: theme,
+                                          burn: _burn,
+                                          onIncinerated: _onIncinerated,
+                                          breath: _breath,
+                                          onViewChanged: _isInfinite && !_charging
+                                              ? (v) => setState(() => _infiniteView = v)
+                                              : null,
+                                        ),
+                                      ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  // First visit only, over the example plate; it scrolls on a short screen.
+                  if (_firstVisit)
+                    Positioned.fill(
+                      child: Center(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(16),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 440),
+                            child: _IntroCard(theme: theme, steps: _steps, onDismiss: _dismissIntro),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
 
-            // System Selector Tabs (Parchment Pill Style)
+            // II · SEAL: the systems in one scrolling row, grouped by family
+            // (one row keeps the plate large at phone width).
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+              child: Align(alignment: Alignment.centerLeft, child: _stepLabel(theme, 'II · SEAL')),
+            ),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
-                children: SigilSystem.values.map((sys) {
+                children: SigilSystem.values.expand((sys) {
                   final isSelected = _state.system == sys;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: ChoiceChip(
-                      label: Text(sys.title),
-                      selected: isSelected,
-                      selectedColor: theme.surfaceElevated,
-                      backgroundColor: theme.surface,
-                      labelStyle: TextStyle(
-                        color: isSelected ? theme.inkPrimary : theme.inkTertiary,
-                        fontSize: 11,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        letterSpacing: 0.5,
+                  final firstOfGroup = sys == SigilSystem.values.firstWhere((s) => s.group == sys.group);
+                  return [
+                    if (firstOfGroup)
+                      Padding(
+                        padding: EdgeInsets.only(left: sys.index == 0 ? 0 : 8, right: 8),
+                        child: Text(
+                          sys.group.caption,
+                          style: TextStyle(color: theme.inkSecondary, fontSize: 12, fontStyle: FontStyle.italic),
+                        ),
                       ),
-                      side: BorderSide(
-                        color: isSelected ? theme.inkPrimary : theme.hairline,
-                        width: isSelected ? 1.2 : 1.0,
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: ChoiceChip(
+                        label: sys == SigilSystem.ringCipher && _firstVisit
+                            ? Row(mainAxisSize: MainAxisSize.min, children: [
+                                Text(sys.title),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: theme.accent),
+                                    borderRadius: BorderRadius.circular(3),
+                                  ),
+                                  child: Text(
+                                    'START HERE',
+                                    style: TextStyle(
+                                        color: theme.accent,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.8),
+                                  ),
+                                ),
+                              ])
+                            : Text(sys.title),
+                        selected: isSelected,
+                        selectedColor: theme.surfaceElevated,
+                        backgroundColor: theme.surface,
+                        labelStyle: TextStyle(
+                          color: isSelected ? theme.inkPrimary : theme.inkTertiary,
+                          fontSize: 11,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          letterSpacing: 0.5,
+                        ),
+                        side: BorderSide(
+                          color: isSelected ? theme.inkPrimary : theme.hairline,
+                          width: isSelected ? 1.2 : 1.0,
+                        ),
+                        onSelected: _isBurning
+                            ? null
+                            : (val) {
+                                if (val) setState(() => _state = _state.copyWith(system: sys));
+                              },
                       ),
-                      onSelected: _isBurning
-                          ? null
-                          : (val) {
-                              if (val) setState(() => _state = _state.copyWith(system: sys));
-                            },
                     ),
-                  );
+                  ];
                 }).toList(),
               ),
             ),
 
-            // The selected system's ritual, in a line or two; it stays through the rite.
+            // What the system does in plain words, then its ritual in the
+            // owner's voice; both stay through the rite.
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
               child: Semantics(
                 liveRegion: true,
-                child: Text(
-                  _state.system.ritual,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: theme.inkSecondary, fontSize: 12.5, height: 1.4, fontStyle: FontStyle.italic),
+                child: Column(
+                  children: [
+                    Text(
+                      _state.system.howTo,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: theme.inkPrimary, fontSize: 14, height: 1.4),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _state.system.ritual,
+                      textAlign: TextAlign.center,
+                      style:
+                          TextStyle(color: theme.inkSecondary, fontSize: 13, height: 1.4, fontStyle: FontStyle.italic),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -737,20 +950,33 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
                   ),
                   const SizedBox(width: 12),
                   // The Burn Button (Refined minimal vermilion seal)
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.inkPrimary,
-                      foregroundColor: theme.surface,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    onPressed: _state.isIncinerated || _isBurning || _kernel.isEmpty ? null : _showBurnModal,
-                    icon: Icon(Icons.whatshot, size: 16, color: theme.surface),
-                    label: const Text(
-                      'BEGIN THE RITE',
-                      style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.0, fontSize: 11),
-                    ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.inkPrimary,
+                          foregroundColor: theme.surface,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                          minimumSize: const Size(0, 48),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: _state.isIncinerated || _isBurning || _kernel.isEmpty ? null : _showBurnModal,
+                        icon: Icon(Icons.whatshot, size: 16, color: theme.surface),
+                        label: const Text(
+                          'III · CHARGE THE SEAL',
+                          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.0, fontSize: 12),
+                        ),
+                      ),
+                      if (_kernel.isEmpty && !_state.isIncinerated)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text('Write your intent first',
+                              style: TextStyle(color: theme.inkSecondary, fontSize: 12)),
+                        ),
+                    ],
                   ),
                 ],
               ),
@@ -764,9 +990,12 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
 
 /// The empty plate after combustion: silence, then the banishing line.
 class _IncineratedPlate extends StatefulWidget {
-  const _IncineratedPlate({required this.theme, this.witness});
+  const _IncineratedPlate({required this.theme, required this.onAnother, this.witness});
 
   final SigilSkinTheme theme;
+
+  /// Back to an empty plate for a new intent.
+  final VoidCallback onAnother;
 
   /// The release's on-chain record, when the rite is enabled.
   final Widget? witness;
@@ -797,33 +1026,147 @@ class _IncineratedPlateState extends State<_IncineratedPlate> {
         opacity: _visible ? 1 : 0,
         duration: const Duration(milliseconds: 1200),
         curve: Curves.easeInOut,
+        // Scaled down rather than clipped on a small plate.
         child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'SEAL DISSOLVED INTO THE VOID',
-                style:
-                    TextStyle(color: theme.inkSecondary, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2.0),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 300),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'IV · RELEASED',
+                    style: TextStyle(
+                        color: theme.inkSecondary, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2.0),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'The seal is gone. Now put it out of mind. Do not check whether it is working.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: theme.inkPrimary, fontSize: 14, height: 1.4),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '"Does not matter—need not be."\n(Spare, The Book of Pleasure)',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: theme.inkSecondary, fontSize: 13, fontStyle: FontStyle.italic, height: 1.5),
+                  ),
+                  const SizedBox(height: 10),
+                  TextButton(
+                    style: TextButton.styleFrom(minimumSize: const Size(44, 48)),
+                    onPressed: _laughed ? null : () => setState(() => _laughed = true),
+                    child: Text(
+                      _laughed ? 'Ha.' : 'BANISH WITH LAUGHTER',
+                      style:
+                          TextStyle(color: theme.accent, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.4),
+                    ),
+                  ),
+                  TextButton(
+                    style: TextButton.styleFrom(foregroundColor: theme.inkSecondary, minimumSize: const Size(44, 44)),
+                    onPressed: widget.onAnother,
+                    child: const Text('Make another seal', style: TextStyle(fontSize: 12)),
+                  ),
+                  if (widget.witness != null) ...[const SizedBox(height: 4), widget.witness!],
+                ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                '"Does not matter—need not be."\n(Spare, The Book of Pleasure)',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: theme.inkTertiary, fontSize: 12, fontStyle: FontStyle.italic, height: 1.5),
-              ),
-              const SizedBox(height: 14),
-              TextButton(
-                onPressed: _laughed ? null : () => setState(() => _laughed = true),
-                child: Text(
-                  _laughed ? 'Ha.' : 'BANISH WITH LAUGHTER',
-                  style: TextStyle(color: theme.accent, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.4),
-                ),
-              ),
-              if (widget.witness != null) ...[const SizedBox(height: 6), widget.witness!],
-            ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// The first visit: the rite in four steps, until dismissed.
+class _IntroCard extends StatelessWidget {
+  const _IntroCard({required this.theme, required this.steps, required this.onDismiss});
+
+  final SigilSkinTheme theme;
+  final List<String> steps;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 0, 4, 10),
+      decoration: BoxDecoration(
+        color: theme.surface,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: theme.hairline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // "Got it" shares the title row, so the card stays short on a small screen.
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'THE RITE, IN FOUR STEPS',
+                  style: TextStyle(
+                      color: theme.inkSecondary, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.4),
+                ),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(foregroundColor: theme.accent, minimumSize: const Size(64, 48)),
+                onPressed: onDismiss,
+                child: const Text('Got it', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          for (final step in steps)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2, right: 12),
+              child: Text(step, style: TextStyle(color: theme.inkPrimary, fontSize: 14, height: 1.4)),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The empty plate: a fixed example seal in faint ink, tagged as an example.
+class _ExamplePlate extends StatelessWidget {
+  const _ExamplePlate({required this.theme, required this.spec, required this.burn});
+
+  final SigilSkinTheme theme;
+  final SigilSpec spec;
+  final SigilBurnController burn;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Example seal. Write your own intent to begin.',
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: IgnorePointer(
+              child: ExcludeSemantics(
+                child: Opacity(
+                  opacity: 0.2,
+                  child: SigilCanvas(spec: spec, skin: theme, burn: burn, onIncinerated: () {}),
+                ),
+              ),
+            ),
+          ),
+          Align(
+            alignment: const Alignment(0, 0.72),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: theme.canvasBackground,
+                borderRadius: BorderRadius.circular(3),
+                border: Border.all(color: theme.hairlineStrong),
+              ),
+              child: Text(
+                'EXAMPLE · write your own',
+                style:
+                    TextStyle(color: theme.inkSecondary, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
