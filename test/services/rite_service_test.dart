@@ -411,4 +411,33 @@ void main() {
     expect(find.text('7 rites left. Your release will be burnt on-chain.'), findsOneWidget);
     s.dispose();
   });
+
+  testWidgets('the witness fold is closed and off until opened', (tester) async {
+    final b = FakeBackend()
+      ..on('GET /packs', [
+        json(200, {
+          'success': true,
+          'packs': [
+            {'id': 'pack7', 'rites': 7, 'amount': 314, 'currency': 'usd'},
+          ],
+        }),
+      ]);
+    final s = serviceFor(b);
+    final theme = SigilSkinTheme.getSkin(SigilSkinId.vellumDraft);
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: RiteWitnessFold(theme: theme, service: s))));
+    await tester.runAsync(() async {
+      await s.load();
+      await s.loadOffers();
+    });
+    await tester.pump();
+    expect(find.text('Optional · Witness on-chain'), findsOneWidget);
+    expect(find.text('Off'), findsOneWidget);
+    expect(find.text('ADD RITES'), findsNothing);
+    await tester.tap(find.text('Optional · Witness on-chain'));
+    await tester.pump();
+    expect(find.textContaining('Your seal burns the same without it.'), findsOneWidget);
+    expect(find.text('ADD RITES'), findsOneWidget);
+    expect(find.textContaining('Only a salted hash of your intent is recorded.'), findsOneWidget);
+    s.dispose();
+  });
 }

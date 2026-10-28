@@ -7,6 +7,15 @@ import '../../motion/breath.dart';
 import '../../motion/reduce_motion.dart';
 import '../theme/sigil_skins.dart';
 
+/// The rite's length for [cycles] breaths of [p], to the nearest quarter
+/// minute: "about 1¼ min".
+String riteLengthLabel(BreathPattern p, int cycles) {
+  final quarters = math.max(1, (p.period * cycles / 15).round());
+  final whole = quarters ~/ 4;
+  final part = const ['', '¼', '½', '¾'][quarters % 4];
+  return 'about ${whole == 0 ? part : '$whole$part'} min';
+}
+
 /// Clean Pen & Ink architectural modal for Gnosis breathing and combustion.
 ///
 /// The breath curve `b(t)` from [BreathPattern] is the master rhythm: it scales
@@ -24,7 +33,8 @@ class PenInkRitualBurnDialog extends StatefulWidget {
   /// Active skin, so the rite does not flash a white panel on a dark skin.
   final SigilSkinTheme theme;
 
-  /// Optional line above the release (the on-chain witness, when enabled).
+  /// Optional, folded below the release (the on-chain witness, when enabled):
+  /// after the release, so it never reads as a step of the rite.
   final Widget? witness;
 
   const PenInkRitualBurnDialog({
@@ -44,6 +54,9 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
   late final Ticker _ticker;
   BreathPattern _pattern = BreathPattern.resonance;
   double _patternStart = 0;
+
+  /// The pattern chips are folded away: the default needs no decision.
+  bool _showPatterns = false;
 
   /// Seconds since the dialog opened. Only the ring repaints from this;
   /// labels and buttons rebuild when the phase or cycle actually changes.
@@ -126,7 +139,7 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
               Row(
                 children: [
                   Text(
-                    'GNOSIS',
+                    'III · CHARGE',
                     style: TextStyle(
                         color: theme.inkPrimary, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1.5),
                   ),
@@ -137,6 +150,17 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 12, bottom: 12),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Rest your eyes on the seal and breathe with its ring. ${_cycleWord(widget.targetCycles)} breaths, '
+                    '${riteLengthLabel(_pattern, widget.targetCycles)}. Then release.',
+                    style: TextStyle(color: theme.inkPrimary, fontSize: 14, height: 1.4),
+                  ),
+                ),
               ),
               Padding(
                 padding: const EdgeInsets.only(right: 12),
@@ -171,7 +195,7 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
                                     color: theme.inkPrimary,
                                     fontWeight: FontWeight.bold,
                                     letterSpacing: 2.0,
-                                    fontSize: 13),
+                                    fontSize: 20),
                               ),
                             ),
                           ),
@@ -180,32 +204,43 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
                             valueListenable: _cycle,
                             builder: (context, cycle, _) => Text(
                               'Breath ${math.min(cycle + 1, widget.targetCycles)} of ${widget.targetCycles}',
-                              style: TextStyle(color: theme.inkTertiary, fontSize: 12),
+                              style: TextStyle(color: theme.inkSecondary, fontSize: 12),
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 4,
-                            children: BreathPattern.values.map((p) {
-                              final selected = p == _pattern;
-                              return ChoiceChip(
-                                label: Text(p.label),
-                                tooltip: p.description,
-                                selected: selected,
-                                showCheckmark: false,
-                                selectedColor: theme.background,
-                                backgroundColor: theme.surface,
-                                side: BorderSide(color: selected ? theme.inkPrimary : theme.hairlineStrong),
-                                labelStyle: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                                  color: selected ? theme.inkPrimary : theme.inkTertiary,
-                                ),
-                                onSelected: (_) => _selectPattern(p),
-                              );
-                            }).toList(),
+                          TextButton.icon(
+                            style: TextButton.styleFrom(
+                              foregroundColor: theme.inkSecondary,
+                              minimumSize: const Size(44, 44),
+                              padding: EdgeInsets.zero,
+                            ),
+                            onPressed: () => setState(() => _showPatterns = !_showPatterns),
+                            iconAlignment: IconAlignment.end,
+                            icon: Icon(_showPatterns ? Icons.expand_less : Icons.expand_more, size: 18),
+                            label: Text('Change the breath · ${_pattern.label}', style: const TextStyle(fontSize: 12)),
                           ),
+                          if (_showPatterns)
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: BreathPattern.values.map((p) {
+                                final selected = p == _pattern;
+                                return ChoiceChip(
+                                  label: Text(p.label),
+                                  tooltip: p.description,
+                                  selected: selected,
+                                  showCheckmark: false,
+                                  selectedColor: theme.background,
+                                  backgroundColor: theme.surface,
+                                  side: BorderSide(color: selected ? theme.inkPrimary : theme.hairlineStrong),
+                                  labelStyle: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                                    color: selected ? theme.inkPrimary : theme.inkTertiary,
+                                  ),
+                                  onSelected: (_) => _selectPattern(p),
+                                );
+                              }).toList(),
+                            ),
                         ],
                       ),
                     ),
@@ -217,13 +252,9 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
                 padding: const EdgeInsets.only(right: 12),
                 child: Text(
                   'Breathe comfortably; stop if you feel dizzy or short of breath. A focus exercise, not medical advice.',
-                  style: TextStyle(color: theme.inkTertiary, fontSize: 12, height: 1.4),
+                  style: TextStyle(color: theme.inkSecondary, fontSize: 12, height: 1.4),
                 ),
               ),
-              if (widget.witness != null) ...[
-                const SizedBox(height: 10),
-                Padding(padding: const EdgeInsets.only(right: 12), child: widget.witness),
-              ],
               const SizedBox(height: 12),
               // Release: always available, emphasised once the breaths are done.
               Padding(
@@ -233,7 +264,7 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
                   builder: (context, cycle, _) {
                     final peaked = cycle >= widget.targetCycles;
                     const label = Text(
-                      'RELEASE THE SEAL',
+                      'IV · RELEASE THE SEAL',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1.0),
                     );
                     return SizedBox(
@@ -263,12 +294,33 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
                   },
                 ),
               ),
+              ValueListenableBuilder<int>(
+                valueListenable: _cycle,
+                builder: (context, cycle, _) => cycle >= widget.targetCycles
+                    ? const SizedBox(height: 4)
+                    : Padding(
+                        padding: const EdgeInsets.only(top: 6, right: 12),
+                        child: Text(
+                          'You can release whenever you are ready.',
+                          style: TextStyle(color: theme.inkSecondary, fontSize: 12),
+                        ),
+                      ),
+              ),
+              if (widget.witness != null) ...[
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, right: 12),
+                  child: Divider(height: 1, color: theme.hairline),
+                ),
+                Padding(padding: const EdgeInsets.only(right: 12), child: widget.witness),
+              ],
             ],
           ),
         ),
       ),
     );
   }
+
+  static String _cycleWord(int n) => n == 7 ? 'Seven' : '$n';
 
   void _release() {
     // Close first so the burn is watched on the plate itself.

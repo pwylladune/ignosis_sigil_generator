@@ -290,7 +290,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
         theme: _skinTheme,
         onBurnComplete: _triggerLocalBurn,
         breath: _breath,
-        witness: kEnableRite ? RiteWitnessRow(theme: _skinTheme, service: RiteService.instance) : null,
+        witness: kEnableRite ? RiteWitnessFold(theme: _skinTheme, service: RiteService.instance) : null,
       )),
     ).whenComplete(() {
       if (mounted) setState(() => _charging = false);

@@ -100,6 +100,74 @@ class RiteWitnessRow extends StatelessWidget {
   }
 }
 
+/// The witness as the rite dialog shows it: one folded, clearly optional row
+/// under the release. Opened, it says what the record is and costs, and holds
+/// the [RiteWitnessRow] and the privacy line.
+class RiteWitnessFold extends StatefulWidget {
+  const RiteWitnessFold({super.key, required this.theme, required this.service});
+
+  final SigilSkinTheme theme;
+  final RiteService service;
+
+  @override
+  State<RiteWitnessFold> createState() => _RiteWitnessFoldState();
+}
+
+class _RiteWitnessFoldState extends State<RiteWitnessFold> {
+  bool _open = false;
+
+  /// The row's state at a glance, so the fold can stay closed.
+  String _summary(RiteService s) {
+    final left = s.credits;
+    if (left > 0) return '$left ${left == 1 ? 'rite' : 'rites'} left · ${s.witness ? 'on' : 'off'}';
+    if (s.awaitingPayment) return 'Waiting for payment…';
+    return 'Off';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = widget.theme;
+    final style = TextStyle(color: theme.inkSecondary, fontSize: 12, height: 1.4);
+    return ListenableBuilder(
+      listenable: widget.service,
+      builder: (context, _) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Semantics(
+            button: true,
+            expanded: _open,
+            child: InkWell(
+              onTap: () => setState(() => _open = !_open),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 44),
+                child: Row(
+                  children: [
+                    Expanded(child: Text('Optional · Witness on-chain', style: style)),
+                    Semantics(liveRegion: true, child: Text(_summary(widget.service), style: style)),
+                    Icon(_open ? Icons.expand_less : Icons.expand_more, size: 18, color: theme.inkSecondary),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (_open) ...[
+            Text(
+              'A paid record that this rite happened: $riteJoulesLabel is burnt on Solana when you release. '
+              'Your seal burns the same without it.',
+              style: style,
+            ),
+            const SizedBox(height: 8),
+            RiteWitnessRow(theme: theme, service: widget.service),
+            const SizedBox(height: 6),
+            Text(_privacy, style: style),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 /// The packages of rites, each with its price once known. Choosing one opens
 /// Google Play's sheet on Android, or Stripe Checkout in a new tab on the web.
 class RitePackChooser extends StatelessWidget {
