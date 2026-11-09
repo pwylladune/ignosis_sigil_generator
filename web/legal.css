@@ -1,5 +1,5 @@
 /* Terms, privacy and refunds: Pen & Ink, as the rest of IGNOSIS. */
-:root { --paper: #F7F5F0; --ink: #141416; --muted: #5E5E66; --hairline: #DCDCD6; --seal: #C0392B; }
+:root { --paper: #F4F4F0; --ink: #141416; --muted: #5E5E66; --hairline: #DCDCD6; --seal: #C0392B; }
 @media (prefers-color-scheme: dark) {
   :root { --paper: #111113; --ink: #ECECEE; --muted: #A3A3AC; --hairline: #2C2C30; --seal: #E5484D; }
 }
