@@ -35,9 +35,11 @@ class RiteWitnessRow extends StatelessWidget {
         final left = service.credits;
         if (left > 0) {
           final count = left == 1 ? '1 rite left' : '$left rites left';
-          detail = service.witness
-              ? '$count. Your release will be burnt on-chain.'
-              : '$count. This release stays off-chain.';
+          detail = service.finishing
+              ? '$count. An earlier burn is still being confirmed; this release stays off-chain.'
+              : service.witness
+                  ? '$count. Your release will be burnt on-chain.'
+                  : '$count. This release stays off-chain.';
           trailing = Switch(
             value: service.witness,
             activeThumbColor: theme.seal,

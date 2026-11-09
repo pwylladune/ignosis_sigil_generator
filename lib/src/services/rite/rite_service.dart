@@ -57,6 +57,7 @@ class RiteSpend {
     required this.receipt,
     required this.saltHex,
     required this.commitment,
+    required this.startedAtMs,
     this.productId = _webProductId,
   });
 
@@ -66,8 +67,17 @@ class RiteSpend {
   final String saltHex;
   final String commitment;
 
-  Map<String, Object> toJson() =>
-      {'platform': platform, 'receipt': receipt, 'product': productId, 'salt': saltHex, 'commitment': commitment};
+  /// When the release happened: a burn still unconfirmed a day later is given up.
+  final int startedAtMs;
+
+  Map<String, Object> toJson() => {
+        'platform': platform,
+        'receipt': receipt,
+        'product': productId,
+        'salt': saltHex,
+        'commitment': commitment,
+        'at': startedAtMs,
+      };
 
   static RiteSpend? fromJson(Object? json) {
     if (json is! Map) return null;
@@ -75,7 +85,15 @@ class RiteSpend {
     final product = json['product'] ?? _webProductId;
     final salt = json['salt'], c = json['commitment'];
     if (platform is! String || r is! String || product is! String || salt is! String || c is! String) return null;
-    return RiteSpend(platform: platform, receipt: r, productId: product, saltHex: salt, commitment: c);
+    // A spend saved before the time was kept gets a day from now.
+    final at = json['at'];
+    return RiteSpend(
+        platform: platform,
+        receipt: r,
+        productId: product,
+        saltHex: salt,
+        commitment: c,
+        startedAtMs: at is int ? at : DateTime.now().millisecondsSinceEpoch);
   }
 }
 
@@ -169,6 +187,12 @@ class RiteService extends ChangeNotifier {
   static const _kStoreLeft = 'ignosis_rite_store_left';
 
   static const _kNotConfirmed = 'This payment could not be confirmed just now. Your rites are kept; please try again.';
+  static const _kNotRecorded = 'This release could not be recorded on-chain. Your rite is kept.';
+  static const _kEarlierBurn =
+      'An earlier burn is still being confirmed, so this release was not recorded on-chain.';
+
+  /// A burn the backend has not confirmed this long after the release is given up.
+  static const giveUpAfter = Duration(hours: 24);
 
   final http.Client _client;
   final String _api;
@@ -204,6 +228,9 @@ class RiteService extends ChangeNotifier {
   Timer? _poll;
   int _pollsLeft = 0;
   bool _spending = false;
+
+  /// The current release went unrecorded because an earlier burn was unfinished.
+  bool _unrecorded = false;
   Future<void>? _load;
 
   /// A checkout was opened and is not paid yet.
@@ -238,8 +265,12 @@ class RiteService extends ChangeNotifier {
   /// Whether the next release is burnt on-chain (the practitioner's choice).
   bool get witness => _witness;
 
+  /// An earlier release's burn is not confirmed yet; until it is, a new
+  /// release is not recorded on-chain.
+  bool get finishing => _spend != null;
+
   /// The next release will be witnessed.
-  bool get willWitness => _witness && credits > 0;
+  bool get willWitness => _witness && credits > 0 && !finishing;
 
   RiteWitnessState get state => _state;
 
@@ -440,7 +471,19 @@ class RiteService extends ChangeNotifier {
   /// burn of [intent]'s commitment. Call before the intent is cleared.
   Future<void> releaseWith(String intent) async {
     await load();
-    if (_spend != null) return; // An earlier burn is still being finished.
+    if (_spend != null) {
+      // An earlier burn is still being finished: say so, and try it again.
+      if (_witness && credits > 0) {
+        _unrecorded = true;
+        _current = null;
+        _state = RiteWitnessState.failed;
+        _notice = _kEarlierBurn;
+        notifyListeners();
+      }
+      unawaited(_spendNow());
+      return;
+    }
+    _unrecorded = false;
     if (!willWitness) {
       // An off-chain release: no record shows for it.
       _state = RiteWitnessState.none;
@@ -466,6 +509,7 @@ class RiteService extends ChangeNotifier {
       productId: product,
       saltHex: hexEncode(salt),
       commitment: riteCommitment(intent, salt),
+      startedAtMs: DateTime.now().millisecondsSinceEpoch,
     );
     _current = null;
     _state = RiteWitnessState.burning;
@@ -479,7 +523,7 @@ class RiteService extends ChangeNotifier {
     final spend = _spend;
     if (spend == null || _spending) return;
     _spending = true;
-    _state = RiteWitnessState.burning;
+    if (!_unrecorded) _state = RiteWitnessState.burning;
     notifyListeners();
     try {
       for (var attempt = 0; attempt < 40 && _spend == spend; attempt++) {
@@ -487,9 +531,14 @@ class RiteService extends ChangeNotifier {
         if (outcome != null) return await _finish(spend, outcome);
         await Future<void>.delayed(pollInterval * 2);
       }
+      if (DateTime.now().millisecondsSinceEpoch - spend.startedAtMs > giveUpAfter.inMilliseconds) {
+        // A day on and still no answer: give it up, so later releases can be
+        // recorded. The backend's count decides whether the rite was spent.
+        return await _finish(spend, _Outcome.refused(_kNotRecorded, ifKept: _kNotRecorded));
+      }
       // Still not confirmed: it stays saved and the backend keeps working on
       // it; the receipt is fetched on the next load.
-      _notice = 'Your burn is still being confirmed on-chain.';
+      if (!_unrecorded) _notice = 'Your burn is still being confirmed on-chain.';
       notifyListeners();
     } finally {
       _spending = false;
@@ -513,10 +562,16 @@ class RiteService extends ChangeNotifier {
       if (body is! Map) return null;
       switch (res.statusCode) {
         case 200:
-          return _Outcome.burnt(body['signature'] as String, body['joules'] as int, body['explorerUrl'] as String,
+          final sig = body['signature'], joules = body['joules'], url = body['explorerUrl'];
+          if (sig is! String || joules is! int) return null; // Not an answer: ask again.
+          return _Outcome.burnt(sig, joules, url is String ? url : 'https://explorer.solana.com/tx/$sig',
               remaining: body['remaining'] is int ? body['remaining'] as int : null);
+        case 400:
+          // The backend will never accept this request: asking again cannot help.
+          return _Outcome.refused(_kNotRecorded, ifKept: _kNotRecorded);
         case 402:
-          return _Outcome.refused('This payment could not be used (it may have been refunded).');
+          return _Outcome.refused('This payment could not be used (it may have been refunded).',
+              ifKept: _kNotConfirmed);
         case 409:
           return _Outcome.refused(
               body['exhausted'] == true
@@ -550,11 +605,11 @@ class RiteService extends ChangeNotifier {
           _credits.remove(token);
         } else if (credit?['paid'] == true && left is int) {
           _setWebLeft(token, left);
-          error = _kNotConfirmed;
+          error = outcome.ifKept ?? error;
         } else {
           // Unknown: give back the rite this release counted down.
           _credits[token] = (_credits[token] ?? 0) + 1;
-          error = _kNotConfirmed;
+          error = outcome.ifKept ?? error;
         }
       } else if (outcome.remaining != null) {
         _setWebLeft(token, outcome.remaining!);
@@ -569,7 +624,22 @@ class RiteService extends ChangeNotifier {
         unawaited(_store?.consumeRite(token));
       }
     }
-    if (error != null) {
+    if (_unrecorded) {
+      // This was an earlier release's burn: the current release went
+      // unrecorded and keeps saying so. A receipt is still kept.
+      if (error == null) {
+        _receipts.insert(
+            0,
+            RiteReceipt(
+              signature: outcome.signature!,
+              commitment: spend.commitment,
+              saltHex: spend.saltHex,
+              joules: outcome.joules!,
+              explorerUrl: outcome.explorerUrl!,
+              at: DateTime.now(),
+            ));
+      }
+    } else if (error != null) {
       _state = RiteWitnessState.failed;
       _notice = error;
     } else {
@@ -621,8 +691,9 @@ class RiteService extends ChangeNotifier {
 class _Outcome {
   _Outcome.burnt(this.signature, this.joules, this.explorerUrl, {this.remaining})
       : error = null,
+        ifKept = null,
         conflict = false;
-  _Outcome.refused(this.error, {this.conflict = false})
+  _Outcome.refused(this.error, {this.conflict = false, this.ifKept})
       : signature = null,
         joules = null,
         explorerUrl = null,
@@ -632,6 +703,9 @@ class _Outcome {
   final int? joules;
   final String? explorerUrl;
   final String? error;
+
+  /// What to say when the refusal turns out not to cost the payer the rite.
+  final String? ifKept;
 
   /// Rites left in the payment's package after this burn, as the backend counts.
   final int? remaining;
