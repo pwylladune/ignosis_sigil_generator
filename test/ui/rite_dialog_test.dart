@@ -24,7 +24,7 @@ void main() {
       ),
     ));
     await tester.pump();
-    final release = tester.getTopLeft(find.text('IV · RELEASE THE SEAL')).dy;
+    final release = tester.getTopLeft(find.text('Release the seal')).dy;
     final witness = tester.getTopLeft(find.text('WITNESS-SLOT')).dy;
     expect(witness, greaterThan(release));
     expect(find.text('You can release whenever you are ready.'), findsOneWidget);

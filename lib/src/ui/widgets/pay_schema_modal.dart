@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
 import '../../models/revenue_schema.dart';
 import '../../services/iap_service.dart';
+import '../../services/rite/rite_service.dart';
 import '../theme/sigil_skins.dart';
 import 'purchase_feedback.dart';
+import 'rite_witness.dart';
 
-/// "Skins & support": what is free, what the optional skins cost, and the
-/// bundle and Restore actions. Prices are only ever the store's localised ones.
+/// "Free and paid": what is free, what the skins cost when they are sold
+/// (with the bundle and Restore actions), and the optional on-chain records.
+/// Prices are only ever the store's localised ones.
 class PaySchemaModal extends StatelessWidget {
   final SigilSkinTheme theme;
   final IapService? iap;
 
-  const PaySchemaModal({super.key, required this.theme, this.iap});
+  /// The on-chain rite, when it is enabled: its packages can be bought here,
+  /// away from the rite itself.
+  final RiteService? rite;
+
+  const PaySchemaModal({super.key, required this.theme, this.iap, this.rite});
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +34,7 @@ class PaySchemaModal extends StatelessWidget {
     return Dialog(
       backgroundColor: theme.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(10),
         side: BorderSide(color: theme.hairline),
       ),
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
@@ -44,13 +51,17 @@ class PaySchemaModal extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'SKINS & SUPPORT',
-                          style: TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.5, color: theme.inkPrimary),
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            'Free and paid',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: theme.inkPrimary),
+                          ),
                         ),
                         Text(
-                          'The studio is free. Skins are optional, one-time unlocks.',
+                          store.sellSkins
+                              ? 'The studio is free. Skins are optional, one-time unlocks.'
+                              : 'The studio and every skin are free.',
                           style: TextStyle(fontSize: 12, color: theme.inkTertiary),
                         ),
                       ],
@@ -72,8 +83,8 @@ class PaySchemaModal extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _card(
-                      title: 'CORE STUDIO',
-                      badge: 'FREE · INCLUDED',
+                      title: 'Core studio',
+                      badge: 'Free',
                       children: [
                         for (final b in const [
                           'All seven systems: Circumlocution, Monogram (after Spare), Planetary Kamea, Golden Dawn Rose, Cymatic Resonance, '
@@ -85,10 +96,22 @@ class PaySchemaModal extends StatelessWidget {
                           _bullet(b),
                       ],
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
+                    if (!store.sellSkins)
+                      _card(
+                        title: 'Skins',
+                        badge: 'Free for now',
+                        children: [
+                          Text(
+                            'Each skin restyles the whole studio, canvas and burn. All of them are free for now.',
+                            style: TextStyle(fontSize: 14, color: theme.inkSecondary, height: 1.4),
+                          ),
+                        ],
+                      )
+                    else
                     _card(
-                      title: 'SKINS',
-                      badge: skinPrice == null ? 'ONE-TIME UNLOCK' : '$skinPrice EACH',
+                      title: 'Skins',
+                      badge: skinPrice == null ? 'One-time unlock' : '$skinPrice each',
                       children: [
                         Text(
                           'Each skin restyles the whole studio, canvas and burn.',
@@ -111,8 +134,8 @@ class PaySchemaModal extends StatelessWidget {
                           child: OutlinedButton(
                             style: OutlinedButton.styleFrom(
                               foregroundColor: theme.inkPrimary,
-                              side: BorderSide(color: theme.hairlineStrong),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              side: BorderSide(color: theme.inkTertiary),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                             ),
                             onPressed: owned == premium.length
                                 ? null
@@ -122,19 +145,19 @@ class PaySchemaModal extends StatelessWidget {
                                   },
                             child: Text(
                               owned == premium.length
-                                  ? 'ALL SKINS UNLOCKED'
+                                  ? 'All skins unlocked'
                                   : [
-                                      owned == 0 ? 'UNLOCK ALL 7 SKINS' : 'UNLOCK REMAINING SKINS',
+                                      owned == 0 ? 'Unlock all 7 skins' : 'Unlock remaining skins',
                                       if (bundlePrice != null) bundlePrice,
                                     ].join(' · '),
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                             ),
                           ),
                         ),
                         PurchaseNote(store: store, theme: theme),
                         Center(
                           child: TextButton(
-                            style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+                            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
                             onPressed: store.isRestoring
                                 ? null
                                 : () async {
@@ -142,14 +165,29 @@ class PaySchemaModal extends StatelessWidget {
                                     reportPurchaseStart(store, result, restoring: true);
                                   },
                             child: Text(
-                              store.isRestoring ? 'RESTORING…' : 'RESTORE PURCHASES',
-                              style: TextStyle(
-                                  fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: theme.inkSecondary),
+                              store.isRestoring ? 'Restoring…' : 'Restore purchases',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.inkSecondary),
                             ),
                           ),
                         ),
                       ],
                     ),
+                    if (rite != null) ...[
+                      const SizedBox(height: 16),
+                      _card(
+                        title: 'On-chain records',
+                        badge: 'Optional · paid',
+                        children: [
+                          Text(
+                            'A paid record that a rite happened: $riteJoulesLabel is burnt on Solana when you '
+                            'release a seal. Your seal burns the same without it. Bought in packages of rites.',
+                            style: TextStyle(fontSize: 14, color: theme.inkSecondary, height: 1.4),
+                          ),
+                          const SizedBox(height: 12),
+                          RiteWitnessRow(theme: theme, service: rite!),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -166,7 +204,7 @@ class PaySchemaModal extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(6),
         border: Border.all(color: theme.hairlineStrong),
       ),
       child: Column(
@@ -175,21 +213,21 @@ class PaySchemaModal extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: theme.inkPrimary),
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    title,
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: theme.inkPrimary),
+                  ),
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(2),
                   border: Border.all(color: theme.hairlineStrong),
                 ),
-                child: Text(
-                  badge,
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: theme.inkSecondary),
-                ),
+                child: Text(badge, style: TextStyle(fontSize: 12, color: theme.inkSecondary)),
               ),
             ],
           ),
@@ -205,7 +243,7 @@ class PaySchemaModal extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('✦ ', style: TextStyle(color: theme.seal, fontSize: 12)),
+            Text('–  ', style: TextStyle(color: theme.inkTertiary, fontSize: 14, height: 1.4)),
             Expanded(child: Text(text, style: TextStyle(fontSize: 14, color: theme.inkSecondary, height: 1.4))),
           ],
         ),
@@ -216,7 +254,7 @@ class PaySchemaModal extends StatelessWidget {
         decoration: BoxDecoration(
           color: theme.background,
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: owned ? theme.seal : theme.hairlineStrong),
+          border: Border.all(color: owned ? theme.seal : theme.inkTertiary),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

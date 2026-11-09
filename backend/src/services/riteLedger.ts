@@ -47,9 +47,14 @@ export interface RiteAllowance {
  */
 export class RiteLedger {
   private db: DatabaseSync;
+  private closed = false;
 
   constructor(path: string) {
     this.db = new DatabaseSync(path);
+    // WAL: a reader (the snapshot tool) never blocks a burn being recorded,
+    // and a writer that finds the file busy waits instead of failing.
+    // synchronous = FULL keeps every recorded burn durable across a crash.
+    this.db.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;');
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS rites (
         purchase_id TEXT PRIMARY KEY,
@@ -205,7 +210,24 @@ export class RiteLedger {
     );
   }
 
+  /**
+   * Writes a consistent copy of the whole ledger to [destination] (which must
+   * not exist), safe while burns are being recorded. The copy is what gets
+   * backed up off the volume: the volume itself is not replicated.
+   */
+  snapshot(destination: string): void {
+    this.db.prepare('VACUUM INTO ?').run(destination);
+  }
+
+  /** Folds the write-ahead log into the file and closes it. Safe to call twice. */
   close(): void {
+    if (this.closed) return;
+    this.closed = true;
+    try {
+      this.db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+    } catch {
+      // Another connection holds the file: the log is replayed on the next open.
+    }
     this.db.close();
   }
 }

@@ -28,7 +28,10 @@ export interface StripeGateway {
   createCheckout(pack: RitePack): Promise<{ id: string; url: string }>;
   /** The packages that have a Stripe price, cheapest first. */
   offers(): Promise<PackOffer[]>;
-  /** The session if it is ours, paid and not refunded or disputed; otherwise null. */
+  /**
+   * The session if it is ours, paid and not refunded or disputed; null if
+   * Stripe says otherwise. Throws when Stripe could not be asked.
+   */
   retrievePaid(sessionId: string): Promise<PaidSession | null>;
   /** Verifies the Stripe-Signature header; throws if it does not match. */
   parseWebhook(rawBody: Buffer, signature: string): Stripe.Event;
@@ -107,9 +110,17 @@ export class StripeRiteGateway implements StripeGateway {
   }
 
   async retrievePaid(sessionId: string): Promise<PaidSession | null> {
-    const s = await this.stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['payment_intent.latest_charge'],
-    });
+    let s: Stripe.Checkout.Session;
+    try {
+      s = await this.stripe.checkout.sessions.retrieve(sessionId, {
+        expand: ['payment_intent.latest_charge'],
+      });
+    } catch (e) {
+      // Stripe does not know this session: not paid. Anything else (an
+      // outage, a rate limit, a bad key) is not an answer and is thrown.
+      if (e instanceof Stripe.errors.StripeInvalidRequestError && e.statusCode === 404) return null;
+      throw e;
+    }
     const paid = paidSession(s);
     if (!paid) return null;
     const charge = (s.payment_intent as Stripe.PaymentIntent | null)?.latest_charge;
@@ -174,7 +185,7 @@ export function applyStripeEvent(
  * Verifies a web purchase: [receiptData] is the Checkout session ID. The
  * ledger's credit (from the webhook) decides; if the webhook has not arrived
  * yet, Stripe is asked directly and the credit recorded. A revoked credit is
- * never valid. The result names the package's product, which sets how many
+ * never valid; if Stripe cannot be reached, it throws. The result names the package's product, which sets how many
  * rites the payment buys.
  */
 export class StripeCreditVerifier {
@@ -196,7 +207,10 @@ export class StripeCreditVerifier {
 
     let credit = this.ledger.getCredit(sessionId);
     if (!credit) {
-      const paid = await this.gateway.retrievePaid(sessionId).catch(() => null);
+      // Thrown if Stripe cannot be asked: an outage must read as "try again"
+      // (the route answers 502), never as a refused payment, or the payer's
+      // app would drop a package it has paid for.
+      const paid = await this.gateway.retrievePaid(sessionId);
       if (!paid) return invalid('Session is not a paid rite');
       this.ledger.recordCredit(paid);
       credit = this.ledger.getCredit(sessionId)!;

@@ -16,6 +16,11 @@ export class FakeChain implements RiteChain {
   dropSends = false;
   rejectSends = false;
   hideStatus = false;
+  /** Sends are accepted but stay in flight: they land only on [land]. */
+  holdSends = false;
+  /** Runs once, right after the next status read (the chain moves between two reads). */
+  afterStatus: (() => void) | null = null;
+  private held = new Map<string, string>();
 
   async prepareBurn(memo: string, joules: number): Promise<PreparedBurn> {
     const signature = `sig${++this.prepared}`;
@@ -24,8 +29,18 @@ export class FakeChain implements RiteChain {
   }
   async send(rawTx: string): Promise<void> {
     this.sends++;
+    if (this.holdSends) {
+      // In flight. With rejectSends too, the node also refuses it at
+      // preflight, as one that has not seen the blockhash yet does.
+      this.held.set(JSON.parse(rawTx).signature, rawTx);
+      if (this.rejectSends) throw new RiteRejected('Blockhash not found');
+      return;
+    }
     if (this.rejectSends) throw new RiteRejected('simulation failed');
     if (this.dropSends) throw new Error('network');
+    this.apply(rawTx);
+  }
+  private apply(rawTx: string): void {
     const { signature, memo, joules } = JSON.parse(rawTx);
     // An expired blockhash can never land.
     if (this.height > this.expiry.get(signature)!) return;
@@ -34,8 +49,17 @@ export class FakeChain implements RiteChain {
       this.burns.set(memo, (this.burns.get(memo) ?? 0) + joules);
     }
   }
+  /** A burn in flight lands now (if its blockhash is still valid). */
+  land(signature: string): void {
+    const rawTx = this.held.get(signature);
+    if (rawTx) this.apply(rawTx);
+  }
   async status(signature: string) {
-    return this.hideStatus ? 'unknown' : this.landed.get(signature) ?? 'unknown';
+    const status = this.hideStatus ? 'unknown' : this.landed.get(signature) ?? 'unknown';
+    const hook = this.afterStatus;
+    this.afterStatus = null;
+    hook?.();
+    return status;
   }
   async blockHeight() {
     return this.height;

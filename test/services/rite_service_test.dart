@@ -252,10 +252,133 @@ void main() {
     final b = FakeBackend();
     final s = await withCredit(b);
     b.on('POST /consecrate', [json(402, {'success': false})]);
+    b.on('GET /credit', [json(200, {...credit(paid: false), 'revoked': true})]);
     await s.releaseWith(intent);
     expect((s.state, s.credits), (RiteWitnessState.failed, 0));
     expect(s.notice, contains('refunded'));
     expect(b.bodies('/consecrate'), hasLength(1));
+    s.dispose();
+  });
+
+  test('a refusal the backend does not confirm as a refund keeps the paid package', () async {
+    // The backend could not look the payment up (a 402 from an older server,
+    // or a store outage): its own record still says paid.
+    final b = FakeBackend();
+    final s = await withCredit(b);
+    b.on('POST /consecrate', [json(402, {'success': false})]);
+    await s.releaseWith(intent);
+    expect((s.state, s.credits), (RiteWitnessState.failed, 7));
+    expect(s.notice, contains('kept'));
+
+    // The package survives a reload and burns once the backend answers.
+    final reloaded = serviceFor(b);
+    await reloaded.load();
+    expect(reloaded.credits, 7);
+    b.on('POST /consecrate', [burnt()]);
+    b.on('GET /verify', [json(404, {})]);
+    await reloaded.releaseWith(intent);
+    expect((reloaded.state, reloaded.credits), (RiteWitnessState.witnessed, 6));
+    s.dispose();
+    reloaded.dispose();
+  });
+
+  test('a refusal with the backend unreachable gives the rite back, even the last one', () async {
+    final b = FakeBackend();
+    b.on('POST /checkout', [json(200, {'success': true, 'sessionId': session, 'url': 'https://checkout.stripe.com/x'})]);
+    b.on('GET /credit', [json(200, credit(used: 6))]);
+    final s = serviceFor(b);
+    await s.beginCheckout(small);
+    await s.checkPayment();
+    expect(s.credits, 1);
+    b.on('POST /consecrate', [json(402, {'success': false})]);
+    b.on('GET /credit', [json(503, {'success': false})]);
+    await s.releaseWith(intent);
+    expect((s.state, s.credits), (RiteWitnessState.failed, 1));
+    s.dispose();
+  });
+
+  test('a request the backend will never accept ends the burn and keeps the rite', () async {
+    final b = FakeBackend();
+    final s = await withCredit(b);
+    b.on('POST /consecrate', [json(400, {'success': false, 'error': 'Invalid request body'})]);
+    await s.releaseWith(intent);
+    expect((s.state, s.credits, s.finishing), (RiteWitnessState.failed, 7, false));
+    expect(s.notice, contains('kept'));
+    expect(b.bodies('/consecrate'), hasLength(1), reason: 'not asked again');
+
+    // Nothing is left stuck: the next release is recorded.
+    b.on('POST /consecrate', [burnt()]);
+    await s.releaseWith(intent);
+    expect((s.state, s.credits), (RiteWitnessState.witnessed, 6));
+    s.dispose();
+  });
+
+  test('a confirmed burn without a link is still a receipt; one without a signature is asked again', () async {
+    final b = FakeBackend();
+    final s = await withCredit(b);
+    b.on('POST /consecrate', [
+      json(200, {'success': true}),
+      json(200, {'success': true, 'signature': signature, 'joules': 1618}),
+    ]);
+    await s.releaseWith(intent);
+    expect(b.bodies('/consecrate'), hasLength(2));
+    expect(s.state, RiteWitnessState.witnessed);
+    expect(s.current!.explorerUrl, contains(signature));
+    s.dispose();
+  });
+
+  test('a release during an unfinished burn says it was not recorded, and the next one is', () async {
+    final b = FakeBackend();
+    final s = await withCredit(b);
+    b.on('POST /consecrate', [json(502, {'success': false})]);
+    await s.releaseWith(intent); // Forty attempts, none answered.
+    expect((s.state, s.finishing, s.willWitness), (RiteWitnessState.burning, true, false));
+
+    final first = b.bodies('/consecrate').first['commitment'];
+    await s.releaseWith('another intent');
+    expect(s.state, RiteWitnessState.failed);
+    expect(s.notice, contains('earlier burn'));
+
+    // The earlier burn is confirmed: kept as a receipt, but this release
+    // still reads as not recorded.
+    b.on('POST /consecrate', [burnt()]);
+    await s.releaseWith('a third intent');
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(b.bodies('/consecrate').map((m) => m['commitment']).toSet(), {first});
+    expect((s.receipts.length, s.receipts.single.commitment), (1, first));
+    expect((s.state, s.current, s.finishing), (RiteWitnessState.failed, null, false));
+
+    await s.releaseWith('a fourth intent');
+    expect((s.state, s.credits, s.receipts.length), (RiteWitnessState.witnessed, 6, 2));
+    s.dispose();
+  });
+
+  test('a burn still unconfirmed a day later is given up and its rite kept', () async {
+    final dayAgo = DateTime.now().millisecondsSinceEpoch - const Duration(hours: 25).inMilliseconds;
+    SharedPreferences.setMockInitialValues({
+      'ignosis_rite_credits': ['$session|6'],
+      'ignosis_rite_spend': jsonEncode({
+        'platform': 'web',
+        'receipt': session,
+        'product': 'net.ignosis.studio.rite.pack7',
+        'salt': '00' * 32,
+        'commitment': 'c' * 64,
+        'at': dayAgo,
+      }),
+    });
+    final b = FakeBackend()
+      ..on('POST /consecrate', [json(502, {'success': false})])
+      ..on('GET /credit', [json(200, credit())]);
+    final s = serviceFor(b);
+    await s.load();
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    expect((s.finishing, s.credits), (false, 7), reason: "the backend's count is kept");
+    expect(s.notice, contains('kept'));
+
+    // A fresh spend that gets no answer is not given up.
+    b.on('POST /consecrate', [json(502, {'success': false})]);
+    await s.releaseWith(intent);
+    expect((s.finishing, s.state), (true, RiteWitnessState.burning));
     s.dispose();
   });
 
@@ -388,16 +511,22 @@ void main() {
     await tester.pump();
     expect(find.textContaining('1618 J'), findsWidgets);
 
-    await tester.tap(find.text('ADD RITES'));
+    await tester.tap(find.text('Add rites'));
     await tester.pumpAndSettle();
-    expect(find.text('7 RITES'), findsOneWidget);
+    expect(find.text('7 rites'), findsOneWidget);
     expect(find.text(r'$3.14'), findsOneWidget);
-    expect(find.text('21 RITES'), findsOneWidget);
-    expect(find.text('100 RITES'), findsOneWidget);
+    expect(find.text('21 rites'), findsOneWidget);
+    expect(find.text('100 rites'), findsOneWidget);
+    // Nothing can be bought before its price is on the button.
+    bool enabled(String label) =>
+        tester.widget<OutlinedButton>(find.widgetWithText(OutlinedButton, label)).onPressed != null;
+    expect((enabled('7 rites'), enabled('21 rites'), enabled('100 rites')), (true, false, false));
+    expect(find.text('Loading price…'), findsNWidgets(2));
+    expect(find.textContaining('J is the Joule'), findsOneWidget);
     expect(find.textContaining('By buying you agree to the Terms'), findsOneWidget);
     expect(find.text('Terms'), findsOneWidget);
     expect(find.text('Refunds'), findsOneWidget);
-    await tester.tap(find.text('CANCEL'));
+    await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
 
     b.on('POST /checkout', [json(200, {'success': true, 'sessionId': session, 'url': 'https://checkout.stripe.com/x'})]);
@@ -432,11 +561,11 @@ void main() {
     await tester.pump();
     expect(find.text('Optional · Witness on-chain'), findsOneWidget);
     expect(find.text('Off'), findsOneWidget);
-    expect(find.text('ADD RITES'), findsNothing);
+    expect(find.text('Add rites'), findsNothing);
     await tester.tap(find.text('Optional · Witness on-chain'));
     await tester.pump();
     expect(find.textContaining('Your seal burns the same without it.'), findsOneWidget);
-    expect(find.text('ADD RITES'), findsOneWidget);
+    expect(find.text('Add rites'), findsOneWidget);
     expect(find.textContaining('Only a salted hash of your intent is recorded.'), findsOneWidget);
     s.dispose();
   });

@@ -22,11 +22,21 @@ export interface PreparedBurn {
 /** What the fulfilment needs from the chain; a fake stands in for it in tests. */
 export interface RiteChain {
   prepareBurn(memo: string, joules: number): Promise<PreparedBurn>;
-  /** Broadcasts a signed burn. Throws `RiteRejected` if the chain refuses it. */
+  /**
+   * Broadcasts a signed burn. Throws `RiteRejected` if the node refuses it,
+   * which does not prove it will not land (an earlier send may be in flight).
+   */
   send(rawTx: string): Promise<void>;
+  /** 'failed' only when the chain holds it with an error: it can never land again. */
   status(signature: string): Promise<'confirmed' | 'failed' | 'unknown'>;
   blockHeight(): Promise<number>;
 }
+
+/**
+ * The RPC refused a send because the chain already holds the transaction:
+ * the burn landed. Not a refusal.
+ */
+export const isAlreadyProcessed = (message: string) => /already\s*(been\s*)?processed/i.test(message);
 
 /** The chain refused the transaction outright (e.g. a failed simulation). */
 export class RiteRejected extends Error {}
@@ -53,10 +63,12 @@ export interface RiteBurnOptions {
  * after the burn is confirmed on-chain.
  *
  * Each burn is signed and written to the ledger before it is sent. A retry
- * first asks the chain whether that exact signature landed, and builds a new
- * burn only once the old one has failed or can no longer land (its blockhash
- * has expired). So a crash, a timeout or two concurrent requests never burn
- * twice for one purchase.
+ * builds a new burn only once the old one failed on-chain, or the chain's
+ * height has passed its last valid block and it is still not there. Until
+ * then it resends the same signed burn, whatever the last send reported: a
+ * refused send is not proof that nothing will land. So a crash, a timeout, a
+ * refusal or two concurrent requests never burn twice for one purchase
+ * (model: backend/formal/RiteBurn.tla).
  */
 export class RiteBurnService {
   private readonly joules: number;
@@ -96,20 +108,22 @@ export class RiteBurnService {
     if (existing?.state === 'done') return this.confirmed(existing.signature, false);
 
     if (existing) {
+      // The height is read before the status, in that order: if the burn
+      // had expired by the first read and is still not there at the second,
+      // it never landed and never can. Read the other way round, it could
+      // land between the two reads and be burnt a second time.
+      const height = await this.chain.blockHeight();
       const status = await this.chain.status(existing.signature);
       if (status === 'confirmed') {
         this.ledger.mark(purchaseId, existing.signature, 'done');
         return this.confirmed(existing.signature, true);
       }
-      if (
-        existing.state === 'pending' &&
-        status === 'unknown' &&
-        (await this.chain.blockHeight()) <= existing.lastValidBlockHeight
-      ) {
-        // Still able to land: resend the same signed burn, never a second one.
+      if (status !== 'failed' && height <= existing.lastValidBlockHeight) {
+        // Still able to land, even if its last send was refused: resend the
+        // same signed burn, never a second one.
         return this.sendAndConfirm(existing);
       }
-      // Failed, or expired without landing: nothing was burnt, so burn anew.
+      // Failed on-chain, or expired without landing: nothing was burnt, so burn anew.
       const next = await this.chain.prepareBurn(riteMemo(commitment), this.joules);
       if (!this.ledger.replacePending(purchaseId, existing.signature, next)) {
         return { status: 'pending', signature: this.ledger.get(purchaseId)?.signature ?? existing.signature };
@@ -143,6 +157,12 @@ export class RiteBurnService {
           await this.chain.send(rec.rawTx);
         } catch (e) {
           if (e instanceof RiteRejected) {
+            // Refused, but an earlier send of it may have landed.
+            if ((await this.chain.status(rec.signature)) === 'confirmed') {
+              this.ledger.mark(rec.purchaseId, rec.signature, 'done');
+              return this.confirmed(rec.signature, true);
+            }
+            // Recorded as failed; it is rebuilt only once it can no longer land.
             this.ledger.mark(rec.purchaseId, rec.signature, 'failed');
             return { status: 'failed', reason: e.message };
           }
@@ -271,7 +291,10 @@ export class SolanaRiteChain implements RiteChain {
     try {
       await this.connection.sendRawTransaction(Buffer.from(rawTx, 'base64'), { preflightCommitment: 'confirmed' });
     } catch (e) {
-      if (e instanceof SendTransactionError) throw new RiteRejected(e.message);
+      if (e instanceof SendTransactionError) {
+        if (isAlreadyProcessed(e.message)) return; // It landed: the status check finds it.
+        throw new RiteRejected(e.message);
+      }
       throw e;
     }
   }
@@ -279,9 +302,10 @@ export class SolanaRiteChain implements RiteChain {
   async status(signature: string): Promise<'confirmed' | 'failed' | 'unknown'> {
     const { value } = await this.connection.getSignatureStatuses([signature], { searchTransactionHistory: true });
     const s = value[0];
-    if (!s) return 'unknown';
-    if (s.err) return 'failed';
-    return s.confirmationStatus === 'confirmed' || s.confirmationStatus === 'finalized' ? 'confirmed' : 'unknown';
+    // Only a confirmed block settles it, either way: a merely processed
+    // result can be on a fork that is dropped.
+    if (!s || (s.confirmationStatus !== 'confirmed' && s.confirmationStatus !== 'finalized')) return 'unknown';
+    return s.err ? 'failed' : 'confirmed';
   }
 
   blockHeight(): Promise<number> {

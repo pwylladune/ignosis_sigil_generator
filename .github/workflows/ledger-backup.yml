@@ -1,0 +1,67 @@
+# Copies the rite ledger off its Fly volume once a day. The ledger is the only
+# record of which paid rites are spent and the volume is not replicated: if it
+# were lost, every past buyer could spend their package again.
+#
+# The server writes a consistent snapshot (tools/ledgerSnapshot, safe while it
+# runs); this job fetches it, encrypts it and keeps it for 30 days as a
+# workflow artifact. The ledger holds Checkout session IDs, which spend rites,
+# so it never leaves the runner unencrypted.
+#
+# Setup (secrets):
+#   FLY_API_TOKEN             fly tokens create deploy -a ignosis-api
+#   LEDGER_BACKUP_PASSPHRASE  a long random passphrase, also kept offline
+# Needs a deployed image that contains dist/tools/ledgerSnapshot.js.
+# Scheduled runs only start once this file is on the default branch.
+#
+# Restore: gpg --decrypt ledger-*.sqlite.gpg > rite-ledger-mainnet.sqlite,
+# stop the machine, put the file on the volume, start it. Rites burnt after
+# the snapshot are missing from it: check the treasury's burns on-chain for
+# that window before reopening.
+name: Ledger backup
+
+on:
+  schedule:
+    - cron: '43 9 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ledger-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      FLY_APP: ignosis-api
+      LEDGER: /data/rite-ledger-mainnet.sqlite
+      SNAPSHOT: /data/backup/ledger-snapshot.sqlite
+    steps:
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Snapshot on the machine
+        # As the node user, so nothing on the volume becomes root-owned.
+        run: >
+          flyctl ssh console -a "$FLY_APP" -C
+          "/sbin/su-exec node /usr/bin/env RITE_LEDGER_PATH=$LEDGER
+          /usr/local/bin/node /app/dist/tools/ledgerSnapshot.js $SNAPSHOT"
+      - name: Fetch and encrypt
+        env:
+          PASSPHRASE: ${{ secrets.LEDGER_BACKUP_PASSPHRASE }}
+        run: |
+          test -n "$PASSPHRASE" || { echo "LEDGER_BACKUP_PASSPHRASE is not set"; exit 1; }
+          umask 077
+          flyctl ssh sftp get "$SNAPSHOT" ledger.sqlite -a "$FLY_APP"
+          test "$(head -c 15 ledger.sqlite)" = "SQLite format 3" || { echo "Not a SQLite file"; exit 1; }
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$PASSPHRASE" \
+            --symmetric --cipher-algo AES256 -o "ledger-$(date -u +%Y%m%dT%H%MZ).sqlite.gpg" ledger.sqlite
+          rm -f ledger.sqlite
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ledger-${{ github.run_id }}
+          path: ledger-*.sqlite.gpg
+          retention-days: 30
+          if-no-files-found: error

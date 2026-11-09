@@ -3,7 +3,7 @@
     "short_name": "IGNOSIS",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#F7F5F0",
+    "background_color": "#F4F4F0",
     "theme_color": "#141416",
     "description": "Chaos-magic sigil studio: seven sigil systems, Gnosis breathing and a ritual burn.",
     "orientation": "portrait-primary",

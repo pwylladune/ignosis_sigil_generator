@@ -138,10 +138,12 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
             children: [
               Row(
                 children: [
-                  Text(
-                    'III · CHARGE',
-                    style: TextStyle(
-                        color: theme.inkPrimary, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1.5),
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      'III · Charge',
+                      style: TextStyle(color: theme.inkPrimary, fontWeight: FontWeight.w600, fontSize: 14),
+                    ),
                   ),
                   const Spacer(),
                   IconButton(
@@ -263,13 +265,14 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
                   valueListenable: _cycle,
                   builder: (context, cycle, _) {
                     final peaked = cycle >= widget.targetCycles;
+                    // No numeral: the release ends step III; step IV is to forget.
                     const label = Text(
-                      'IV · RELEASE THE SEAL',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1.0),
+                      'Release the seal',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                     );
                     return SizedBox(
                       width: double.infinity,
-                      height: 48,
+                      height: 52,
                       child: peaked
                           ? ElevatedButton(
                               style: ElevatedButton.styleFrom(
@@ -284,7 +287,7 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
                           : OutlinedButton(
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: theme.inkPrimary,
-                                side: BorderSide(color: theme.hairlineStrong),
+                                side: BorderSide(color: theme.inkTertiary),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
                               onPressed: _release,
