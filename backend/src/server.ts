@@ -1,4 +1,5 @@
 import express, { NextFunction, Request, Response } from 'express';
+import type { Server } from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -40,6 +41,8 @@ export interface RiteDeps extends Pick<RiteRouterDeps, 'burns' | 'check' | 'stri
   /** Android payments through Google Play; null when not configured. */
   play?: { gateway: PlayGateway; ledger: RiteLedger } | null;
   voidedSync?: PlayVoidedSync | null;
+  /** The fulfilment ledger, closed on shutdown. */
+  ledger?: RiteLedger | null;
 }
 
 /**
@@ -116,6 +119,7 @@ export function riteFromConfig(): RiteDeps {
   return {
     burns,
     check,
+    ledger,
     stripe: gateway ? { gateway, ledger } : null,
     sweeper: new RiteSweeper(burns, ledger),
     play: play ? { gateway: play, ledger } : null,
@@ -211,6 +215,31 @@ export function createApp(deps: AppDeps = {}) {
   return app;
 }
 
+/**
+ * Stops taking work and closes the ledger: the timers stop, requests in
+ * flight get up to [graceMs] to finish (a burn waits up to 45 s for the
+ * chain), then the write-ahead log is folded into the ledger file. A burn cut
+ * off anyway is safe: it was recorded before it was sent, and the sweeper
+ * finishes it after the restart.
+ */
+export async function shutDown(server: Server, rite: RiteDeps, graceMs = 50_000): Promise<void> {
+  rite.sweeper?.stop();
+  rite.voidedSync?.stop();
+  await new Promise<void>((resolve) => {
+    const timer = setTimeout(() => {
+      console.error('[server] Requests still open after the grace period: closing anyway.');
+      server.closeAllConnections();
+      resolve();
+    }, graceMs);
+    server.close(() => {
+      clearTimeout(timer);
+      resolve();
+    });
+    server.closeIdleConnections();
+  });
+  rite.ledger?.close();
+}
+
 const isMainModule = process.argv[1]?.endsWith('/server.js') || process.argv[1]?.endsWith('/server.ts');
 
 if (isMainModule && process.env.NODE_ENV !== 'test') {
@@ -218,7 +247,7 @@ if (isMainModule && process.env.NODE_ENV !== 'test') {
   const app = createApp({ rite });
   rite.sweeper?.start();
   rite.voidedSync?.start();
-  app.listen(config.port, () => {
+  const server = app.listen(config.port, () => {
     console.log(`\n======================================================`);
     console.log(`🔥 IGNOSIS RELAY SERVER LISTENING ON PORT ${config.port}`);
     console.log(`🌐 Cluster: ${config.solanaCluster} | Joule mint: ${config.jouleMintAddress || 'none'}`);
@@ -227,4 +256,16 @@ if (isMainModule && process.env.NODE_ENV !== 'test') {
     );
     console.log(`======================================================\n`);
   });
+  // Fly sends the signal on every deploy and restart.
+  let stopping = false;
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+    process.on(signal, () => {
+      if (stopping) return;
+      stopping = true;
+      console.log(`[server] ${signal}: finishing open requests, then closing the ledger.`);
+      shutDown(server, rite)
+        .catch((e) => console.error(`[server] Shutdown failed: ${e.message}`))
+        .finally(() => process.exit(0));
+    });
+  }
 }

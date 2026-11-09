@@ -19,6 +19,10 @@
 
 app = "ignosis-api"
 primary_region = "sjc"
+# On a deploy or restart the server finishes open requests (a burn waits up
+# to 45 s for the chain) and closes the ledger before it exits.
+kill_signal = "SIGTERM"
+kill_timeout = "60s"
 
 [build]
   dockerfile = "Dockerfile"

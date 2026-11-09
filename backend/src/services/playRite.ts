@@ -18,7 +18,10 @@ export interface PlayPurchase {
 
 /** What the rite needs from Google Play; a fake stands in for it in tests. */
 export interface PlayGateway {
-  /** The purchase, or null if Play does not know this token for this product. */
+  /**
+   * The purchase, or null if Play does not know this token for this product.
+   * Throws when Play could not be asked.
+   */
   getPurchase(productId: string, purchaseToken: string): Promise<PlayPurchase | null>;
   acknowledge(productId: string, purchaseToken: string): Promise<void>;
   /** Order IDs of in-app purchases refunded, charged back or revoked since [sinceMs]. */
@@ -171,7 +174,8 @@ export class PlayCreditVerifier {
     if (!pack) return invalid('Not a rite package');
     if (!PLAY_PURCHASE_TOKEN.test(purchaseToken)) return invalid('Not a Play purchase token');
 
-    const p = await this.gateway.getPurchase(productId, purchaseToken).catch(() => null);
+    // Thrown if Play cannot be asked: an outage is "try again", not a refusal.
+    const p = await this.gateway.getPurchase(productId, purchaseToken);
     if (!p || p.purchaseState !== 0 || !p.orderId) return invalid('Not a completed purchase');
     if ((p.purchaseType === 0) !== this.options.testPurchasesOnly) {
       return invalid(this.options.testPurchasesOnly ? 'Real purchases are refused here' : 'Test purchases are refused here');
