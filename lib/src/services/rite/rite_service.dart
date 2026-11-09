@@ -168,6 +168,8 @@ class RiteService extends ChangeNotifier {
   static const _kSpentTokens = 'ignosis_rite_spent_tokens';
   static const _kStoreLeft = 'ignosis_rite_store_left';
 
+  static const _kNotConfirmed = 'This payment could not be confirmed just now. Your rites are kept; please try again.';
+
   final http.Client _client;
   final String _api;
   final Duration pollInterval;
@@ -534,9 +536,26 @@ class RiteService extends ChangeNotifier {
   Future<void> _finish(RiteSpend spend, _Outcome outcome) async {
     _spend = null;
     final token = spend.receipt;
+    var error = outcome.error;
     if (spend.platform == 'web') {
-      if (outcome.error != null) {
-        _credits.remove(token); // Refunded, or every rite spent.
+      if (outcome.conflict) {
+        _credits.remove(token); // Every rite spent.
+      } else if (error != null) {
+        // Refused. A paid package is dropped only when the backend's own
+        // record says it was refunded or used up; a refusal alone may be a
+        // payment the backend could not look up just then.
+        final credit = await _credit(token);
+        final left = credit?['remaining'];
+        if (credit?['revoked'] == true || credit?['spent'] == true) {
+          _credits.remove(token);
+        } else if (credit?['paid'] == true && left is int) {
+          _setWebLeft(token, left);
+          error = _kNotConfirmed;
+        } else {
+          // Unknown: give back the rite this release counted down.
+          _credits[token] = (_credits[token] ?? 0) + 1;
+          error = _kNotConfirmed;
+        }
       } else if (outcome.remaining != null) {
         _setWebLeft(token, outcome.remaining!);
       }
@@ -550,9 +569,9 @@ class RiteService extends ChangeNotifier {
         unawaited(_store?.consumeRite(token));
       }
     }
-    if (outcome.error != null) {
+    if (error != null) {
       _state = RiteWitnessState.failed;
-      _notice = outcome.error;
+      _notice = error;
     } else {
       final receipt = RiteReceipt(
         signature: outcome.signature!,

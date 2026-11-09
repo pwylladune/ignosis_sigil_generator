@@ -252,10 +252,48 @@ void main() {
     final b = FakeBackend();
     final s = await withCredit(b);
     b.on('POST /consecrate', [json(402, {'success': false})]);
+    b.on('GET /credit', [json(200, {...credit(paid: false), 'revoked': true})]);
     await s.releaseWith(intent);
     expect((s.state, s.credits), (RiteWitnessState.failed, 0));
     expect(s.notice, contains('refunded'));
     expect(b.bodies('/consecrate'), hasLength(1));
+    s.dispose();
+  });
+
+  test('a refusal the backend does not confirm as a refund keeps the paid package', () async {
+    // The backend could not look the payment up (a 402 from an older server,
+    // or a store outage): its own record still says paid.
+    final b = FakeBackend();
+    final s = await withCredit(b);
+    b.on('POST /consecrate', [json(402, {'success': false})]);
+    await s.releaseWith(intent);
+    expect((s.state, s.credits), (RiteWitnessState.failed, 7));
+    expect(s.notice, contains('kept'));
+
+    // The package survives a reload and burns once the backend answers.
+    final reloaded = serviceFor(b);
+    await reloaded.load();
+    expect(reloaded.credits, 7);
+    b.on('POST /consecrate', [burnt()]);
+    b.on('GET /verify', [json(404, {})]);
+    await reloaded.releaseWith(intent);
+    expect((reloaded.state, reloaded.credits), (RiteWitnessState.witnessed, 6));
+    s.dispose();
+    reloaded.dispose();
+  });
+
+  test('a refusal with the backend unreachable gives the rite back, even the last one', () async {
+    final b = FakeBackend();
+    b.on('POST /checkout', [json(200, {'success': true, 'sessionId': session, 'url': 'https://checkout.stripe.com/x'})]);
+    b.on('GET /credit', [json(200, credit(used: 6))]);
+    final s = serviceFor(b);
+    await s.beginCheckout(small);
+    await s.checkPayment();
+    expect(s.credits, 1);
+    b.on('POST /consecrate', [json(402, {'success': false})]);
+    b.on('GET /credit', [json(503, {'success': false})]);
+    await s.releaseWith(intent);
+    expect((s.state, s.credits), (RiteWitnessState.failed, 1));
     s.dispose();
   });
 
