@@ -48,6 +48,14 @@ portal/dist
 backend/node_modules
 backend/dist
 backend/.env
+# Ledgers hold Checkout session IDs (they spend rites); env files hold keys.
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite.gpg
+.env
+.env.*
+!.env.example
 deployer-keypair.json
 *.keypair.json
 
