@@ -28,7 +28,7 @@ class RiteWitnessRow extends StatelessWidget {
     return ListenableBuilder(
       listenable: service,
       builder: (context, _) {
-        final label = TextStyle(color: theme.inkPrimary, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0);
+        final label = TextStyle(color: theme.inkPrimary, fontSize: 13, fontWeight: FontWeight.w600);
         final sub = TextStyle(color: theme.inkTertiary, fontSize: 12, height: 1.35);
         final Widget trailing;
         final String detail;
@@ -63,10 +63,7 @@ class RiteWitnessRow extends StatelessWidget {
           trailing = TextButton(
             style: TextButton.styleFrom(minimumSize: const Size(64, 44), foregroundColor: theme.seal),
             onPressed: () => _choose(context),
-            child: const Text(
-              'ADD RITES',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0),
-            ),
+            child: const Text('Add rites', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           );
         }
         return Tooltip(
@@ -74,8 +71,8 @@ class RiteWitnessRow extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
             decoration: BoxDecoration(
-              border: Border.all(color: theme.hairlineStrong),
-              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: theme.inkTertiary),
+              borderRadius: BorderRadius.circular(6),
             ),
             child: Row(
               children: [
@@ -86,7 +83,7 @@ class RiteWitnessRow extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('WITNESS ON-CHAIN · $riteJoulesLabel', style: label),
+                      Text('Witness on-chain · $riteJoulesLabel', style: label),
                       const SizedBox(height: 2),
                       Semantics(liveRegion: true, child: Text(detail, style: sub)),
                     ],
@@ -205,13 +202,17 @@ class RitePackChooser extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'WITNESS ON-CHAIN',
-                  style: TextStyle(color: theme.inkPrimary, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                Semantics(
+                  header: true,
+                  child: Text(
+                    'Witness on-chain',
+                    style: TextStyle(color: theme.inkPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(
-                  'Each rite burns $riteJoulesLabel on Solana when you release a seal.',
+                  'A rite is one on-chain record of a release. Each burns $riteJoulesLabel on Solana when you '
+                  'release a seal. J is the Joule, the token IGNOSIS burns from its own treasury for each record.',
                   style: TextStyle(color: theme.inkTertiary, fontSize: 12, height: 1.4),
                 ),
                 const SizedBox(height: 12),
@@ -226,7 +227,7 @@ class RitePackChooser extends StatelessWidget {
                       TextButton(
                         style: TextButton.styleFrom(
                           foregroundColor: theme.inkPrimary,
-                          minimumSize: const Size(44, 40),
+                          minimumSize: const Size(48, 48),
                           padding: EdgeInsets.zero,
                           textStyle: const TextStyle(fontSize: 12, decoration: TextDecoration.underline),
                         ),
@@ -244,23 +245,23 @@ class RitePackChooser extends StatelessWidget {
                         foregroundColor: theme.inkPrimary,
                         minimumSize: const Size.fromHeight(48),
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        side: BorderSide(color: theme.hairlineStrong),
+                        side: BorderSide(color: theme.inkTertiary),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                       ),
-                      onPressed: () => _buy(context, offer.pack),
+                      // Nothing is bought before its price is on the button.
+                      onPressed: offer.price == null ? null : () => _buy(context, offer.pack),
                       child: Row(
                         children: [
                           Expanded(
                             child: Text(
-                              '${offer.pack.rites} RITES',
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+                              '${offer.pack.rites} rites',
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                             ),
                           ),
-                          if (offer.price != null)
-                            Text(
-                              offer.price!,
-                              style: const TextStyle(fontSize: 13, fontFeatures: [FontFeature.tabularFigures()]),
-                            ),
+                          Text(
+                            offer.price ?? 'Loading price…',
+                            style: const TextStyle(fontSize: 13, fontFeatures: [FontFeature.tabularFigures()]),
+                          ),
                         ],
                       ),
                     ),
@@ -270,7 +271,7 @@ class RitePackChooser extends StatelessWidget {
                   child: TextButton(
                     style: TextButton.styleFrom(foregroundColor: theme.inkTertiary, minimumSize: const Size(64, 44)),
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('CANCEL', style: TextStyle(fontSize: 12, letterSpacing: 1.0)),
+                    child: const Text('Cancel', style: TextStyle(fontSize: 13)),
                   ),
                 ),
               ],
@@ -300,7 +301,23 @@ class RiteWitnessRecord extends StatelessWidget {
         final Widget child = switch (service.state) {
           RiteWitnessState.none => const SizedBox.shrink(),
           RiteWitnessState.burning => Text('Burning $riteJoulesLabel on-chain…', style: style),
-          RiteWitnessState.failed => Text(service.notice ?? 'The on-chain burn did not go through.', style: style),
+          // A failure is marked by an icon and the seal colour, not by words alone.
+          RiteWitnessState.failed => Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 1, right: 6),
+                  child: Icon(Icons.error_outline, size: 16, color: theme.seal),
+                ),
+                Flexible(
+                  child: Text(
+                    service.notice ?? 'The on-chain burn did not go through.',
+                    style: style.copyWith(color: theme.inkPrimary),
+                  ),
+                ),
+              ],
+            ),
           RiteWitnessState.witnessed when receipt != null => Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -313,10 +330,7 @@ class RiteWitnessRecord extends StatelessWidget {
                 TextButton(
                   style: TextButton.styleFrom(minimumSize: const Size(44, 44), foregroundColor: theme.seal),
                   onPressed: () => launchUrl(Uri.parse(receipt.explorerUrl), webOnlyWindowName: '_blank'),
-                  child: const Text(
-                    'VIEW THE RECORD',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2),
-                  ),
+                  child: const Text('View the record', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                 ),
               ],
             ),

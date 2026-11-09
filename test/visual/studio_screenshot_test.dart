@@ -68,4 +68,55 @@ void main() {
     await tester.pumpAndSettle();
     await shot(tester, key, 'studio_skins');
   });
+
+  /// The studio at [size] with the intro [seen] or not, then with an intent,
+  /// the rite dialog and the "Free and paid" sheet.
+  Future<void> states(WidgetTester tester, Size size, String tag, {required bool seen}) async {
+    SharedPreferences.setMockInitialValues({'ignosis_intro_seen': seen});
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final key = GlobalKey();
+    await tester.pumpWidget(RepaintBoundary(
+      key: key,
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: IgnosisTheme.lightTheme.copyWith(
+          textTheme: IgnosisTheme.lightTheme.textTheme.apply(fontFamily: 'Roboto'),
+        ),
+        home: DefaultTextStyle.merge(style: const TextStyle(fontFamily: 'Roboto'), child: const SigilStudioScreen()),
+      ),
+    ));
+    for (var i = 0; i < 6 * 60; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await shot(tester, key, 'studio_${tag}_empty');
+    if (!seen) return;
+
+    await tester.enterText(find.byType(TextField), 'I command radiant clarity');
+    for (var i = 0; i < 8 * 60; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await shot(tester, key, 'studio_${tag}_intent');
+
+    await tester.tap(find.byTooltip('More'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Free and paid'));
+    await tester.pumpAndSettle();
+    await shot(tester, key, 'studio_${tag}_free_and_paid');
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('III · Charge the seal'));
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await shot(tester, key, 'studio_${tag}_charge');
+  }
+
+  testWidgets('studio states: phone, first visit', (t) => states(t, const Size(390, 844), 'phone_first', seen: false));
+  testWidgets('studio states: small phone, first visit',
+      (t) => states(t, const Size(320, 568), 'small_first', seen: false));
+  testWidgets('studio states: phone', (t) => states(t, const Size(390, 844), 'phone', seen: true));
+  testWidgets('studio states: desktop', (t) => states(t, const Size(1440, 900), 'desktop', seen: true));
 }

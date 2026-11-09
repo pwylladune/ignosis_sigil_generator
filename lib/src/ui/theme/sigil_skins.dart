@@ -88,6 +88,8 @@ class SigilSkinTheme {
         outline: hairlineStrong,
       ),
       dividerColor: hairline,
+      // Keyboard focus: a seal wash on every ink well, chip and button.
+      focusColor: seal.withValues(alpha: 0.18),
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: seal,
         selectionColor: seal.withValues(alpha: 0.25),

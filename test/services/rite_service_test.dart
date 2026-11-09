@@ -511,16 +511,22 @@ void main() {
     await tester.pump();
     expect(find.textContaining('1618 J'), findsWidgets);
 
-    await tester.tap(find.text('ADD RITES'));
+    await tester.tap(find.text('Add rites'));
     await tester.pumpAndSettle();
-    expect(find.text('7 RITES'), findsOneWidget);
+    expect(find.text('7 rites'), findsOneWidget);
     expect(find.text(r'$3.14'), findsOneWidget);
-    expect(find.text('21 RITES'), findsOneWidget);
-    expect(find.text('100 RITES'), findsOneWidget);
+    expect(find.text('21 rites'), findsOneWidget);
+    expect(find.text('100 rites'), findsOneWidget);
+    // Nothing can be bought before its price is on the button.
+    bool enabled(String label) =>
+        tester.widget<OutlinedButton>(find.widgetWithText(OutlinedButton, label)).onPressed != null;
+    expect((enabled('7 rites'), enabled('21 rites'), enabled('100 rites')), (true, false, false));
+    expect(find.text('Loading price…'), findsNWidgets(2));
+    expect(find.textContaining('J is the Joule'), findsOneWidget);
     expect(find.textContaining('By buying you agree to the Terms'), findsOneWidget);
     expect(find.text('Terms'), findsOneWidget);
     expect(find.text('Refunds'), findsOneWidget);
-    await tester.tap(find.text('CANCEL'));
+    await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
 
     b.on('POST /checkout', [json(200, {'success': true, 'sessionId': session, 'url': 'https://checkout.stripe.com/x'})]);
@@ -555,11 +561,11 @@ void main() {
     await tester.pump();
     expect(find.text('Optional · Witness on-chain'), findsOneWidget);
     expect(find.text('Off'), findsOneWidget);
-    expect(find.text('ADD RITES'), findsNothing);
+    expect(find.text('Add rites'), findsNothing);
     await tester.tap(find.text('Optional · Witness on-chain'));
     await tester.pump();
     expect(find.textContaining('Your seal burns the same without it.'), findsOneWidget);
-    expect(find.text('ADD RITES'), findsOneWidget);
+    expect(find.text('Add rites'), findsOneWidget);
     expect(find.textContaining('Only a salted hash of your intent is recorded.'), findsOneWidget);
     s.dispose();
   });

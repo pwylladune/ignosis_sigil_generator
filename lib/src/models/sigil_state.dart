@@ -52,7 +52,7 @@ enum SigilSystem {
   cyberChaos(
     'Cyber Chaos',
     SystemGroup.generative,
-    'Hashes your intent into the seed of a strange attractor.',
+    'Turns your intent into a number that seeds a strange attractor.',
     'SHA-256 seeded Clifford strange attractor',
     'Hash your intent into the seed of a strange attractor. Fields of truth blossom from folds of self. '
         'Consume to release.',
