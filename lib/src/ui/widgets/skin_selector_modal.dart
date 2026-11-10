@@ -124,9 +124,9 @@ class _SkinSelectorModalState extends State<SkinSelectorModal> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'SKINS',
+                          'Skins',
                           style: TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.5, color: theme.inkPrimary),
+                              fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 0.2, color: theme.inkPrimary),
                         ),
                         Text(
                           store.sellSkins ? 'Tap a locked skin to preview it' : 'All skins are free for now',
@@ -265,8 +265,8 @@ class _SkinSelectorModalState extends State<SkinSelectorModal> {
                       onPressed: () => _buy(previewProduct),
                       child: Text(
                         _price(previewProduct) == null
-                            ? 'UNLOCK ${SigilSkinTheme.getSkin(_previewing!).shortLabel.toUpperCase()}'
-                            : 'UNLOCK ${SigilSkinTheme.getSkin(_previewing!).shortLabel.toUpperCase()} · ${_price(previewProduct)}',
+                            ? 'Unlock ${SigilSkinTheme.getSkin(_previewing!).shortLabel}'
+                            : 'Unlock ${SigilSkinTheme.getSkin(_previewing!).shortLabel} · ${_price(previewProduct)}',
                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0),
                       ),
                     ),
@@ -287,7 +287,7 @@ class _SkinSelectorModalState extends State<SkinSelectorModal> {
                             reportPurchaseStart(store, result, restoring: true);
                           },
                     child: Text(
-                      store.isRestoring ? 'RESTORING…' : 'RESTORE PURCHASES',
+                      store.isRestoring ? 'Restoring…' : 'Restore purchases',
                       style: TextStyle(
                           fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: theme.inkSecondary),
                     ),
@@ -299,7 +299,7 @@ class _SkinSelectorModalState extends State<SkinSelectorModal> {
                       onPressed: () => _buy(RevenueSchemaConfig.allSkinsBundleId),
                       child: Text(
                         [
-                          owned == 0 ? 'ALL 7 SKINS' : 'REMAINING SKINS',
+                          owned == 0 ? 'All 7 skins' : 'Remaining skins',
                           if (_price(RevenueSchemaConfig.allSkinsBundleId) != null)
                             _price(RevenueSchemaConfig.allSkinsBundleId)!,
                         ].join(' · '),

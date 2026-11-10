@@ -189,7 +189,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('All skins are free for now'), findsOneWidget);
     expect(find.text('Restore purchases'), findsNothing);
-    expect(find.textContaining('UNLOCK'), findsNothing);
+    expect(find.textContaining('Unlock'), findsNothing);
   });
 
   testWidgets('a saved premium skin is not applied without an entitlement', (tester) async {
@@ -227,7 +227,7 @@ void main() {
     await tester.tap(find.text('Cosmic'));
     await tester.pump();
     // An explicit unlock button appears; the skin is not applied or bought.
-    expect(find.textContaining('UNLOCK COSMIC'), findsOneWidget);
+    expect(find.textContaining('Unlock Cosmic'), findsOneWidget);
     expect(IapService.instance.isSkinUnlocked('cosmic'), isFalse);
   });
 

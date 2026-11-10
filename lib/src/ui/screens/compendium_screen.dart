@@ -19,7 +19,7 @@ class CompendiumScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return _CompendiumPage(
       theme: theme,
-      title: 'THE COMPENDIUM',
+      title: 'The Compendium',
       mark: true,
       body: compendium != null
           ? _home(context, compendium!)
@@ -49,32 +49,32 @@ class CompendiumScreen extends StatelessWidget {
           '${c.quoteCount} quotations from ${c.workCount} works',
           style: TextStyle(fontSize: 12, letterSpacing: 0.5, color: theme.inkTertiary),
         ),
-        _heading(theme, 'PARTS'),
+        _heading(theme, 'Parts'),
         for (final p in c.parts)
           _tile(
             theme,
             leading: p.numeral,
             title: p.title,
             subtitle: '${p.quoteCount} quotations',
-            onTap: () => open('${p.numeral}. ${p.title.toUpperCase()}', _PartView(theme: theme, part: p)),
+            onTap: () => open('${p.numeral}. ${p.title}', _PartView(theme: theme, part: p)),
           ),
-        _heading(theme, 'REFERENCE'),
+        _heading(theme, 'Reference'),
         _tile(theme,
             title: 'Glossary',
             subtitle: '${c.glossary.length} terms',
-            onTap: () => open('GLOSSARY', _GlossaryView(theme: theme, terms: c.glossary))),
+            onTap: () => open('Glossary', _GlossaryView(theme: theme, terms: c.glossary))),
         _tile(theme,
             title: 'Study guide',
             subtitle: 'The works, part by part',
-            onTap: () => open('STUDY GUIDE', _StudyGuideView(theme: theme, parts: c.studyGuide))),
+            onTap: () => open('Study guide', _StudyGuideView(theme: theme, parts: c.studyGuide))),
         _tile(theme,
             title: 'Bibliography',
             subtitle: '${c.bibliography.length} entries',
-            onTap: () => open('BIBLIOGRAPHY', _BibliographyView(theme: theme, entries: c.bibliography))),
+            onTap: () => open('Bibliography', _BibliographyView(theme: theme, entries: c.bibliography))),
         _tile(theme,
             title: 'Authors and websites',
             subtitle: '${c.authors.length} authors',
-            onTap: () => open('AUTHORS AND WEBSITES', _AuthorsView(theme: theme, authors: c.authors))),
+            onTap: () => open('Authors and websites', _AuthorsView(theme: theme, authors: c.authors))),
       ],
     );
   }
@@ -108,7 +108,7 @@ class _CompendiumPage extends StatelessWidget {
                 title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 2.0, color: theme.inkPrimary),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 0.2, color: theme.inkPrimary),
               ),
             ),
           ],
@@ -131,7 +131,7 @@ class _PartView extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
       children: [
         for (final s in part.sections) ...[
-          _heading(theme, s.title.toUpperCase()),
+          _heading(theme, s.title),
           for (final q in s.quotes) QuotationCard(theme: theme, quote: q),
         ],
       ],
@@ -193,7 +193,7 @@ class _StudyGuideView extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
       children: [
         for (final g in parts) ...[
-          _heading(theme, '${g.numeral}. ${g.title.toUpperCase()}'),
+          _heading(theme, '${g.numeral}. ${g.title}'),
           for (final w in g.works)
             _entry(
               theme,
@@ -302,7 +302,7 @@ Widget _heading(SigilSkinTheme theme, String text) => Padding(
       padding: const EdgeInsets.only(top: 24, bottom: 12),
       child: Text(
         text,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2.0, color: theme.accent),
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.2, color: theme.accent),
       ),
     );
 

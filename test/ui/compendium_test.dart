@@ -33,7 +33,7 @@ void main() {
 
   testWidgets('the home lists the nine parts and the reference pages', (tester) async {
     await tester.pumpWidget(MaterialApp(home: CompendiumScreen(theme: theme, compendium: c)));
-    expect(find.text('THE COMPENDIUM'), findsOneWidget);
+    expect(find.text('The Compendium'), findsOneWidget);
     expect(find.text(c.parts.first.title), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Authors and websites'), 200);
     expect(find.text('Glossary'), findsOneWidget);

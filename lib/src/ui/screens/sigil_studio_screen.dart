@@ -453,7 +453,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
           // How letters are reduced: Carroll's method, or the modern convention.
           for (final strip in const [false, true]) {
             chips.add(chip(
-              strip ? 'NO VOWELS (MODERN)' : 'KEEP VOWELS (CARROLL)',
+              strip ? 'No vowels (modern)' : 'Keep vowels (Carroll)',
               _state.stripVowels == strip,
               () => setState(() {
                 _state = _state.copyWith(stripVowels: strip);
@@ -470,7 +470,7 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
         if (_state.system == SigilSystem.spare) {
           for (final g in SymmetryGroup.values) {
             chips.add(chip(
-              g == SymmetryGroup.cyclic ? 'ROTATE' : 'ROTATE + MIRROR',
+              g == SymmetryGroup.cyclic ? 'Rotate' : 'Rotate + mirror',
               _state.symmetryGroup == g,
               () => setState(() => _state = _state.copyWith(symmetryGroup: g)),
               tooltip: g == SymmetryGroup.cyclic ? 'Cyclic group Cₙ' : 'Dihedral group Dₙ',
@@ -489,13 +489,13 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
         }
       case SigilSystem.infinite:
         chips.add(chip(
-          'INVERT · √',
+          'Invert · √',
           _infiniteInverted,
           () => setState(() => _infiniteInverted = !_infiniteInverted),
           tooltip: 'Draw the set by the inverse map z ↦ ±√(z − c) instead of the rings around it',
         ));
         if (_infiniteView != null) {
-          chips.add(chip('RESET VIEW', false, () => setState(() => _infiniteView = null),
+          chips.add(chip('Reset view', false, () => setState(() => _infiniteView = null),
               tooltip: 'Back out to the whole set'));
         }
         chips.add(Padding(
