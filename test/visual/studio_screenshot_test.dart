@@ -71,8 +71,8 @@ void main() {
 
   /// The studio at [size] with the intro [seen] or not, then with an intent,
   /// the rite dialog and the "Free and paid" sheet.
-  Future<void> states(WidgetTester tester, Size size, String tag, {required bool seen}) async {
-    SharedPreferences.setMockInitialValues({'ignosis_intro_seen': seen});
+  Future<void> states(WidgetTester tester, Size size, String tag, {required bool seen, String? skin}) async {
+    SharedPreferences.setMockInitialValues({'ignosis_intro_seen': seen, if (skin != null) 'ignosis_selected_skin': skin});
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -98,6 +98,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 16));
     }
     await shot(tester, key, 'studio_${tag}_intent');
+    if (skin != null) return;
 
     await tester.tap(find.byTooltip('More'));
     await tester.pumpAndSettle();
@@ -119,4 +120,11 @@ void main() {
       (t) => states(t, const Size(320, 568), 'small_first', seen: false));
   testWidgets('studio states: phone', (t) => states(t, const Size(390, 844), 'phone', seen: true));
   testWidgets('studio states: desktop', (t) => states(t, const Size(1440, 900), 'desktop', seen: true));
+  testWidgets('studio states: desktop, first visit',
+      (t) => states(t, const Size(1440, 900), 'desktop_first', seen: false));
+  // Every other skin, with an intent: the default is covered above.
+  for (final skin in const ['techOccult', 'darkAcademia', 'cosmic', 'surrealist', 'alchemical', 'wiccan', 'chaos']) {
+    testWidgets('studio states: phone, $skin',
+        (t) => states(t, const Size(390, 844), 'skin_$skin', seen: true, skin: skin));
+  }
 }

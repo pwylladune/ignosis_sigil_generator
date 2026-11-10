@@ -527,6 +527,273 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
     // Room for the first-visit steps and the example plate together.
     final tall = screen.height >= 700;
 
+    // A wide window has room for the plate and the controls side by side.
+    final wide = screen.width >= 1000 && screen.height >= 560;
+
+    // The parts of the studio, placed in one column on a phone and in two
+    // panes on a wide window.
+    final intentBlock = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: _stepLabel(theme, 'I · Intent'),
+          ),
+          // The hint alone leaves the field unnamed for a screen reader.
+          Semantics(
+              label: 'Intent',
+              child: TextField(
+                key: const ValueKey('intent'),
+                controller: _textController,
+                focusNode: _intentFocus,
+                // A released seal burns to the end; the intent is fixed meanwhile.
+                enabled: !_isBurning,
+                // The intent is private: keep it out of the keyboard's
+                // learned (and possibly cloud-synced) dictionary.
+                autocorrect: false,
+                enableSuggestions: false,
+                enableIMEPersonalizedLearning: false,
+                smartDashesType: SmartDashesType.disabled,
+                smartQuotesType: SmartQuotesType.disabled,
+                onChanged: _onIntentChanged,
+                style: TextStyle(
+                  color: theme.inkPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.5,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'e.g. I stand with strength',
+                  hintStyle: TextStyle(color: theme.inkTertiary, fontSize: 14),
+                  filled: true,
+                  fillColor: theme.surface,
+                  prefixIcon: Icon(Icons.edit_note, color: theme.inkSecondary, size: 20),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: theme.hairline),
+                  ),
+                  // The edge is all that bounds the field on paper (SC 1.4.11).
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: theme.inkTertiary),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: theme.inkPrimary, width: 1.2),
+                  ),
+                ),
+              )),
+          const SizedBox(height: 6),
+          if (_kernel.isEmpty && !_state.isIncinerated)
+            Text(
+              'One sentence, stated positively. Your intent stays on this device.',
+              style: TextStyle(color: theme.inkSecondary, fontSize: 12, height: 1.4),
+            ),
+          // Hidden during the rite: forgetting the intent is part of the practice.
+          if (_kernel.reducedConsonants.isNotEmpty && !_charging && !_isBurning)
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                // One label for every system; the tooltip says what each takes.
+                Tooltip(
+                  message: _drawnFromHelp,
+                  triggerMode: TooltipTriggerMode.tap,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Drawn from',
+                        style: TextStyle(color: theme.inkSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.info_outline, size: 14, color: theme.inkSecondary),
+                    ],
+                  ),
+                ),
+                Text(
+                  _tracesHebrew
+                      ? transliterate(_kernel.normalized).map((l) => l.glyph).join()
+                      : _state.system == SigilSystem.ringCipher
+                          ? RingCipherEngine.cipherText(_kernel.rawIntent).split('').join(' · ')
+                          : _isInfinite
+                              ? _infiniteLabel
+                              : _kernel.reducedConsonants.split('').join(' · '),
+                  style: TextStyle(
+                    color: theme.seal,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.8,
+                  ),
+                ),
+                // Circumlocution traces the whole phrase, and The
+                // Infinite hashes it: nothing is reduced.
+                if (_state.system != SigilSystem.ringCipher && !_isInfinite)
+                  TextButton(
+                    // TextButton keeps a 48 pt hit area around the small link.
+                    onPressed: _showExegesisModal,
+                    style: TextButton.styleFrom(
+                      foregroundColor: theme.inkTertiary,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: const Size(44, 44),
+                    ),
+                    child: const Text(
+                      'Why reduce?',
+                      style: TextStyle(fontSize: 12, decoration: TextDecoration.underline),
+                    ),
+                  ),
+              ],
+            ),
+        ],
+      ),
+    );
+
+    final plate = Stack(
+      children: [
+        Positioned.fill(
+          child: Center(
+            child: AspectRatio(
+              aspectRatio: 1.0,
+              child: Container(
+                margin: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: theme.canvasBackground,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: _state.isIncinerated ? theme.accent.withValues(alpha: 0.3) : theme.hairline,
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.inkPrimary.withValues(alpha: theme.id.isDark ? 0.3 : 0.04),
+                      blurRadius: 30,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: RepaintBoundary(
+                  child: _state.isIncinerated
+                      ? _IncineratedPlate(
+                          theme: theme,
+                          onAnother: _makeAnother,
+                          witness: kEnableRite ? RiteWitnessRecord(theme: theme, service: RiteService.instance) : null,
+                        )
+                      : _kernel.isEmpty
+                          ? _ExamplePlate(
+                              theme: theme,
+                              spec: SigilSpec(
+                                kernel: _exampleKernel,
+                                system: _state.system,
+                                kameaType: _state.kameaType,
+                                symmetryFolds: _state.symmetryFolds,
+                                symmetryGroup: _state.symmetryGroup,
+                              ),
+                              burn: _burn,
+                            )
+                          : Semantics(
+                              image: true,
+                              label: _kernel.isEmpty ? 'Empty plate' : '${_state.system.title} sigil',
+                              child: SigilCanvas(
+                                spec: _spec,
+                                skin: theme,
+                                burn: _burn,
+                                onIncinerated: _onIncinerated,
+                                breath: _breath,
+                                onViewChanged:
+                                    _isInfinite && !_charging ? (v) => setState(() => _infiniteView = v) : null,
+                              ),
+                            ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (_firstVisit && !tall && !wide)
+          Positioned.fill(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+              child: _IntroCard(theme: theme, steps: _steps, onDismiss: _dismissIntro),
+            ),
+          ),
+      ],
+    );
+
+    final systemLabel = Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+      child: Align(alignment: Alignment.centerLeft, child: _stepLabel(theme, 'II · System')),
+    );
+
+    final systemChips = SigilSystem.values.expand((sys) {
+      final isSelected = _state.system == sys;
+      final firstOfGroup = sys == SigilSystem.values.firstWhere((s) => s.group == sys.group);
+      return [
+        if (firstOfGroup)
+          Padding(
+            padding: EdgeInsets.only(left: sys.index == 0 ? 0 : 8, right: 8),
+            child: Text(
+              sys.group.caption,
+              style: TextStyle(color: theme.inkSecondary, fontSize: 12),
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.only(right: 8.0),
+          child: ChoiceChip(
+            label: Text(sys.title),
+            selected: isSelected,
+            selectedColor: theme.surfaceElevated,
+            backgroundColor: theme.surface,
+            labelStyle: TextStyle(
+              // On the first visit the place to start is marked in vermilion.
+              color: sys == SigilSystem.ringCipher && _firstVisit
+                  ? theme.accent
+                  : isSelected
+                      ? theme.inkPrimary
+                      : theme.inkTertiary,
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            ),
+            // The edge is all that bounds an unselected chip: it
+            // needs 3:1 on the page (WCAG 2.2 SC 1.4.11).
+            side: BorderSide(
+              color: isSelected ? theme.inkPrimary : theme.inkTertiary,
+              width: isSelected ? 1.2 : 1.0,
+            ),
+            onSelected: _isBurning
+                ? null
+                : (val) {
+                    if (val) setState(() => _state = _state.copyWith(system: sys));
+                  },
+          ),
+        ),
+      ];
+    }).toList();
+
+    final systemText = Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+      child: Semantics(
+        liveRegion: true,
+        child: Column(
+          children: [
+            Text(
+              _state.system.howTo,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: theme.inkPrimary, fontSize: 14, height: 1.4),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              _state.system.ritual,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: theme.inkSecondary, fontSize: 13, height: 1.4, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+      ),
+    );
+
     return _skinned(Scaffold(
       backgroundColor: theme.background,
       appBar: AppBar(
@@ -588,306 +855,75 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
       body: SafeArea(
         child: Column(children: [
           Expanded(
-              child: _measure(Column(
-            children: [
-              // Statement of Intent Input
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: _stepLabel(theme, 'I · Intent'),
-                    ),
-                    // The hint alone leaves the field unnamed for a screen reader.
-                    Semantics(
-                        label: 'Intent',
-                        child: TextField(
-                          key: const ValueKey('intent'),
-                          controller: _textController,
-                          focusNode: _intentFocus,
-                          // A released seal burns to the end; the intent is fixed meanwhile.
-                          enabled: !_isBurning,
-                          // The intent is private: keep it out of the keyboard's
-                          // learned (and possibly cloud-synced) dictionary.
-                          autocorrect: false,
-                          enableSuggestions: false,
-                          enableIMEPersonalizedLearning: false,
-                          smartDashesType: SmartDashesType.disabled,
-                          smartQuotesType: SmartQuotesType.disabled,
-                          onChanged: _onIntentChanged,
-                          style: TextStyle(
-                            color: theme.inkPrimary,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 0.5,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: 'e.g. I stand with strength',
-                            hintStyle: TextStyle(color: theme.inkTertiary, fontSize: 14),
-                            filled: true,
-                            fillColor: theme.surface,
-                            prefixIcon: Icon(Icons.edit_note, color: theme.inkSecondary, size: 20),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: theme.hairline),
-                            ),
-                            // The edge is all that bounds the field on paper (SC 1.4.11).
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: theme.inkTertiary),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: theme.inkPrimary, width: 1.2),
-                            ),
-                          ),
-                        )),
-                    const SizedBox(height: 6),
-                    if (_kernel.isEmpty && !_state.isIncinerated)
-                      Text(
-                        'One sentence, stated positively. Your intent stays on this device.',
-                        style: TextStyle(color: theme.inkSecondary, fontSize: 12, height: 1.4),
-                      ),
-                    // Hidden during the rite: forgetting the intent is part of the practice.
-                    if (_kernel.reducedConsonants.isNotEmpty && !_charging && !_isBurning)
-                      Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 8,
-                        runSpacing: 4,
-                        children: [
-                          // One label for every system; the tooltip says what each takes.
-                          Tooltip(
-                            message: _drawnFromHelp,
-                            triggerMode: TooltipTriggerMode.tap,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+              child: wide
+                  // Two panes: the plate keeps the height of the window, and
+                  // everything that is read or chosen sits beside it.
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(child: plate),
+                        SizedBox(
+                          width: 460,
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.only(top: 8, bottom: 16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                Text(
-                                  'Drawn from',
-                                  style:
-                                      TextStyle(color: theme.inkSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+                                intentBlock,
+                                if (_firstVisit)
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                                    child: _IntroCard(theme: theme, steps: _steps, onDismiss: _dismissIntro),
+                                  ),
+                                systemLabel,
+                                // Room for every system at once: no sideways scrolling.
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  child: Wrap(
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    runSpacing: 4,
+                                    children: systemChips,
+                                  ),
                                 ),
-                                const SizedBox(width: 4),
-                                Icon(Icons.info_outline, size: 14, color: theme.inkSecondary),
+                                systemText,
+                                _buildSystemOptions(theme),
                               ],
                             ),
                           ),
-                          Text(
-                            _tracesHebrew
-                                ? transliterate(_kernel.normalized).map((l) => l.glyph).join()
-                                : _state.system == SigilSystem.ringCipher
-                                    ? RingCipherEngine.cipherText(_kernel.rawIntent).split('').join(' · ')
-                                    : _isInfinite
-                                        ? _infiniteLabel
-                                        : _kernel.reducedConsonants.split('').join(' · '),
-                            style: TextStyle(
-                              color: theme.seal,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1.8,
+                        ),
+                      ],
+                    )
+                  : _measure(Column(
+                      children: [
+                        intentBlock,
+
+                        // First visit only: the four steps sit above the plate, so the
+                        // example seal stays in view. A short window has no room for
+                        // both: there the card lies over the plate, as it scrolls.
+                        if (_firstVisit && tall)
+                          Flexible(
+                            flex: 5,
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+                              child: _IntroCard(theme: theme, steps: _steps, onDismiss: _dismissIntro),
                             ),
                           ),
-                          // Circumlocution traces the whole phrase, and The
-                          // Infinite hashes it: nothing is reduced.
-                          if (_state.system != SigilSystem.ringCipher && !_isInfinite)
-                            TextButton(
-                              // TextButton keeps a 48 pt hit area around the small link.
-                              onPressed: _showExegesisModal,
-                              style: TextButton.styleFrom(
-                                foregroundColor: theme.inkTertiary,
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
-                                minimumSize: const Size(44, 44),
-                              ),
-                              child: const Text(
-                                'Why reduce?',
-                                style: TextStyle(fontSize: 12, decoration: TextDecoration.underline),
-                              ),
-                            ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
 
-              // First visit only: the four steps sit above the plate, so the
-              // example seal stays in view. A short window has no room for
-              // both: there the card lies over the plate, as it scrolls.
-              if (_firstVisit && tall)
-                Flexible(
-                  flex: 5,
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
-                    child: _IntroCard(theme: theme, steps: _steps, onDismiss: _dismissIntro),
-                  ),
-                ),
+                        Expanded(flex: 6, child: plate),
 
-              // Archival Parchment Canvas Viewport
-              Expanded(
-                flex: 6,
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: Center(
-                        child: AspectRatio(
-                          aspectRatio: 1.0,
-                          child: Container(
-                            margin: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: theme.canvasBackground,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: _state.isIncinerated ? theme.accent.withValues(alpha: 0.3) : theme.hairline,
-                                width: 1.5,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: theme.inkPrimary.withValues(alpha: theme.id.isDark ? 0.3 : 0.04),
-                                  blurRadius: 30,
-                                  spreadRadius: 2,
-                                ),
-                              ],
-                            ),
-                            child: RepaintBoundary(
-                              child: _state.isIncinerated
-                                  ? _IncineratedPlate(
-                                      theme: theme,
-                                      onAnother: _makeAnother,
-                                      witness: kEnableRite
-                                          ? RiteWitnessRecord(theme: theme, service: RiteService.instance)
-                                          : null,
-                                    )
-                                  : _kernel.isEmpty
-                                      ? _ExamplePlate(
-                                          theme: theme,
-                                          spec: SigilSpec(
-                                            kernel: _exampleKernel,
-                                            system: _state.system,
-                                            kameaType: _state.kameaType,
-                                            symmetryFolds: _state.symmetryFolds,
-                                            symmetryGroup: _state.symmetryGroup,
-                                          ),
-                                          burn: _burn,
-                                        )
-                                      : Semantics(
-                                          image: true,
-                                          label: _kernel.isEmpty ? 'Empty plate' : '${_state.system.title} sigil',
-                                          child: SigilCanvas(
-                                            spec: _spec,
-                                            skin: theme,
-                                            burn: _burn,
-                                            onIncinerated: _onIncinerated,
-                                            breath: _breath,
-                                            onViewChanged: _isInfinite && !_charging
-                                                ? (v) => setState(() => _infiniteView = v)
-                                                : null,
-                                          ),
-                                        ),
-                            ),
-                          ),
+                        // II · System: the systems in one scrolling row, grouped by family
+                        // (one row keeps the plate large at phone width).
+                        systemLabel,
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(children: systemChips),
                         ),
-                      ),
-                    ),
-                    if (_firstVisit && !tall)
-                      Positioned.fill(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
-                          child: _IntroCard(theme: theme, steps: _steps, onDismiss: _dismissIntro),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-
-              // II · System: the systems in one scrolling row, grouped by family
-              // (one row keeps the plate large at phone width).
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
-                child: Align(alignment: Alignment.centerLeft, child: _stepLabel(theme, 'II · System')),
-              ),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: SigilSystem.values.expand((sys) {
-                    final isSelected = _state.system == sys;
-                    final firstOfGroup = sys == SigilSystem.values.firstWhere((s) => s.group == sys.group);
-                    return [
-                      if (firstOfGroup)
-                        Padding(
-                          padding: EdgeInsets.only(left: sys.index == 0 ? 0 : 8, right: 8),
-                          child: Text(
-                            sys.group.caption,
-                            style: TextStyle(color: theme.inkSecondary, fontSize: 12),
-                          ),
-                        ),
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: ChoiceChip(
-                          label: Text(sys.title),
-                          selected: isSelected,
-                          selectedColor: theme.surfaceElevated,
-                          backgroundColor: theme.surface,
-                          labelStyle: TextStyle(
-                            // On the first visit the place to start is marked in vermilion.
-                            color: sys == SigilSystem.ringCipher && _firstVisit
-                                ? theme.accent
-                                : isSelected
-                                    ? theme.inkPrimary
-                                    : theme.inkTertiary,
-                            fontSize: 12,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                          ),
-                          // The edge is all that bounds an unselected chip: it
-                          // needs 3:1 on the page (WCAG 2.2 SC 1.4.11).
-                          side: BorderSide(
-                            color: isSelected ? theme.inkPrimary : theme.inkTertiary,
-                            width: isSelected ? 1.2 : 1.0,
-                          ),
-                          onSelected: _isBurning
-                              ? null
-                              : (val) {
-                                  if (val) setState(() => _state = _state.copyWith(system: sys));
-                                },
-                        ),
-                      ),
-                    ];
-                  }).toList(),
-                ),
-              ),
-
-              // What the system does in plain words, then its ritual in the
-              // owner's voice; both stay through the rite.
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                child: Semantics(
-                  liveRegion: true,
-                  child: Column(
-                    children: [
-                      Text(
-                        _state.system.howTo,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: theme.inkPrimary, fontSize: 14, height: 1.4),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _state.system.ritual,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            color: theme.inkSecondary, fontSize: 13, height: 1.4, fontStyle: FontStyle.italic),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              _buildSystemOptions(theme),
-
-              const SizedBox(height: 10),
-            ],
-          ))),
+                        systemText,
+                        _buildSystemOptions(theme),
+                        const SizedBox(height: 10),
+                      ],
+                    ))),
 
           // Bottom bar: the skin and the release. The bar spans the
           // window; its content keeps the studio's measure.
@@ -897,7 +933,9 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
               color: theme.surface,
               border: Border(top: BorderSide(color: theme.hairline)),
             ),
-            child: _measure(Padding(
+            // With two panes it spans them: the skin under the plate, the
+            // release under the controls.
+            child: (wide ? (Widget bar) => bar : _measure)(Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
