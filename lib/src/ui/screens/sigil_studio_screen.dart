@@ -14,7 +14,8 @@ import '../../models/intent_kernel.dart';
 import '../../models/sigil_state.dart';
 import '../../services/iap_service.dart';
 import '../../services/rite/rite_service.dart';
-import '../../services/sigil_print_service.dart';
+// Loaded on first print: the PDF and printing code is a large part of the web bundle.
+import '../../services/sigil_print_service.dart' deferred as print_sheet;
 import '../../services/universal_export_service.dart';
 import '../../motion/breath.dart';
 import '../canvas/sigil_canvas.dart';
@@ -224,7 +225,8 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
   Future<void> _printPhysicalSheet() async {
     final bytes = await _settledSealPng();
     if (bytes != null) {
-      await SigilPrintService.printPhysicalBurnSheet(
+      await print_sheet.loadLibrary();
+      await print_sheet.SigilPrintService.printPhysicalBurnSheet(
         pngBytes: bytes,
         reducedKernel: _kernel.reducedConsonants,
         systemTitle: _state.system.title,

@@ -141,16 +141,26 @@ class BrushStroke {
     }
   }
 
+  /// Outlines built so far, for tests.
+  @visibleForTesting
+  static int outlinesBuilt = 0;
+
   void _paintContour(Canvas canvas, SceneStyle style, _Contour c, int ci, double f, double width, double opacity) {
     final cSeed = (seed + ci * 7919) & 0x7FFFFFFF;
     final n = c.points.length;
     final upto = math.max(2, (f * (n - 1)).round() + 1);
-    final key = (cSeed, upto, width);
-    // Completed contours reuse their outline; the one being written is rebuilt.
-    final shape = c.cacheKey == key ? c.cached! : _outline(c, cSeed, upto, width, f, landing: ci == 0);
-    if (upto == n) {
-      c.cacheKey = key;
-      c.cached = shape;
+    // Completed contours reuse their outline; the one being written is
+    // rebuilt. The Gnosis breath moves the width in a few fixed steps
+    // ([SceneStyle.weight]), so a breathing sigil has one outline per step.
+    final key = (cSeed, width);
+    var shape = upto == n ? c.cache[key] : null;
+    if (shape == null) {
+      outlinesBuilt++;
+      shape = _outline(c, cSeed, upto, width, f, landing: ci == 0);
+      if (upto == n) {
+        if (c.cache.length >= 16) c.cache.clear();
+        c.cache[key] = shape;
+      }
     }
 
     final ink = style.ink;
@@ -275,8 +285,8 @@ class _Contour {
   final List<Offset> normals;
   final double length;
   final bool closed;
-  (int, int, double)? cacheKey;
-  _Shape? cached;
+  /// Finished outlines by (seed, brush width).
+  final cache = <(int, double), _Shape>{};
 }
 
 class _Shape {

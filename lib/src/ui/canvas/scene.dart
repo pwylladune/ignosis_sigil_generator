@@ -94,8 +94,12 @@ class SceneStyle {
         scale: scale,
       );
 
-  /// Stroke weight, breathing by ±3 % with the Gnosis breath.
-  double get weight => px(breath == null ? strokeWidth : strokeWidth * (0.97 + 0.06 * breath!));
+  /// Stroke weight, breathing by ±3 % with the Gnosis breath. The breath moves
+  /// it in twelve steps of 0.5 % (under a twentieth of a pixel each), so the
+  /// brush outlines of a settled sigil are built once per step and reused,
+  /// not rebuilt on every frame.
+  double get weight =>
+      px(breath == null ? strokeWidth : strokeWidth * (0.97 + 0.005 * (12 * breath!.clamp(0.0, 1.0)).roundToDouble()));
 
   Paint inkPaint({double opacity = 1, double? width}) => Paint()
     ..color = ink.withValues(alpha: ink.a * opacity)
