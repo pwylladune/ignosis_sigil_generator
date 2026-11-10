@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { PurchaseVerificationResult } from '../services/receiptValidator.js';
 import { RiteBurnService } from '../services/riteBurn.js';
@@ -26,7 +27,34 @@ export interface RiteRouterDeps {
   cluster: string;
   /** Web payments through Stripe Checkout; null when Stripe is not configured. */
   stripe?: { gateway: StripeGateway; ledger: RiteLedger } | null;
+  /** False while another machine of the app is running: no burn and no sale. */
+  alone?: () => boolean;
+  /** Requests per minute per address on each route; the defaults suit one person. */
+  limits?: Partial<RiteLimits>;
 }
+
+/** Requests per minute per address. */
+export interface RiteLimits {
+  /** Each one asks the store and the chain. */
+  consecrate: number;
+  /** Each one creates a Stripe Checkout session. */
+  checkout: number;
+  /** The app asks every 3 s while a payment is open (20 a minute). */
+  credit: number;
+  /** Each one reads the chain. */
+  check: number;
+}
+
+export const defaultRiteLimits: RiteLimits = { consecrate: 20, checkout: 10, credit: 60, check: 30 };
+
+const perMinute = (limit: number) =>
+  rateLimit({
+    windowMs: 60_000,
+    limit,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: { success: false, error: 'Too many requests; wait a minute' },
+  });
 
 /** Adds a first-time confirmed burn to the Global Pyre. */
 export function recordInPyre(pyre: PyreIndexerService, signature: string, joules: number, commitment: string) {
@@ -59,11 +87,13 @@ const checkoutSchema = z.object({ pack: z.string().min(1).max(32) });
  */
 export function createRiteRouter(deps: RiteRouterDeps): Router {
   const router = Router();
+  const limits = { ...defaultRiteLimits, ...deps.limits };
+  const alone = deps.alone ?? (() => true);
 
   // POST /api/v1/rite/consecrate
-  router.post('/consecrate', async (req: Request, res: Response) => {
+  router.post('/consecrate', perMinute(limits.consecrate), async (req: Request, res: Response) => {
     const burns = deps.burns;
-    if (!burns) return res.status(503).json({ success: false, error: 'Rites are not available' });
+    if (!burns || !alone()) return res.status(503).json({ success: false, error: 'Rites are not available' });
     const parsed = consecrateSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ success: false, error: 'Invalid request body' });
     try {
@@ -130,8 +160,8 @@ export function createRiteRouter(deps: RiteRouterDeps): Router {
   // POST /api/v1/rite/checkout {pack}: a Stripe Checkout session for a package
   // of rites. The session ID is the payer's credit; each release at
   // /consecrate spends one of its rites.
-  router.post('/checkout', async (req: Request, res: Response) => {
-    if (!deps.burns || !deps.stripe) return res.status(503).json({ success: false, error: 'Web payment is not available' });
+  router.post('/checkout', perMinute(limits.checkout), async (req: Request, res: Response) => {
+    if (!deps.burns || !deps.stripe || !alone()) return res.status(503).json({ success: false, error: 'Web payment is not available' });
     const parsed = checkoutSchema.safeParse(req.body);
     const pack = parsed.success ? ritePackById(parsed.data.pack) : undefined;
     if (!pack) return res.status(400).json({ success: false, error: 'Unknown package' });
@@ -146,7 +176,7 @@ export function createRiteRouter(deps: RiteRouterDeps): Router {
 
   // GET /api/v1/rite/credit/:sessionId: is this payment paid, and how many of
   // its rites are left?
-  router.get('/credit/:sessionId', async (req: Request, res: Response) => {
+  router.get('/credit/:sessionId', perMinute(limits.credit), async (req: Request, res: Response) => {
     const stripe = deps.stripe;
     if (!stripe) return res.status(503).json({ success: false, error: 'Web payment is not available' });
     const sessionId = req.params.sessionId;
@@ -178,7 +208,7 @@ export function createRiteRouter(deps: RiteRouterDeps): Router {
   });
 
   // GET /api/v1/rite/:signature: the on-chain check, for anyone.
-  router.get('/:signature', async (req: Request, res: Response) => {
+  router.get('/:signature', perMinute(limits.check), async (req: Request, res: Response) => {
     if (!deps.check) return res.status(503).json({ success: false, error: 'Rites are not available' });
     const sig = signatureSchema.safeParse(req.params.signature);
     if (!sig.success) return res.status(400).json({ success: false, error: 'Invalid signature' });

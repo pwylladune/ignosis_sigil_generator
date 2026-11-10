@@ -3,6 +3,8 @@
 # Exactly one machine. The fulfilment ledger is a SQLite file on the volume,
 # and two machines would mean two ledgers, which could burn twice for one
 # purchase. Deploy with `fly deploy --ha=false`; never scale above 1.
+# The server enforces it (services/machineGuard.ts): while Fly's private DNS
+# lists another started machine, it neither burns nor opens a checkout.
 # The machine never stops: the sweeper and the Play refund check run in it.
 #
 # Mainnet (ADR 2026-10-27-ignosis-treasury-cold-owner-hot-delegate). The
@@ -13,6 +15,11 @@
 #   TREASURY_PRIVATE_KEY  the server key (the delegate), never the owner's
 #   SOLANA_RPC_URL        a mainnet RPC with its API key (Helius)
 #   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_RITE_PRICES  live mode
+#     STRIPE_SECRET_KEY should be a restricted key (rk_live_), not the
+#     account's secret key: the server only needs Checkout Sessions (write),
+#     Prices (read), PaymentIntents (read) and Charges (read). With any of
+#     the four missing, a release answers 502, so after changing the key
+#     open /api/v1/rite/packs and make one release.
 #   GOOGLE_PLAY_SERVICE_ACCOUNT  when Android rites are ready
 # Each fails closed: without a mainnet RPC rites refuse to burn (the default
 # RPC is devnet), and a test Stripe key turns web payment off on mainnet.

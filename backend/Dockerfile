@@ -3,7 +3,8 @@ WORKDIR /app
 COPY package*.json tsconfig.json ./
 RUN npm ci --ignore-scripts
 COPY src/ ./src/
-RUN npm run build
+# The test scripts are compiled with the rest but have no place in the image.
+RUN npm run build && rm -f dist/test-*.js
 
 FROM node:22-alpine AS runner
 WORKDIR /app

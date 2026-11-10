@@ -58,7 +58,7 @@ async function routeTests() {
   const burns = new RiteBurnService(chain, ledger, { joules: J, pollMs: 1, timeoutMs: 20 });
   const play = new FakePlay();
   const rite = { burns, check: null, play: { gateway: play, ledger } };
-  const server = http.createServer(createApp({ rite })).listen(0);
+  const server = http.createServer(createApp({ rite, limits: { consecrate: 1000 } })).listen(0);
   const base = `http://localhost:${(server.address() as any).port}/api/v1`;
   const consecrate = (receiptData: string, commitment: string, productId = RITE) =>
     fetch(`${base}/rite/consecrate`, {
