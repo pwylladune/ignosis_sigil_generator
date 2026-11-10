@@ -22,6 +22,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Download seal (PNG)'), findsOneWidget);
     expect(find.text('Share seal (PNG)'), findsOneWidget);
+    expect(find.text('Download lines (SVG)'), findsOneWidget);
     expect(find.text('Print burn sheet'), findsOneWidget);
   });
 
@@ -35,5 +36,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Download seal (PNG)'), findsNothing);
     expect(find.text('Share seal (PNG)'), findsOneWidget);
+    expect(find.text('Share lines (SVG)'), findsOneWidget);
   });
 }

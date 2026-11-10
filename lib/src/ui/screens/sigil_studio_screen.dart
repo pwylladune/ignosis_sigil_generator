@@ -16,8 +16,10 @@ import '../../services/iap_service.dart';
 import '../../services/rite/rite_service.dart';
 // Loaded on first print: the PDF and printing code is a large part of the web bundle.
 import '../../services/sigil_print_service.dart' deferred as print_sheet;
+import '../../services/sigil_svg.dart';
 import '../../services/universal_export_service.dart';
 import '../../motion/breath.dart';
+import '../canvas/scene_factory.dart';
 import '../canvas/sigil_canvas.dart';
 import '../canvas/sigil_spec.dart';
 import '../theme/sigil_skins.dart';
@@ -196,6 +198,15 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.polyline_outlined),
+              title: Text(UniversalExportService.canDownload ? 'Download lines (SVG)' : 'Share lines (SVG)'),
+              subtitle: const Text('The strokes alone, as vectors: for a plotter, a cutter or a stencil'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _exportSvg();
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.print_outlined),
               title: const Text('Print burn sheet'),
               subtitle: const Text('A4 or US Letter, with the seal to cut out'),
@@ -220,6 +231,15 @@ class _SigilStudioScreenState extends State<SigilStudioScreen> {
     if (bytes != null) {
       await UniversalExportService.shareSigilPng(bytes, 'ignosis_sigil');
     }
+  }
+
+  /// The seal's strokes as vectors, always in dark ink: a tool file is opened
+  /// on white, where a dark skin's pale ink would not show.
+  Future<void> _exportSvg() async {
+    final geometry = buildScene(_spec, SigilCanvas.referenceSize, -1e6).geometry;
+    if (geometry.isEmpty) return;
+    final svg = sigilSvg(geometry, size: SigilCanvas.referenceSize);
+    await UniversalExportService.exportSigilSvg(svg, 'ignosis_sigil');
   }
 
   Future<void> _printPhysicalSheet() async {
