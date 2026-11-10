@@ -1,5 +1,5 @@
 name: ignosis_sigil_generator
-description: "IGNOSIS: Chaos Magic Sigil Studio & Cryptographic Heat Engine (iOS, Android, Web) with Solana SPL token integration."
+description: "IGNOSIS: a chaos-magic sigil studio with seven sigil systems, Gnosis breathing and a ritual burn (iOS, Android, web)."
 publish_to: "none"
 version: 1.0.0+1
 
@@ -10,7 +10,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.8
   crypto: ^3.0.3
   share_plus: ^11.0.0
   printing: ^5.15.1

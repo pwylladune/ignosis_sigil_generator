@@ -36,11 +36,11 @@ class RitualExegesisModal extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'THE RITUAL OF IGNOSIS',
+                        'The ritual of IGNOSIS',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          letterSpacing: 2.0,
+                          letterSpacing: 0.2,
                           color: theme.inkPrimary,
                         ),
                       ),
@@ -67,7 +67,7 @@ class RitualExegesisModal extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionHeader('1. THE FOUNDATIONAL PRINCIPLE (CHAOS MAGICK)'),
+                    _buildSectionHeader('1. The foundational principle (chaos magick)'),
                     _buildParagraph(
                       'Sigil magic in this form comes from the artist-occultist Austin Osman Spare (The Book of Pleasure, 1913) and was '
                       'systematised by Peter J. Carroll (Liber Null, 1978). In chaos magick a sigil is understood as a glyph of intent '
@@ -75,13 +75,13 @@ class RitualExegesisModal extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
 
-                    _buildSectionHeader('2. STATEMENT OF INTENT TO PURE GEOMETRY'),
+                    _buildSectionHeader('2. Statement of intent to pure geometry'),
                     _buildStepRow('A', 'Formulate Intent', 'Spare and Carroll phrase it as a wish ("This my wish to obtain…"); present-tense affirmations are a later convention. Use whichever your mind does not argue with.'),
                     _buildStepRow('B', 'Reduce the Letters', 'Repeated letters are struck out (Carroll, Liber Null). Removing vowels too is a later popular convention, offered as an option. The Kamea and Rose Cross instead trace the Hebrew spelling, as the Golden Dawn did.'),
                     _buildStepRow('C', 'Draw the Glyph', 'The letters are drawn through a system: Spare-style monogram, planetary kamea, Golden Dawn rose, Chladni plate or a hash-seeded attractor. The last two are IGNOSIS\'s own.'),
                     const SizedBox(height: 20),
 
-                    _buildSectionHeader('3. GNOSIS (THE CHARGING TRANCE)'),
+                    _buildSectionHeader('3. Gnosis (the charging trance)'),
                     _buildParagraph(
                       'Carroll teaches that a sigil is charged in "gnosis": a peak of single-pointed focus, reached by inhibitory methods '
                       '(stillness, trance) or excitatory ones (dance, chanting). In the studio, the breath ring paces a slow, steady rhythm '
@@ -89,7 +89,7 @@ class RitualExegesisModal extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
 
-                    _buildSectionHeader('4. FORGETTING (AND THE OPTIONAL BURN)'),
+                    _buildSectionHeader('4. Forgetting (and the optional burn)'),
                     _buildParagraph(
                       'Spare\'s formula of non-attachment was "Does not matter—need not be" (The Book of Pleasure). He advised '
                       '"a deliberate striving to forget" the sigil; dwelling on the outcome, what Carroll (after Crowley) calls '
@@ -131,7 +131,7 @@ class RitualExegesisModal extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     ),
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('UNDERSTOOD · ENTER STUDIO', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                    child: const Text('Understood · enter the studio', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
@@ -148,9 +148,9 @@ class RitualExegesisModal extends StatelessWidget {
       child: Text(
         title,
         style: TextStyle(
-          fontSize: 11,
+          fontSize: 13,
           fontWeight: FontWeight.bold,
-          letterSpacing: 1.5,
+          letterSpacing: 0.2,
           color: theme.inkSecondary,
         ),
       ),

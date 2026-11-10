@@ -42,6 +42,12 @@ jobs:
       SNAPSHOT: /data/backup/ledger-snapshot.sqlite
     steps:
       - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Exactly one machine
+        # A second machine would keep a second ledger. The server refuses to
+        # burn while it sees one; this is the alert that it has happened.
+        run: |
+          count=$(flyctl machines list -a "$FLY_APP" --json | jq 'length')
+          test "$count" = "1" || { echo "::error::$FLY_APP has $count machines; it must have exactly 1"; exit 1; }
       - name: Snapshot on the machine
         # As the node user, so nothing on the volume becomes root-owned.
         run: >

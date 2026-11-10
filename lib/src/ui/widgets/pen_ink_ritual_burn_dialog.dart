@@ -104,13 +104,13 @@ class _PenInkRitualBurnDialogState extends State<PenInkRitualBurnDialog> with Si
   String _phaseLabel(BreathPhase phase) {
     switch (phase) {
       case BreathPhase.inhale:
-        return 'INHALE';
+        return 'Inhale';
       case BreathPhase.holdIn:
-        return 'HOLD';
+        return 'Hold';
       case BreathPhase.exhale:
-        return 'EXHALE · LET GO';
+        return 'Exhale · let go';
       case BreathPhase.holdOut:
-        return 'HOLD · EMPTY';
+        return 'Hold · empty';
     }
   }
 

@@ -124,18 +124,45 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('a wide window keeps the studio to a readable measure; the bar spans it', (tester) async {
+  testWidgets('a window too narrow for two panes keeps the studio to a readable measure', (tester) async {
     SharedPreferences.setMockInitialValues({'ignosis_intro_seen': true});
-    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.physicalSize = const Size(960, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(const IgnosisApp());
     await tester.pump(const Duration(milliseconds: 50));
     expect(tester.getSize(find.byType(TextField)).width, lessThanOrEqualTo(720));
     final field = tester.getRect(find.byType(TextField));
-    expect(field.center.dx, closeTo(720, 1));
+    expect(field.center.dx, closeTo(480, 1));
     final charge = tester.getRect(find.widgetWithText(ElevatedButton, 'III · Charge the seal'));
     expect(charge.right, closeTo(field.right, 1), reason: 'the bar aligns with the studio');
+  });
+
+  testWidgets('a wide window has two panes: the plate, and beside it the intent and every system', (tester) async {
+    for (final seen in [true, false]) {
+      SharedPreferences.setMockInitialValues(seen ? {'ignosis_intro_seen': true} : {});
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(const IgnosisApp());
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(tester.takeException(), isNull);
+      final field = tester.getRect(find.byType(TextField));
+      final plate = tester.getRect(find.text('Example · write your own'));
+      expect(plate.center.dx, lessThan(field.left), reason: 'the plate is left of the controls');
+      expect(field.right, lessThanOrEqualTo(1440));
+      expect(field.width, lessThanOrEqualTo(460));
+      // Every system is in view at once: nothing to scroll sideways.
+      final chips = find.byType(ChoiceChip);
+      for (var i = 0; i < SigilSystem.values.length; i++) {
+        final chip = tester.getRect(find.widgetWithText(ChoiceChip, SigilSystem.values[i].title));
+        expect(chip.left, greaterThanOrEqualTo(980), reason: '${SigilSystem.values[i].title} is in the right pane');
+        expect(chip.right, lessThanOrEqualTo(1440), reason: '${SigilSystem.values[i].title} is in view');
+      }
+      expect(chips, findsWidgets);
+      expect(find.text('The rite, in four steps'), seen ? findsNothing : findsOneWidget);
+    }
   });
 
   testWidgets('the first visit shows the steps and the example together', (tester) async {
@@ -189,7 +216,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('All skins are free for now'), findsOneWidget);
     expect(find.text('Restore purchases'), findsNothing);
-    expect(find.textContaining('UNLOCK'), findsNothing);
+    expect(find.textContaining('Unlock'), findsNothing);
   });
 
   testWidgets('a saved premium skin is not applied without an entitlement', (tester) async {
@@ -227,7 +254,7 @@ void main() {
     await tester.tap(find.text('Cosmic'));
     await tester.pump();
     // An explicit unlock button appears; the skin is not applied or bought.
-    expect(find.textContaining('UNLOCK COSMIC'), findsOneWidget);
+    expect(find.textContaining('Unlock Cosmic'), findsOneWidget);
     expect(IapService.instance.isSkinUnlocked('cosmic'), isFalse);
   });
 

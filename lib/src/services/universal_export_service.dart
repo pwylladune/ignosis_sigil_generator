@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
@@ -29,6 +30,26 @@ class UniversalExportService {
   /// Saves the PNG to the browser's downloads; false where that is not possible.
   static Future<bool> downloadSigilPng(Uint8List pngBytes, String filenamePrefix) =>
       downloadPng(pngBytes, pngFilename(filenamePrefix));
+
+  /// The vector seal's file name, by the same rule as the PNG's.
+  static String svgFilename(String prefix, [DateTime? at]) =>
+      '${prefix}_${(at ?? DateTime.now()).millisecondsSinceEpoch}.svg';
+
+  /// The vector seal: saved to the browser's downloads, or handed to the
+  /// share sheet in the apps.
+  static Future<bool> exportSigilSvg(String svg, String filenamePrefix) async {
+    final bytes = Uint8List.fromList(utf8.encode(svg));
+    final filename = svgFilename(filenamePrefix);
+    if (canDownload) return downloadFile(bytes, filename, 'image/svg+xml');
+    try {
+      final result = await SharePlus.instance.share(
+        ShareParams(files: [XFile.fromData(bytes, mimeType: 'image/svg+xml', name: filename)]),
+      );
+      return result.status == ShareResultStatus.success || result.status == ShareResultStatus.dismissed;
+    } catch (_) {
+      return false;
+    }
+  }
 
   /// Exports and shares PNG across iOS, Android, and Web
   static Future<bool> shareSigilPng(Uint8List pngBytes, String filenamePrefix) async {

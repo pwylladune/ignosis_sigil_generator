@@ -9,6 +9,7 @@ import { ReceiptValidatorService } from './services/receiptValidator.js';
 import { PyreIndexerService } from './services/pyreIndexer.js';
 import { RiteBurnService, SolanaRiteChain } from './services/riteBurn.js';
 import { RiteLedger } from './services/riteLedger.js';
+import { MachineGuard, machineGuardFromEnv } from './services/machineGuard.js';
 import { RiteSweeper } from './services/riteSweeper.js';
 import { verifyRite } from './services/riteVerifier.js';
 import { StripeCreditVerifier, StripeGateway, StripeRiteGateway } from './services/stripeRite.js';
@@ -16,7 +17,7 @@ import { GooglePlayGateway, PlayCreditVerifier, PlayGateway, PlayVoidedSync } fr
 import { parsePackPrices } from './services/ritePacks.js';
 import { createIapRouter } from './routes/iap.js';
 import { createPyreRouter } from './routes/pyre.js';
-import { PurchaseVerifier, RiteRouterDeps, createRiteRouter, recordInPyre } from './routes/rite.js';
+import { PurchaseVerifier, RiteLimits, RiteRouterDeps, createRiteRouter, recordInPyre } from './routes/rite.js';
 import { createStripeWebhookRouter } from './routes/stripeWebhook.js';
 
 /**
@@ -43,6 +44,8 @@ export interface RiteDeps extends Pick<RiteRouterDeps, 'burns' | 'check' | 'stri
   voidedSync?: PlayVoidedSync | null;
   /** The fulfilment ledger, closed on shutdown. */
   ledger?: RiteLedger | null;
+  /** Refuses burns and sales while another machine runs; null off Fly. */
+  machines?: MachineGuard | null;
 }
 
 /**
@@ -131,6 +134,7 @@ export function riteFromConfig(): RiteDeps {
 export interface AppDeps {
   verifier?: PurchaseVerifier;
   rite?: RiteDeps;
+  limits?: Partial<RiteLimits>;
 }
 
 /** Web purchases go to Stripe, Android to Google Play, the rest to the store validator. */
@@ -201,6 +205,8 @@ export function createApp(deps: AppDeps = {}) {
       stripe: rite.stripe,
       pyre: pyreIndexer,
       cluster: config.solanaCluster,
+      alone: () => rite.machines?.alone ?? true,
+      limits: deps.limits,
     })
   );
 
@@ -225,6 +231,7 @@ export function createApp(deps: AppDeps = {}) {
 export async function shutDown(server: Server, rite: RiteDeps, graceMs = 50_000): Promise<void> {
   rite.sweeper?.stop();
   rite.voidedSync?.stop();
+  rite.machines?.stop();
   await new Promise<void>((resolve) => {
     const timer = setTimeout(() => {
       console.error('[server] Requests still open after the grace period: closing anyway.');
@@ -244,9 +251,14 @@ const isMainModule = process.argv[1]?.endsWith('/server.js') || process.argv[1]?
 
 if (isMainModule && process.env.NODE_ENV !== 'test') {
   const rite = riteFromConfig();
+  rite.machines = machineGuardFromEnv();
   const app = createApp({ rite });
   rite.sweeper?.start();
   rite.voidedSync?.start();
+  // The first answer arrives within moments of the start; until then the
+  // machine is taken to be the only one, as it is on every ordinary deploy.
+  void rite.machines?.check();
+  rite.machines?.start();
   const server = app.listen(config.port, () => {
     console.log(`\n======================================================`);
     console.log(`🔥 IGNOSIS RELAY SERVER LISTENING ON PORT ${config.port}`);
@@ -254,6 +266,7 @@ if (isMainModule && process.env.NODE_ENV !== 'test') {
     console.log(
       `🕯  Rites: ${rite.burns ? 'on' : 'off'} | Web payment: ${rite.stripe ? 'on' : 'off'} | Android: ${rite.play ? 'on' : 'off'}`
     );
+    console.log(`🔒 Single-machine guard: ${rite.machines ? 'on' : 'off (not on Fly)'}`);
     console.log(`======================================================\n`);
   });
   // Fly sends the signal on every deploy and restart.
